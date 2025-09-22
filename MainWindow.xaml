@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:TaskCore"
         Title="TaskCore" Height="700" Width="1100"
-        Background="#1e1e1e"
+        Background="#353545"
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -30,12 +30,13 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#e61dafb8"/> <!-- Less transparent hover -->
-                    <Setter Property="Foreground" Value="#23272E"/>
+                    <Setter Property="Background" Value="#750889ad"/> <!-- Less transparent hover -->
+                    <Setter Property="Foreground" Value="#1E1E23"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
                     <Setter Property="Foreground" Value="#444c56"/>
-                    <Setter Property="Background" Value="#23272E"/>
+                    <Setter Property="Background" Value="#1E1E23"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -46,7 +47,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <!-- Sidebar -->
-        <StackPanel Grid.Column="0" Background="#23272E" VerticalAlignment="Stretch">
+        <StackPanel Grid.Column="0" Background="#1E1E23" VerticalAlignment="Stretch">
             <!-- Icon and App Name -->
             <StackPanel Orientation="Horizontal" Margin="8,24,0,24" VerticalAlignment="Center">
                 <Button x:Name="HamburgerButton"
@@ -62,8 +63,8 @@
                         Grid.ColumnSpan="2">
                     <Viewbox Width="28" Height="28">
                         <Canvas Width="24" Height="24">
-                            <Path Data="M4,12 L10,6 M4,12 L10,18" Stroke="#61dafb" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                            <Path Data="M20,12 L14,6 M20,12 L14,18" Stroke="#61dafb" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            <Path Data="M4,12 L10,6 M4,12 L10,18" Stroke="Transparent" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            <Path Data="M20,12 L14,6 M20,12 L14,18" Stroke="Transparent" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
                         </Canvas>
                     </Viewbox>
                 </Button>
@@ -94,7 +95,7 @@
                     <TextBlock Text="  RAM Cleanup" Margin="8,0,0,0" FontSize="18" Visibility="{Binding IsSidebarOpen, Converter={StaticResource BoolToVis}}"/>
                 </StackPanel>
             </Button>
-            <Button Style="{StaticResource SidebarButtonStyle}" IsEnabled="False">
+            <Button Style="{StaticResource SidebarButtonStyle}" Click="WatchDogButton_Click">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="🔔" FontSize="18"/>
                     <TextBlock Text="  Watchdog" Margin="8,0,0,0" FontSize="18" Visibility="{Binding IsSidebarOpen, Converter={StaticResource BoolToVis}}"/>
