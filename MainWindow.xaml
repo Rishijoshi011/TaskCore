@@ -4,6 +4,7 @@
         xmlns:local="clr-namespace:TaskCore"
         Title="TaskCore" Height="700" Width="1100"
         Background="#353545"
+        Icon="Resources/taskcore_icon.ico"
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -63,8 +64,8 @@
                         Grid.ColumnSpan="2">
                     <Viewbox Width="28" Height="28">
                         <Canvas Width="24" Height="24">
-                            <Path Data="M4,12 L10,6 M4,12 L10,18" Stroke="Transparent" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                            <Path Data="M20,12 L14,6 M20,12 L14,18" Stroke="Transparent" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            <Path Data="M4,12 L10,6 M4,12 L10,18" Stroke="Aqua" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            <Path Data="M20,12 L14,6 M20,12 L14,18" Stroke="Aqua" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
                         </Canvas>
                     </Viewbox>
                 </Button>

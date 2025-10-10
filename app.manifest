@@ -1,2 +1,0 @@
-<!-- Add this to your project (right-click project > Add > New Item > Application Manifest File) and set the requestedExecutionLevel to 'requireAdministrator' -->
-<requestedExecutionLevel level="requireAdministrator" uiAccess="true" />
