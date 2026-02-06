@@ -1,0 +1,113 @@
+﻿<Window x:Class="TaskCore.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TaskCore"
+        Height="700"
+        Width="1100"
+        Background="#202124"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- SIDEBAR -->
+        <StackPanel Grid.Column="0"
+                    Background="#1B1C1F">
+
+            <TextBlock Text="TaskCore"
+                       Foreground="#E8EAED"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       Margin="20"/>
+
+            <Button Content="Process List"
+                    Margin="10"
+                    Padding="10"
+                    Foreground="#E8EAED"
+                    Background="#2A2D33"
+                    BorderThickness="0"
+                    HorizontalContentAlignment="Left"/>
+        </StackPanel>
+
+        <!-- MAIN CONTENT -->
+        <Grid Grid.Column="1"
+              Background="#181A1F"
+              Margin="16">
+
+        <ListView ItemsSource="{Binding ProcessesView}"
+          SelectedItem="{Binding SelectedProcess}"
+          Background="#1E1E23"
+          BorderThickness="0"
+          Foreground="LightGray">
+
+                <!-- GROUP STYLE WITH DROPDOWN -->
+                <ListView.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.ContainerStyle>
+                            <Style TargetType="GroupItem">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="GroupItem">
+                                            <Expander IsExpanded="True"
+                                          Background="#25252A"
+                                          BorderThickness="0"
+                                          Foreground="White">
+
+                                                <!-- GROUP HEADER -->
+                                                <Expander.Header>
+                                                    <DockPanel Margin="4">
+                                                        <TextBlock Text="{Binding Name}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="13"
+                                                       Foreground="White"/>
+                                                        <TextBlock Text="{Binding ItemCount, StringFormat=' ({0})'}"
+                                                       Margin="6,0,0,0"
+                                                       Foreground="#AAAAAA"/>
+                                                    </DockPanel>
+                                                </Expander.Header>
+
+                                                <!-- GROUP CONTENT -->
+                                                <ItemsPresenter Margin="12,0,0,0"/>
+                                            </Expander>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </GroupStyle.ContainerStyle>
+                    </GroupStyle>
+                </ListView.GroupStyle>
+
+                <!-- GRID VIEW -->
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Name" Width="300"
+                            DisplayMemberBinding="{Binding Name}" />
+                        <GridViewColumn Header="PID" Width="90"
+                            DisplayMemberBinding="{Binding Id}" />
+                        <GridViewColumn Header="Memory"
+                            Width="140"
+                            DisplayMemberBinding="{Binding Memory, StringFormat={}{0:F2} MB}" />
+                        <GridViewColumn Header="CPU"
+                            Width="100"
+                            DisplayMemberBinding="{Binding Cpu, StringFormat={}{0:F1}%}" />
+                    </GridView>
+                </ListView.View>
+            </ListView>
+
+
+            <!-- END TASK -->
+            <Button Content="End Task"
+                    Width="110"
+                    Height="34"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,20,20"
+                    Background="#D94A4A"
+                    Foreground="White"
+                    BorderThickness="0"/>
+        </Grid>
+    </Grid>
+</Window>

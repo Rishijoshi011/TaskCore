@@ -22,14 +22,14 @@ namespace TaskCore.Views
         private readonly int _maxHistoryPoints = 60; // 60 seconds of history
 
         // Performance counters
-        private PerformanceCounter _cpuCounter;
-        private PerformanceCounter _memoryAvailableCounter;
+        private PerformanceCounter _cpuCounter = null!;
+        private PerformanceCounter _memoryAvailableCounter = null!;
 
         // System info
         private string _cpuName = "Loading CPU info...";
         private long _totalMemoryMB = 0;
-        private string _gpuName = "Integrated Graphics";
-        private string _diskInfo = "SSD (NVMe)";
+        //private string _gpuName = "Integrated Graphics";
+        //private string _diskInfo = "SSD (NVMe)";
 
         // Current values
         private float _currentCpuUsage;
@@ -40,23 +40,24 @@ namespace TaskCore.Views
         private readonly DispatcherTimer _refreshTimer = new();
 
         // Graph canvases
-        private Canvas _cpuGraphCanvas;
-        private Canvas _memoryGraphCanvas;
+        private Canvas _cpuGraphCanvas = null!;
+        private Canvas _memoryGraphCanvas = null!;
 
         // Current selected component
         private string _selectedComponent = "CPU";
 
         // Component panels
-        private Border _cpuPanel;
-        private Border _memoryPanel;
-        private Border _diskPanel;
-        private Border _gpuPanel;
+        private Border _cpuPanel = null!;
+        private Border _memoryPanel = null!;
+        private Border _diskPanel = null!;
+        private Border _gpuPanel = null!;
 
-        private Grid _mainContentGrid;
+        private Grid _mainContentGrid = null!;
         private bool _isInitialized = false;
 
         // UI elements dictionary for safe access
         private readonly Dictionary<string, TextBlock> _uiElements = new();
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         // Windows API for memory info
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
@@ -81,7 +82,7 @@ namespace TaskCore.Views
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX lpBuffer);
 
-        public event PropertyChangedEventHandler PropertyChanged;
+       
         protected void OnPropertyChanged(string name) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
@@ -724,7 +725,7 @@ namespace TaskCore.Views
             }
         }
 
-        private void RefreshTimer_Tick(object sender, EventArgs e)
+        private void RefreshTimer_Tick(object? sender, EventArgs e)
         {
             try
             {

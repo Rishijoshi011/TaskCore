@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Resources\TaskCore_icon.ico" />
+    <Resource Include="Resources\TaskCore_icon.ico" />
   </ItemGroup>
 
   <ItemGroup>

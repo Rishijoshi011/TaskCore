@@ -1,13 +1,9 @@
 ﻿using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -18,7 +14,7 @@ namespace TaskCore.Views
 {
     public class BlockedProcess : INotifyPropertyChanged
     {
-        private string _processName;
+        private string _processName = null!;
         public string ProcessName
         {
             get => _processName;
@@ -80,7 +76,7 @@ namespace TaskCore.Views
 
         public string LastKilledString => _lastKilled == DateTime.MinValue ? "Never" : _lastKilled.ToString("HH:mm:ss");
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string name) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
@@ -100,14 +96,14 @@ namespace TaskCore.Views
         private readonly object _lockObject = new object();
 
         // UI Elements
-        private TextBox _processNameTextBox;
-        private Button _addProcessButton;
-        private Button _browseButton;
-        private DataGrid _blockedProcessesGrid;
-        private ListBox _activityLogListBox;
-        private CheckBox _enableWatchdogCheckBox;
-        private TextBlock _statusText;
-        private TextBlock _statsText;
+        private TextBox _processNameTextBox = null!;
+        private Button _addProcessButton = null!;
+        private Button _browseButton = null!;
+        private DataGrid _blockedProcessesGrid = null!;
+        private ListBox _activityLogListBox = null!;
+        private CheckBox _enableWatchdogCheckBox = null!;
+        private TextBlock _statusText = null!;
+        private TextBlock _statsText = null!;
 
         // Statistics
         private int _totalKills = 0;
@@ -119,7 +115,7 @@ namespace TaskCore.Views
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "TaskCore", "watchdog_settings.json");
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string name) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
@@ -634,7 +630,7 @@ namespace TaskCore.Views
             _watchdogTimer.Tick += WatchdogTimer_Tick;
         }
 
-        private void WatchdogTimer_Tick(object sender, EventArgs e)
+        private void WatchdogTimer_Tick(object? sender, EventArgs e)
         {
             if (!_isWatchdogActive || _blockedProcesses.Count == 0) return;
 
@@ -769,8 +765,11 @@ namespace TaskCore.Views
                 };
 
                 var directory = Path.GetDirectoryName(_settingsPath);
-                if (!Directory.Exists(directory))
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
                     Directory.CreateDirectory(directory);
+                }
+
 
                 var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(_settingsPath, json);
@@ -790,13 +789,13 @@ namespace TaskCore.Views
                 var json = File.ReadAllText(_settingsPath);
                 var settings = JsonSerializer.Deserialize<JsonElement>(json);
 
-                if (settings.TryGetProperty("BlockedProcesses", out var blockedProcessesJson))
+                if (settings.TryGetProperty("BlockedProcesses", out var blockedProcessesJson))  
                 {
                     foreach (var item in blockedProcessesJson.EnumerateArray())
                     {
                         var blockedProcess = new BlockedProcess
                         {
-                            ProcessName = item.GetProperty("ProcessName").GetString(),
+                            ProcessName = item.GetProperty("ProcessName").GetString() ?? "unknown",
                             DateAdded = item.GetProperty("DateAdded").GetDateTime(),
                             KillCount = item.GetProperty("KillCount").GetInt32(),
                             LastKilled = item.GetProperty("LastKilled").GetDateTime()
