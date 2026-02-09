@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "0Ddo9JlkRvo=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\rishi.joshi\\temp_pro\\TaskCore\\TaskCore.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\rishi.joshi\\.nuget\\packages\\communitytoolkit.mvvm\\8.4.0\\communitytoolkit.mvvm.8.4.0.nupkg.sha512"
+  ],
+  "logs": []
+}

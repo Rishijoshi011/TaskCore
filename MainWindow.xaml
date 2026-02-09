@@ -1,0 +1,178 @@
+﻿<Window x:Class="TaskCore.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:TaskCore.Views"
+        mc:Ignorable="d"
+        Title="TaskCore"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        Background="{StaticResource BackgroundPrimary}"
+        Width="1200"
+        Height="750">
+
+    <Border Background="{StaticResource BackgroundPrimary}">
+        <Grid>
+
+            <!-- ================= TOP BAR ================= -->
+            <Grid Background="{StaticResource BackgroundSecondary}" Height="40" VerticalAlignment="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- DRAG AREA + TITLE -->
+                <Grid Grid.Column="0" MouseDown="DragWindow"
+                      VerticalAlignment="Center">
+                    <TextBlock Text=" TaskCore"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Margin="10 0 0 0"/>
+                </Grid>
+
+                <!-- WINDOW BUTTONS -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+
+                    <!-- Minimize -->
+                    <Button Width="40" Background="Transparent" Click="Minimize_Click">
+                        <TextBlock Text="−" 
+                                   Foreground="{StaticResource TextPrimary}"
+                                   FontSize="18" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Button>
+                    <!-- Maximize -->
+                    <Button Width="40" Background="Transparent" Click="Maximize_Click">
+                        <TextBlock Text="▢"
+                           Foreground="{StaticResource TextPrimary}"
+                           FontSize="14"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+                    </Button>
+
+                    <!-- Close -->
+                    <Button Width="40" Background="Transparent" Click="Close_Click">
+                        <TextBlock Text="×"
+                                   Foreground="{StaticResource TextPrimary}"
+                                   FontSize="20" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Button>
+                    
+                </StackPanel>
+            </Grid>
+
+
+            <!-- ================= MAIN LAYOUT ================= -->
+            <Grid Margin="0,40,0,0">
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220"/>
+                    <!-- SIDEBAR -->
+                    <ColumnDefinition Width="*"/>
+                    <!-- CONTENT -->
+                </Grid.ColumnDefinitions>
+
+                <!-- ************ SIDEBAR ************ -->
+                <Border Grid.Column="0"
+                        Background="{StaticResource BackgroundSecondary}"
+                        Padding="20 25">
+
+                    <StackPanel>
+
+                        <!-- LOGO -->
+                        <!--<TextBlock Text="TaskCore"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource AccentBrush}"
+                                   Margin="0 0 0 25"/>-->
+
+                        <!-- NAV MENU -->
+                        <ListBox x:Name="Sidebar"
+                                 SelectionChanged="Sidebar_SelectionChanged"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Foreground="{StaticResource TextPrimary}"
+                                 FontSize="15">
+
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Margin" Value="0 5"/>
+                                    <Setter Property="Padding" Value="8 6"/>
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="bd"
+                                                        Background="Transparent"
+                                                        CornerRadius="6"
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="bd" Property="Background"
+                                                                Value="#292929"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="bd" Property="Background"
+                                                                Value="#3F3F3F"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+
+                            <!-- SIDEBAR ITEMS -->
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="pack://application:,,,/TaskCore;component/Resources/Icons/Processes.png"
+                                           Width="20" Height="20" Margin="0 0 10 0"/>
+                                    <TextBlock Text="Processes"/>
+                                </StackPanel>
+                            </ListBoxItem>
+
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="pack://application:,,,/TaskCore;component/Resources/Icons/Graphs.png"
+                                           Width="20" Height="20" Margin="0 0 10 0"/>
+                                    <TextBlock Text="Graphs"/>
+                                </StackPanel>
+                            </ListBoxItem>
+
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="pack://application:,,,/TaskCore;component/Resources/Icons/Details.png"
+                                           Width="20" Height="20" Margin="0 0 10 0"/>
+                                    <TextBlock Text="Details"/>
+                                </StackPanel>
+                            </ListBoxItem>
+
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="pack://application:,,,/TaskCore;component/Resources/Icons/Settings.png"
+                                           Width="20" Height="20" Margin="0 0 10 0"/>
+                                    <TextBlock Text="Settings"/>
+                                </StackPanel>
+                            </ListBoxItem>
+
+                        </ListBox>
+
+                    </StackPanel>
+                </Border>
+
+
+
+                <!-- ************ CONTENT AREA ************ -->
+                <ContentControl x:Name="ContentArea"
+                                Grid.Column="1"
+                                Margin="20"/>
+            </Grid>
+
+        </Grid>
+    </Border>
+</Window>

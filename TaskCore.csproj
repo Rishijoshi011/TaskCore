@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\Icons\Details.png" />
+    <None Remove="Resources\Icons\Graphs.png" />
+    <None Remove="Resources\Icons\Processes.png" />
+    <None Remove="Resources\Icons\Settings.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Resources\Theme.xaml">
+      <Generator></Generator>
+    </Page>
+    <Page Update="Views\DetailsView.xaml">
+      <Generator></Generator>
+    </Page>
+    <Page Update="Views\GraphsView.xaml">
+      <Generator></Generator>
+    </Page>
+    <Page Update="Views\ProcessesView.xaml">
+      <Generator></Generator>
+    </Page>
+    <Page Update="Views\SettingsView.xaml">
+      <Generator></Generator>
+    </Page>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\Icons\Details.png" />
+    <Resource Include="Resources\Icons\Graphs.png" />
+    <Resource Include="Resources\Icons\Processes.png" />
+    <Resource Include="Resources\Icons\Settings.png" />
+  </ItemGroup>
+
+</Project>
