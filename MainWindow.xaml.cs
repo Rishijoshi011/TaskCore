@@ -1,11 +1,15 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
 using TaskCore.Views;
 
 namespace TaskCore
 {
     public partial class MainWindow : Window
     {
+        private bool _isSidebarCollapsed = false;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -31,6 +35,24 @@ namespace TaskCore
                 case 3:
                     ContentArea.Content = new SettingsView();
                     break;
+            }
+        }
+
+        private void ToggleSidebar(object sender, RoutedEventArgs e)
+        {
+            if (_isSidebarCollapsed)
+            {
+                // Expand sidebar
+                SidebarColumn.Width = new GridLength(220);
+                SidebarBorder.Visibility = Visibility.Visible;
+                _isSidebarCollapsed = false;
+            }
+            else
+            {
+                // Collapse sidebar
+                SidebarColumn.Width = new GridLength(0);
+                SidebarBorder.Visibility = Visibility.Collapsed;
+                _isSidebarCollapsed = true;
             }
         }
 

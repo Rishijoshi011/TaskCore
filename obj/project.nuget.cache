@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "5BFOngYIWQo=",
+  "dgSpecHash": "o/sy2dECCpg=",
   "success": true,
   "projectFilePath": "C:\\Users\\rishi.joshi\\temp_pro\\TaskCore\\TaskCore.csproj",
   "expectedPackageFiles": [
@@ -28,6 +28,8 @@
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\skiasharp.nativeassets.win32\\3.119.0\\skiasharp.nativeassets.win32.3.119.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\skiasharp.views.desktop.common\\3.119.0\\skiasharp.views.desktop.common.3.119.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\skiasharp.views.wpf\\3.119.0\\skiasharp.views.wpf.3.119.0.nupkg.sha512",
+    "C:\\Users\\rishi.joshi\\.nuget\\packages\\system.codedom\\8.0.0\\system.codedom.8.0.0.nupkg.sha512",
+    "C:\\Users\\rishi.joshi\\.nuget\\packages\\system.management\\8.0.0\\system.management.8.0.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.57\\microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512"
   ],
   "logs": []
