@@ -9,7 +9,6 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-using LiveChartsCore.SkiaSharpView.WPF;
 using System;
 using System.Diagnostics;
 using System.Windows;
