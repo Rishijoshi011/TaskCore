@@ -91,11 +91,18 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Row 1 -->
+                        <!-- Row 1 - Basic Info -->
                         <TextBlock Text="Utilization:" Foreground="#999999" FontSize="11" Grid.Column="0" Grid.Row="0" VerticalAlignment="Top"/>
-                        <TextBlock Text="{Binding CurrentUtilization, StringFormat='{}{0:F1}%'}" Foreground="#CCCCCC" FontSize="11" Grid.Column="0" Grid.Row="1" Margin="0 0 0 8" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding CurrentUtilization, StringFormat='{}{0:F1}%'}" Foreground="#8A2BE2" FontSize="11" Grid.Column="0" Grid.Row="1" Margin="0 0 0 8" VerticalAlignment="Top"/>
 
                         <TextBlock Text="Speed:" Foreground="#999999" FontSize="11" Grid.Column="1" Grid.Row="0" VerticalAlignment="Top"/>
                         <TextBlock Text="{Binding CurrentSpeed, StringFormat='{}{0:F2} GHz'}" Foreground="#CCCCCC" FontSize="11" Grid.Column="1" Grid.Row="1" Margin="0 0 0 8" VerticalAlignment="Top"/>
@@ -106,7 +113,7 @@
                         <TextBlock Text="Threads:" Foreground="#999999" FontSize="11" Grid.Column="3" Grid.Row="0" VerticalAlignment="Top"/>
                         <TextBlock Text="{Binding Threads}" Foreground="#CCCCCC" FontSize="11" Grid.Column="3" Grid.Row="1" Margin="0 0 0 8" VerticalAlignment="Top"/>
 
-                        <!-- Row 2 -->
+                        <!-- Row 2 - System Info -->
                         <TextBlock Text="Handles:" Foreground="#999999" FontSize="11" Grid.Column="0" Grid.Row="2" VerticalAlignment="Top"/>
                         <TextBlock Text="{Binding Handles}" Foreground="#CCCCCC" FontSize="11" Grid.Column="0" Grid.Row="3" Margin="0 0 0 8" VerticalAlignment="Top"/>
 
@@ -119,7 +126,7 @@
                         <TextBlock Text="Sockets:" Foreground="#999999" FontSize="11" Grid.Column="3" Grid.Row="2" VerticalAlignment="Top"/>
                         <TextBlock Text="{Binding Sockets}" Foreground="#CCCCCC" FontSize="11" Grid.Column="3" Grid.Row="3" Margin="0 0 0 8" VerticalAlignment="Top"/>
 
-                        <!-- Row 3 -->
+                        <!-- Row 3 - Core Info -->
                         <TextBlock Text="Cores:" Foreground="#999999" FontSize="11" Grid.Column="0" Grid.Row="4" VerticalAlignment="Top"/>
                         <TextBlock Text="{Binding Cores}" Foreground="#CCCCCC" FontSize="11" Grid.Column="0" Grid.Row="5" Margin="0 0 0 8" VerticalAlignment="Top"/>
 
@@ -129,15 +136,51 @@
                         <TextBlock Text="Virtualization:" Foreground="#999999" FontSize="11" Grid.Column="2" Grid.Row="4" VerticalAlignment="Top"/>
                         <TextBlock Text="{Binding Virtualization}" Foreground="#CCCCCC" FontSize="11" Grid.Column="2" Grid.Row="5" Margin="0 0 0 8" VerticalAlignment="Top"/>
 
-                        <TextBlock Text="L1 cache:" Foreground="#999999" FontSize="11" Grid.Column="3" Grid.Row="4" VerticalAlignment="Top"/>
-                        <TextBlock Text="{Binding L1Cache}" Foreground="#CCCCCC" FontSize="11" Grid.Column="3" Grid.Row="5" Margin="0 0 0 8" VerticalAlignment="Top"/>
+                        <TextBlock Text="Architecture:" Foreground="#999999" FontSize="11" Grid.Column="3" Grid.Row="4" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding Architecture}" Foreground="#CCCCCC" FontSize="11" Grid.Column="3" Grid.Row="5" Margin="0 0 0 8" VerticalAlignment="Top"/>
 
-                        <!-- Row 4 (Additional info) -->
-                        <TextBlock Text="L2 cache:" Foreground="#999999" FontSize="11" Grid.Column="0" Grid.Row="6" Margin="0 8 0 0" VerticalAlignment="Top"/>
-                        <TextBlock Text="{Binding L2Cache}" Foreground="#CCCCCC" FontSize="11" Grid.Column="0" Grid.Row="7" Margin="0 0 0 8" VerticalAlignment="Top"/>
+                        <!-- Row 4 - Cache Info -->
+                        <TextBlock Text="L1 Cache:" Foreground="#999999" FontSize="11" Grid.Column="0" Grid.Row="6" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding L1Cache}" Foreground="#CCCCCC" FontSize="11" Grid.Column="0" Grid.Row="7" Margin="0 0 0 8" VerticalAlignment="Top"/>
 
-                        <TextBlock Text="L3 cache:" Foreground="#999999" FontSize="11" Grid.Column="1" Grid.Row="6" Margin="0 8 0 0" VerticalAlignment="Top"/>
-                        <TextBlock Text="{Binding L3Cache}" Foreground="#CCCCCC" FontSize="11" Grid.Column="1" Grid.Row="7" Margin="0 0 0 8" VerticalAlignment="Top"/>
+                        <TextBlock Text="L2 Cache:" Foreground="#999999" FontSize="11" Grid.Column="1" Grid.Row="6" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding L2Cache}" Foreground="#CCCCCC" FontSize="11" Grid.Column="1" Grid.Row="7" Margin="0 0 0 8" VerticalAlignment="Top"/>
+
+                        <TextBlock Text="L3 Cache:" Foreground="#999999" FontSize="11" Grid.Column="2" Grid.Row="6" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding L3Cache}" Foreground="#CCCCCC" FontSize="11" Grid.Column="2" Grid.Row="7" Margin="0 0 0 8" VerticalAlignment="Top"/>
+
+                        <TextBlock Text="Max Speed:" Foreground="#999999" FontSize="11" Grid.Column="3" Grid.Row="6" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding MaxClockSpeed}" Foreground="#CCCCCC" FontSize="11" Grid.Column="3" Grid.Row="7" Margin="0 0 0 8" VerticalAlignment="Top"/>
+
+                        <!-- Row 5 - Manufacturer Info -->
+                        <TextBlock Text="Manufacturer:" Foreground="#999999" FontSize="11" Grid.Column="0" Grid.Row="8" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding Manufacturer}" Foreground="#CCCCCC" FontSize="11" Grid.Column="0" Grid.Row="9" Margin="0 0 0 8" VerticalAlignment="Top"/>
+
+                        <TextBlock Text="Family:" Foreground="#999999" FontSize="11" Grid.Column="1" Grid.Row="8" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding Family}" Foreground="#CCCCCC" FontSize="11" Grid.Column="1" Grid.Row="9" Margin="0 0 0 8" VerticalAlignment="Top"/>
+
+                        <TextBlock Text="Model:" Foreground="#999999" FontSize="11" Grid.Column="2" Grid.Row="8" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding Model}" Foreground="#CCCCCC" FontSize="11" Grid.Column="2" Grid.Row="9" Margin="0 0 0 8" VerticalAlignment="Top"/>
+
+                        <TextBlock Text="Stepping:" Foreground="#999999" FontSize="11" Grid.Column="3" Grid.Row="8" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding Stepping}" Foreground="#CCCCCC" FontSize="11" Grid.Column="3" Grid.Row="9" Margin="0 0 0 8" VerticalAlignment="Top"/>
+
+                        <!-- Row 6 - Advanced Info -->
+                        <TextBlock Text="Level:" Foreground="#999999" FontSize="11" Grid.Column="0" Grid.Row="10" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding Level}" Foreground="#CCCCCC" FontSize="11" Grid.Column="0" Grid.Row="11" Margin="0 0 0 8" VerticalAlignment="Top"/>
+
+                        <TextBlock Text="Revision:" Foreground="#999999" FontSize="11" Grid.Column="1" Grid.Row="10" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding Revision}" Foreground="#CCCCCC" FontSize="11" Grid.Column="1" Grid.Row="11" Margin="0 0 0 8" VerticalAlignment="Top"/>
+
+                        <TextBlock Text="Socket:" Foreground="#999999" FontSize="11" Grid.Column="2" Grid.Row="10" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding SocketDesignation}" Foreground="#CCCCCC" FontSize="11" Grid.Column="2" Grid.Row="11" Margin="0 0 0 8" VerticalAlignment="Top"/>
+
+                        <TextBlock Text="Type:" Foreground="#999999" FontSize="11" Grid.Column="3" Grid.Row="10" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding ProcessorType}" Foreground="#CCCCCC" FontSize="11" Grid.Column="3" Grid.Row="11" Margin="0 0 0 8" VerticalAlignment="Top"/>
+
+                        <!-- Row 7 - CPU Name (spans all columns) -->
+                        <TextBlock Text="CPU Name:" Foreground="#999999" FontSize="11" Grid.Column="0" Grid.Row="12" VerticalAlignment="Top"/>
+                        <TextBlock Text="{Binding CpuName}" Foreground="#8A2BE2" FontSize="11" Grid.Column="0" Grid.ColumnSpan="4" Grid.Row="13" Margin="0 0 0 8" VerticalAlignment="Top" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
                     </Grid>
                 </ScrollViewer>
             </Border>

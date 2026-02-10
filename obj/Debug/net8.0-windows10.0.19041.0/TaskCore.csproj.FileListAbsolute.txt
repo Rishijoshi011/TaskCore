@@ -97,6 +97,7 @@ C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\Skia
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\SkiaSharp.HarfBuzz.dll
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\SkiaSharp.Views.Desktop.Common.dll
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\SkiaSharp.Views.WPF.dll
+C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\System.Management.dll
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\runtimes\win-arm64\native\libHarfBuzzSharp.dll
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\runtimes\win-x64\native\libHarfBuzzSharp.dll
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\runtimes\win-x86\native\libHarfBuzzSharp.dll
@@ -107,15 +108,15 @@ C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\runt
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\runtimes\win-arm64\native\libSkiaSharp.dll
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\runtimes\win-x64\native\libSkiaSharp.dll
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\runtimes\win-x86\native\libSkiaSharp.dll
+C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\runtimes\win\lib\net8.0\System.Management.dll
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\Microsoft.Windows.SDK.NET.dll
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\WinRT.Runtime.dll
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\TaskCore.csproj.AssemblyReference.cache
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Resources\Theme.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\DetailsView.baml
-C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\CpuGraphView.baml
+C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\GraphsView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\DiskGraphView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\GpuGraphView.baml
-C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\MemoryGraphView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\NetworkGraphView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\SettingsView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\App.baml
@@ -134,7 +135,8 @@ C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Gene
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\TaskCore_MarkupCompile.cache
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\TaskCore_MarkupCompile.lref
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\MainWindow.baml
-C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\GraphsView.baml
+C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\CpuGraphView.baml
+C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\MemoryGraphView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\ProcessesView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\TaskCore.g.resources
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\TaskCore.GeneratedMSBuildEditorConfig.editorconfig
@@ -148,5 +150,3 @@ C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\refi
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\TaskCore.pdb
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\TaskCore.genruntimeconfig.cache
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\ref\TaskCore.dll
-C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\System.Management.dll
-C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\runtimes\win\lib\net8.0\System.Management.dll

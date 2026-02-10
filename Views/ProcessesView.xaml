@@ -11,6 +11,7 @@
     <UserControl.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:BoolToArrowConverter x:Key="BoolToArrowConverter"/>
+        <converters:NullToBoolConverter x:Key="NullToBoolConverter"/>
     </UserControl.Resources>
 
     <UserControl.DataContext>
