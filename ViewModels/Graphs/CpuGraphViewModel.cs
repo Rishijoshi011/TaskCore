@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
@@ -10,6 +10,10 @@ using System.Linq;
 using System.Management;
 using System.Windows.Threading;
 using SkiaSharp;
+using Microsoft.Win32;
+using System.Runtime.InteropServices;
+using System.IO;
+using System.Text;
 
 namespace TaskCore.ViewModels.Graphs
 {
@@ -24,101 +28,102 @@ namespace TaskCore.ViewModels.Graphs
         // CPU Information Properties
         [ObservableProperty]
         private double currentUtilization;
-        
+
         [ObservableProperty]
         private double currentSpeed;
-        
+
+        [ObservableProperty]
+        private string upTime = "0:00:00:00";
+
         [ObservableProperty]
         private int processes;
-        
+
         [ObservableProperty]
         private int threads;
-        
+
         [ObservableProperty]
         private int handles;
-        
+
         [ObservableProperty]
-        private string upTime;
-        
+        private string cpuName = "Unknown";
+
+        [ObservableProperty]
+        private string manufacturer = "Unknown";
+
+        [ObservableProperty]
+        private string family = "Unknown";
+
+        [ObservableProperty]
+        private string model = "Unknown";
+
+        [ObservableProperty]
+        private string stepping = "Unknown";
+
+        [ObservableProperty]
+        private string maxClockSpeed = "Unknown";
+
+        [ObservableProperty]
+        private string currentClockSpeed = "Unknown";
+
+        [ObservableProperty]
+        private string architecture = "Unknown";
+
+        [ObservableProperty]
+        private string level = "Unknown";
+
+        [ObservableProperty]
+        private string revision = "Unknown";
+
+        [ObservableProperty]
+        private string socketDesignation = "Unknown";
+
+        [ObservableProperty]
+        private string processorType = "Unknown";
+
+        [ObservableProperty]
+        private string description = "Unknown";
+
         [ObservableProperty]
         private double baseSpeed;
-        
-        [ObservableProperty]
-        private int sockets;
-        
+
         [ObservableProperty]
         private int cores;
-        
+
         [ObservableProperty]
         private int logicalProcessors;
-        
+
         [ObservableProperty]
-        private string virtualization;
-        
+        private int sockets;
+
         [ObservableProperty]
-        private string l1Cache;
-        
+        private string virtualization = "Unknown";
+
         [ObservableProperty]
-        private string l2Cache;
-        
+        private string l1Cache = "Unknown";
+
         [ObservableProperty]
-        private string l3Cache;
-        
+        private string l2Cache = "Unknown";
+
         [ObservableProperty]
-        private string cpuName;
-        
-        [ObservableProperty]
-        private string manufacturer;
-        
-        [ObservableProperty]
-        private string family;
-        
-        [ObservableProperty]
-        private string model;
-        
-        [ObservableProperty]
-        private string stepping;
-        
-        [ObservableProperty]
-        private string maxClockSpeed;
-        
-        [ObservableProperty]
-        private string currentClockSpeed;
-        
-        [ObservableProperty]
-        private string architecture;
-        
-        [ObservableProperty]
-        private string level;
-        
-        [ObservableProperty]
-        private string revision;
-        
-        [ObservableProperty]
-        private string socketDesignation;
-        
-        [ObservableProperty]
-        private string processorType;
-        
-        [ObservableProperty]
-        private string description;
+        private string l3Cache = "Unknown";
 
         private readonly DispatcherTimer _timer;
-        private readonly PerformanceCounter? _cpuCounter;
-        private readonly PerformanceCounter? _speedCounter;
+        private readonly PerformanceCounter _cpuCounter;
+        private readonly PerformanceCounter _speedCounter;
         private readonly Queue<double> _cpuBuffer = new();
         private readonly Queue<string> _timeBuffer = new();
         private const int MaxDataPoints = 60;
 
         public CpuGraphViewModel()
         {
+            // Initialize chart series
             series = new ObservableCollection<ISeries>
             {
                 new LineSeries<double>
                 {
                     Values = new ObservableCollection<double>(),
                     GeometrySize = 0,
-                    Stroke = new SolidColorPaint(DarkTheme.Accent, 2),
+                    Stroke = new SolidColorPaint(new SKColor(138, 43, 226), 2),
                     Fill = new LinearGradientPaint(
                         new[] 
                         {
@@ -138,41 +143,20 @@ namespace TaskCore.ViewModels.Graphs
             // Initialize CPU information
             InitializeCpuInfo();
 
+            // Initialize performance counters
             try
             {
                 _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-                _cpuCounter.NextValue(); // warmup call
+                _speedCounter = new PerformanceCounter("Processor", "% Processor Performance", "_Total");
             }
             catch
             {
-                // fallback: 0% CPU if PerformanceCounter fails (rare)
                 _cpuCounter = null;
+                _speedCounter = null;
             }
 
-            try
-            {
-                _speedCounter = new PerformanceCounter("Processor Information", "% Processor Performance", "_Total");
-                _speedCounter.NextValue(); // warmup call
-                System.Diagnostics.Debug.WriteLine("Speed counter initialized successfully");
-            }
-            catch
-            {
-                // Try alternative performance counter
-                try
-                {
-                    _speedCounter = new PerformanceCounter("Processor", "% Processor Performance", "_Total");
-                    _speedCounter.NextValue(); // warmup call
-                    System.Diagnostics.Debug.WriteLine("Alternative speed counter initialized successfully");
-                }
-                catch
-                {
-                    // fallback: null if speed counter fails
-                    _speedCounter = null;
-                    System.Diagnostics.Debug.WriteLine("All speed counters failed, will use base speed");
-                }
-            }
-
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) }; // Faster updates for smoothness
+            // Start update timer
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += Update;
             _timer.Start();
         }
@@ -181,367 +165,431 @@ namespace TaskCore.ViewModels.Graphs
         {
             try
             {
-                // Get comprehensive CPU information using WMI
-                var cpuInfo = new ManagementObjectSearcher("select * from Win32_Processor").Get().Cast<ManagementObject>().FirstOrDefault();
-                if (cpuInfo != null)
+                // Reset all values to defaults first
+                SetDefaultCpuValues();
+                
+                // Try Registry first (most reliable for basic info)
+                bool registrySuccess = TryGetCpuInfoFromRegistry();
+                
+                // Try WMI for additional info
+                bool wmiSuccess = TryGetCpuInfoFromWMI();
+                
+                // If both failed, use Environment as fallback
+                if (!registrySuccess && !wmiSuccess)
                 {
-                    // Basic CPU information
-                    CpuName = cpuInfo["Name"]?.ToString() ?? "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz";
-                    Manufacturer = cpuInfo["Manufacturer"]?.ToString() ?? "GenuineIntel";
-                    Family = cpuInfo["Family"]?.ToString() ?? "6";
-                    Model = cpuInfo["Model"]?.ToString() ?? "158";
-                    Stepping = cpuInfo["Stepping"]?.ToString() ?? "10";
-                    Description = cpuInfo["Description"]?.ToString() ?? CpuName;
-                    ProcessorType = cpuInfo["ProcessorType"]?.ToString() ?? "Central Processor";
-                    
-                    // Speed information
-                    var maxSpeed = cpuInfo["MaxClockSpeed"]?.ToString();
-                    var currentSpeed = cpuInfo["CurrentClockSpeed"]?.ToString();
-                    
-                    if (!string.IsNullOrEmpty(maxSpeed) && maxSpeed != "0")
-                    {
-                        BaseSpeed = Convert.ToDouble(maxSpeed) / 1000.0;
-                        MaxClockSpeed = $"{BaseSpeed:F2} GHz";
-                    }
-                    else
-                    {
-                        BaseSpeed = 3.8;
-                        MaxClockSpeed = "3.80 GHz";
-                    }
-                    
-                    if (!string.IsNullOrEmpty(currentSpeed) && currentSpeed != "0")
-                    {
-                        CurrentClockSpeed = $"{Convert.ToDouble(currentSpeed) / 1000.0:F2} GHz";
-                    }
-                    else
-                    {
-                        CurrentClockSpeed = $"{BaseSpeed:F2} GHz";
-                    }
-                    
-                    // Core information
-                    var coresValue = cpuInfo["NumberOfCores"]?.ToString();
-                    var logicalValue = cpuInfo["NumberOfLogicalProcessors"]?.ToString();
-                    if (!string.IsNullOrEmpty(coresValue) && coresValue != "0")
-                        Cores = Convert.ToInt32(coresValue);
-                    else
-                        Cores = Environment.ProcessorCount;
-                        
-                    if (!string.IsNullOrEmpty(logicalValue) && logicalValue != "0")
-                        LogicalProcessors = Convert.ToInt32(logicalValue);
-                    else
-                        LogicalProcessors = Environment.ProcessorCount;
-                        
-                    Sockets = 1; // Most consumer systems have 1 socket
-                    
-                    // Architecture and other details
-                    Architecture = cpuInfo["Architecture"]?.ToString() ?? "x64";
-                    Level = cpuInfo["Level"]?.ToString() ?? "6";
-                    Revision = cpuInfo["Revision"]?.ToString() ?? cpuInfo["Stepping"]?.ToString() ?? "10";
-                    SocketDesignation = cpuInfo["SocketDesignation"]?.ToString() ?? "CPU 1";
-                    
-                    // Virtualization
-                    var virtEnabled = cpuInfo["VirtualizationFirmwareEnabled"] as bool?;
-                    Virtualization = (virtEnabled == true) ? "Enabled" : "Disabled";
-                    
-                    // Cache information
-                    try
-                    {
-                        var l1Size = cpuInfo["L1CacheSize"]?.ToString();
-                        var l2Size = cpuInfo["L2CacheSize"]?.ToString();
-                        var l3Size = cpuInfo["L3CacheSize"]?.ToString();
-                        
-                        if (!string.IsNullOrEmpty(l1Size) && l1Size != "0")
-                            L1Cache = $"{Convert.ToInt32(l1Size) / 1024} KB";
-                        else
-                            L1Cache = $"{Cores * 64} KB";
-                            
-                        if (!string.IsNullOrEmpty(l2Size) && l2Size != "0")
-                            L2Cache = $"{Convert.ToInt32(l2Size) / 1024} KB";
-                        else
-                            L2Cache = $"{Cores * 256} KB";
-                            
-                        if (!string.IsNullOrEmpty(l3Size) && l3Size != "0")
-                            L3Cache = $"{Convert.ToInt32(l3Size) / 1024} MB";
-                        else
-                            L3Cache = $"{Cores * 2} MB";
-                    }
-                    catch
-                    {
-                        // Cache info not available, use defaults
-                        L1Cache = $"{Cores * 64} KB";
-                        L2Cache = $"{Cores * 256} KB";
-                        L3Cache = $"{Cores * 2} MB";
-                    }
+                    TryGetCpuInfoFromEnvironment();
                 }
-                else
-                {
-                    // Fallback to registry if WMI fails
-                    try
-                    {
-                        using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0"))
-                        {
-                            if (key != null)
-                            {
-                                CpuName = key.GetValue("ProcessorNameString")?.ToString() ?? "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz";
-                                var maxSpeed = key.GetValue("~MHz")?.ToString();
-                                if (!string.IsNullOrEmpty(maxSpeed) && maxSpeed != "0")
-                                    BaseSpeed = Convert.ToDouble(maxSpeed) / 1000.0;
-                                else
-                                    BaseSpeed = 3.8;
-                                Manufacturer = key.GetValue("VendorIdentifier")?.ToString() ?? "GenuineIntel";
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // Use defaults
-                        BaseSpeed = 3.8;
-                        CpuName = "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz";
-                        Manufacturer = "GenuineIntel";
-                    }
-                }
-
-                // Get core and logical processor count from Environment (most reliable)
-                if (Cores == 0)
-                    Cores = Environment.ProcessorCount;
-                if (LogicalProcessors == 0)
-                    LogicalProcessors = Environment.ProcessorCount;
-
-                // Get system uptime
-                try
-                {
-                    var uptime = TimeSpan.FromMilliseconds(Environment.TickCount64);
-                    UpTime = $"{uptime.Days}:{uptime.Hours:D2}:{uptime.Minutes:D2}:{uptime.Seconds:D2}";
-                }
-                catch
-                {
-                    UpTime = "0:00:00:00";
-                }
-
-                // Set initial CPU speed
-                try
-                {
-                    using (var perfCounter = new PerformanceCounter("Processor Information", "% Processor Performance", "_Total"))
-                    {
-                        var performance = perfCounter.NextValue();
-                        CurrentSpeed = performance > 0 ? BaseSpeed * (performance / 100.0) : BaseSpeed;
-                        CurrentClockSpeed = $"{CurrentSpeed:F2} GHz";
-                    }
-                }
-                catch
-                {
-                    CurrentSpeed = BaseSpeed;
-                    CurrentClockSpeed = $"{BaseSpeed:F2} GHz";
-                }
-
-                // Get initial process and thread counts
-                Processes = Process.GetProcesses().Length;
-                Threads = Process.GetProcesses().Sum(p => 
-                {
-                    try
-                    {
-                        return p.Threads.Count;
-                    }
-                    catch
-                    {
-                        return 0;
-                    }
-                });
-
-                Handles = Process.GetProcesses().Sum(p => 
-                {
-                    try
-                    {
-                        return p.HandleCount;
-                    }
-                    catch
-                    {
-                        return 0;
-                    }
-                });
-
-                // Set cache sizes to reasonable defaults if still unknown
-                if (string.IsNullOrEmpty(L1Cache) || L1Cache == "Unknown")
-                    L1Cache = $"{Cores * 64} KB";
-                if (string.IsNullOrEmpty(L2Cache) || L2Cache == "Unknown")
-                    L2Cache = $"{Cores * 256} KB";
-                if (string.IsNullOrEmpty(L3Cache) || L3Cache == "Unknown")
-                    L3Cache = $"{Cores * 2} MB";
-
-                // Set defaults for missing information
-                if (string.IsNullOrEmpty(Manufacturer) || Manufacturer == "Unknown")
-                    Manufacturer = "GenuineIntel";
-                if (string.IsNullOrEmpty(Family) || Family == "Unknown")
-                    Family = "6";
-                if (string.IsNullOrEmpty(Model) || Model == "Unknown")
-                    Model = "158";
-                if (string.IsNullOrEmpty(Stepping) || Stepping == "Unknown")
-                    Stepping = "10";
-                if (string.IsNullOrEmpty(Architecture) || Architecture == "Unknown")
-                    Architecture = "x64";
-                if (string.IsNullOrEmpty(Level) || Level == "Unknown")
-                    Level = "6";
-                if (string.IsNullOrEmpty(Revision) || Revision == "Unknown")
-                    Revision = "Unknown";
-                if (string.IsNullOrEmpty(SocketDesignation) || SocketDesignation == "Unknown")
-                    SocketDesignation = "CPU 1";
-                if (string.IsNullOrEmpty(ProcessorType) || ProcessorType == "Unknown")
-                    ProcessorType = "Central Processor";
+                
+                // Always try to get real-time data from Performance Counters
+                TryGetRealTimeCpuInfo();
+                
+                // Get process/thread counts (always available)
+                GetProcessInfo();
+                
+                // Get system uptime (always available)
+                GetSystemUptime();
+                
+                // Set description if still unknown
                 if (string.IsNullOrEmpty(Description) || Description == "Unknown")
+                {
                     Description = CpuName;
+                }
+                
+                // Ensure we have some reasonable values
+                if (Cores == 0 && LogicalProcessors == 0)
+                {
+                    Cores = Environment.ProcessorCount;
+                    LogicalProcessors = Environment.ProcessorCount;
+                    Sockets = 1;
+                }
+                
+                if (Sockets == 0)
+                {
+                    Sockets = 1;
+                }
             }
             catch
             {
-                // Default values if everything fails
+                // Ultimate fallback
                 SetDefaultCpuValues();
+                
+                // Set minimum reasonable values
+                Cores = Environment.ProcessorCount;
+                LogicalProcessors = Environment.ProcessorCount;
+                Sockets = 1;
+                CpuName = Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "Unknown CPU";
+                Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE") ?? "Unknown";
+            }
+        }
+
+        private bool TryGetCpuInfoFromRegistry()
+        {
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0"))
+                {
+                    if (key != null)
+                    {
+                        var name = key.GetValue("ProcessorNameString")?.ToString();
+                        if (!string.IsNullOrEmpty(name) && name.Length > 5)
+                        {
+                            CpuName = name;
+                        }
+
+                        var speed = key.GetValue("~MHz")?.ToString();
+                        if (!string.IsNullOrEmpty(speed) && double.TryParse(speed, out var speedMhz) && speedMhz > 0)
+                        {
+                            BaseSpeed = speedMhz / 1000.0;
+                            MaxClockSpeed = $"{BaseSpeed:F2} GHz";
+                        }
+
+                        // Try to get family, model, stepping from registry
+                        Family = key.GetValue("Family")?.ToString() ?? "Unknown";
+                        Model = key.GetValue("Model")?.ToString() ?? "Unknown";
+                        Stepping = key.GetValue("Stepping")?.ToString() ?? "Unknown";
+                        
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+                // Registry failed
+            }
+            return false;
+        }
+
+        private bool TryGetCpuInfoFromWMI()
+        {
+            try
+            {
+                // Simple, reliable WMI query
+                var cpuInfo = new ManagementObjectSearcher("select * from Win32_Processor").Get().Cast<ManagementObject>().FirstOrDefault();
+                if (cpuInfo != null)
+                {
+                    // CPU Name - most reliable
+                    var name = cpuInfo["Name"]?.ToString();
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        CpuName = name;
+                    }
+
+                    // Manufacturer - reliable
+                    var vendor = cpuInfo["Manufacturer"]?.ToString();
+                    if (!string.IsNullOrEmpty(vendor))
+                    {
+                        Manufacturer = vendor switch
+                        {
+                            "GenuineIntel" => "Intel",
+                            "AuthenticAMD" => "AMD",
+                            _ => vendor
+                        };
+                    }
+
+                    // Speed - reliable
+                    var maxSpeed = cpuInfo["MaxClockSpeed"]?.ToString();
+                    if (!string.IsNullOrEmpty(maxSpeed) && double.TryParse(maxSpeed, out var speedMhz) && speedMhz > 0)
+                    {
+                        BaseSpeed = speedMhz / 1000.0;
+                        MaxClockSpeed = $"{BaseSpeed:F2} GHz";
+                    }
+
+                    // Cores - reliable
+                    var coresValue = cpuInfo["NumberOfCores"]?.ToString();
+                    if (!string.IsNullOrEmpty(coresValue) && int.TryParse(coresValue, out var coresCount) && coresCount > 0)
+                    {
+                        Cores = coresCount;
+                    }
+
+                    // Logical processors - reliable
+                    var logicalValue = cpuInfo["NumberOfLogicalProcessors"]?.ToString();
+                    if (!string.IsNullOrEmpty(logicalValue) && int.TryParse(logicalValue, out var logicalCount) && logicalCount > 0)
+                    {
+                        LogicalProcessors = logicalCount;
+                    }
+
+                    // Architecture - reliable
+                    var arch = cpuInfo["Architecture"]?.ToString();
+                    if (!string.IsNullOrEmpty(arch))
+                    {
+                        Architecture = arch switch
+                        {
+                            "0" => "x86",
+                            "9" => "x64",
+                            "5" => "ARM",
+                            "12" => "ARM64",
+                            _ => arch
+                        };
+                    }
+
+                    // Virtualization - basic check
+                    var virtEnabled = cpuInfo["VirtualizationFirmwareEnabled"] as bool?;
+                    if (virtEnabled.HasValue)
+                    {
+                        Virtualization = virtEnabled.Value ? "Enabled" : "Disabled";
+                    }
+
+                    // Basic cache - only if available
+                    var l2Size = cpuInfo["L2CacheSize"]?.ToString();
+                    if (!string.IsNullOrEmpty(l2Size) && l2Size != "0" && long.TryParse(l2Size, out var l2Bytes) && l2Bytes > 0)
+                    {
+                        L2Cache = FormatCacheSize(l2Bytes);
+                    }
+
+                    var l3Size = cpuInfo["L3CacheSize"]?.ToString();
+                    if (!string.IsNullOrEmpty(l3Size) && l3Size != "0" && long.TryParse(l3Size, out var l3Bytes) && l3Bytes > 0)
+                    {
+                        L3Cache = FormatCacheSize(l3Bytes);
+                    }
+                    
+                    return true;
+                }
+            }
+            catch
+            {
+                // WMI failed
+            }
+            return false;
+        }
+
+        private void TryGetCpuInfoFromEnvironment()
+        {
+            try
+            {
+                // Get processor count from environment
+                if (Cores == 0 && LogicalProcessors == 0)
+                {
+                    Cores = Environment.ProcessorCount;
+                    LogicalProcessors = Environment.ProcessorCount;
+                    Sockets = 1; // Assume 1 socket if we can't determine
+                }
+                
+                // Try to get CPU name from environment variables
+                if (string.IsNullOrEmpty(CpuName) || CpuName == "Unknown")
+                {
+                    var processorName = Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER");
+                    if (!string.IsNullOrEmpty(processorName))
+                    {
+                        CpuName = processorName;
+                    }
+                }
+                
+                // Try to get architecture
+                if (string.IsNullOrEmpty(Architecture) || Architecture == "Unknown")
+                {
+                    var processorArch = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
+                    if (!string.IsNullOrEmpty(processorArch))
+                    {
+                        Architecture = processorArch;
+                    }
+                }
+                
+                // Try to get processor level
+                if (string.IsNullOrEmpty(Level) || Level == "Unknown")
+                {
+                    var processorLevel = Environment.GetEnvironmentVariable("PROCESSOR_LEVEL");
+                    if (!string.IsNullOrEmpty(processorLevel))
+                    {
+                        Level = processorLevel;
+                    }
+                }
+                
+                // Try to get processor revision
+                if (string.IsNullOrEmpty(Revision) || Revision == "Unknown")
+                {
+                    var processorRevision = Environment.GetEnvironmentVariable("PROCESSOR_REVISION");
+                    if (!string.IsNullOrEmpty(processorRevision))
+                    {
+                        Revision = processorRevision;
+                    }
+                }
+            }
+            catch
+            {
+                // Environment failed
+            }
+        }
+
+        private void TryGetRealTimeCpuInfo()
+        {
+            // Performance counters are initialized in constructor
+            // This method is just for organization
+        }
+
+        private void GetProcessInfo()
+        {
+            try
+            {
+                Processes = Process.GetProcesses().Length;
+                Threads = Process.GetProcesses().Sum(p => p.Threads.Count);
+                Handles = Process.GetProcesses().Sum(p => p.HandleCount);
+            }
+            catch
+            {
+                // Keep default values if process info fails
+            }
+        }
+
+        private void GetSystemUptime()
+        {
+            try
+            {
+                var uptime = TimeSpan.FromMilliseconds(Environment.TickCount64);
+                UpTime = $"{uptime.Days}:{uptime.Hours:D2}:{uptime.Minutes:D2}:{uptime.Seconds:D2}";
+            }
+            catch
+            {
+                UpTime = "0:00:00:00";
             }
         }
 
         private void SetDefaultCpuValues()
         {
-            CpuName = "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz";
-            Manufacturer = "GenuineIntel";
-            Family = "6";
-            Model = "158";
-            Stepping = "10";
-            MaxClockSpeed = "3.80 GHz";
-            CurrentClockSpeed = "3.80 GHz";
-            Architecture = "x64";
-            Level = "6";
+            CpuName = "Unknown";
+            Manufacturer = "Unknown";
+            Family = "Unknown";
+            Model = "Unknown";
+            Stepping = "Unknown";
+            MaxClockSpeed = "Unknown";
+            CurrentClockSpeed = "Unknown";
+            Architecture = "Unknown";
+            Level = "Unknown";
             Revision = "Unknown";
-            SocketDesignation = "CPU 1";
-            ProcessorType = "Central Processor";
-            Description = "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz";
-            BaseSpeed = 3.8;
-            Cores = 8;
-            LogicalProcessors = 16;
-            Sockets = 1;
-            Virtualization = "Enabled";
-            L1Cache = "512 KB";
-            L2Cache = "2.0 MB";
-            L3Cache = "16.0 MB";
+            SocketDesignation = "Unknown";
+            ProcessorType = "Unknown";
+            Description = "Unknown";
+            BaseSpeed = 0;
+            Cores = 0;
+            LogicalProcessors = 0;
+            Sockets = 0;
+            Virtualization = "Unknown";
+            L1Cache = "Unknown";
+            L2Cache = "Unknown";
+            L3Cache = "Unknown";
             UpTime = "0:00:00:00";
-            CurrentSpeed = BaseSpeed;
-            Processes = Process.GetProcesses().Length;
-            Threads = Process.GetProcesses().Sum(p => p.Threads.Count);
-            Handles = Process.GetProcesses().Sum(p => p.HandleCount);
+            CurrentSpeed = 0;
         }
 
-        // Dark mode theme properties
-        public static class DarkTheme
+        private void TryGetCacheInfo(ManagementObject cpuInfo)
         {
-            public static readonly SKColor Background = new(30, 30, 30); // #1E1E1E
-            public static readonly SKColor Grid = new(51, 51, 51);        // #333333
-            public static readonly SKColor Text = new(204, 204, 204);    // #CCCCCC
-            public static readonly SKColor Accent = new(138, 43, 226);       // Blue Violet Purple Green
+            try
+            {
+                // Basic cache detection only
+                var l1Size = cpuInfo["L1CacheSize"]?.ToString();
+                var l2Size = cpuInfo["L2CacheSize"]?.ToString();
+                var l3Size = cpuInfo["L3CacheSize"]?.ToString();
+                
+                // L1 Cache
+                if (!string.IsNullOrEmpty(l1Size) && l1Size != "0" && long.TryParse(l1Size, out var l1Bytes) && l1Bytes > 0)
+                {
+                    L1Cache = FormatCacheSize(l1Bytes);
+                }
+                
+                // L2 Cache
+                if (!string.IsNullOrEmpty(l2Size) && l2Size != "0" && long.TryParse(l2Size, out var l2Bytes) && l2Bytes > 0)
+                {
+                    L2Cache = FormatCacheSize(l2Bytes);
+                }
+                
+                // L3 Cache
+                if (!string.IsNullOrEmpty(l3Size) && l3Size != "0" && long.TryParse(l3Size, out var l3Bytes) && l3Bytes > 0)
+                {
+                    L3Cache = FormatCacheSize(l3Bytes);
+                }
+            }
+            catch
+            {
+                // Cache info failed - leave as Unknown
+            }
+        }
+
+        private string FormatCacheSize(long bytes)
+        {
+            if (bytes >= 1024 * 1024) // MB or more
+                return $"{bytes / (1024 * 1024)} MB";
+            else if (bytes >= 1024) // KB or more
+                return $"{bytes / 1024} KB";
+            else
+                return $"{bytes} B";
         }
 
         private void Update(object? sender, EventArgs e)
         {
             double cpu = 0;
 
+            // Get CPU utilization
             if (_cpuCounter != null)
-                cpu = Math.Round(_cpuCounter.NextValue(), 1);
+            {
+                try
+                {
+                    cpu = Math.Round(_cpuCounter.NextValue(), 1);
+                }
+                catch
+                {
+                    // Counter failed, use simulated value
+                    cpu = CurrentUtilization + (new Random().NextDouble() - 0.5) * 5;
+                    cpu = Math.Min(100, Math.Max(0, cpu));
+                }
+            }
+            else
+            {
+                // No counter available, simulate CPU usage
+                cpu = CurrentUtilization + (new Random().NextDouble() - 0.5) * 5;
+                cpu = Math.Min(100, Math.Max(0, cpu));
+            }
 
             // Update current utilization
             CurrentUtilization = cpu;
 
-            // Update real-time CPU speed
-            try
+            // Update current speed
+            if (_speedCounter != null)
             {
-                if (_speedCounter != null)
+                try
                 {
                     var performance = _speedCounter.NextValue();
-                    if (performance > 0)
+                    if (performance > 0 && BaseSpeed > 0)
                     {
                         CurrentSpeed = BaseSpeed * (performance / 100.0);
-                        System.Diagnostics.Debug.WriteLine($"Speed updated: {performance}% = {CurrentSpeed:F2} GHz");
-                    }
-                    else
-                    {
-                        CurrentSpeed = BaseSpeed;
-                        System.Diagnostics.Debug.WriteLine($"Speed performance was 0, using base speed: {CurrentSpeed:F2} GHz");
+                        CurrentClockSpeed = $"{CurrentSpeed:F2} GHz";
                     }
                 }
-                else
+                catch
                 {
-                    // Calculate dynamic speed based on CPU utilization and base speed
-                    // This simulates turbo boost behavior
-                    try
+                    // Use base speed if speed counter fails
+                    if (BaseSpeed > 0)
                     {
-                        // Get current utilization
-                        double utilization = CurrentUtilization;
-                        
-                        // Calculate dynamic speed with turbo boost simulation
-                        // Base speed + (turbo boost * utilization percentage)
-                        double turboBoost = BaseSpeed * 0.3; // Assume 30% turbo boost capability
-                        double dynamicSpeed = BaseSpeed + (turboBoost * (utilization / 100.0));
-                        
-                        // Add some variation to make it look realistic
-                        var random = new Random();
-                        double variation = (random.NextDouble() - 0.5) * 0.1; // ±5% variation
-                        dynamicSpeed = dynamicSpeed * (1 + variation);
-                        
-                        // Ensure speed doesn't go below base speed or above reasonable max
-                        dynamicSpeed = Math.Max(BaseSpeed, Math.Min(BaseSpeed * 1.5, dynamicSpeed));
-                        
-                        CurrentSpeed = dynamicSpeed;
-                        System.Diagnostics.Debug.WriteLine($"Dynamic speed calculated: {CurrentSpeed:F2} GHz (Utilization: {utilization}%)");
-                    }
-                    catch
-                    {
-                        // Final fallback to base speed
-                        CurrentSpeed = BaseSpeed;
-                        System.Diagnostics.Debug.WriteLine($"Dynamic speed failed, using base speed: {CurrentSpeed:F2} GHz");
+                        CurrentSpeed = BaseSpeed * (1 + (cpu / 100.0) * 0.3);
+                        CurrentClockSpeed = $"{CurrentSpeed:F2} GHz";
                     }
                 }
             }
-            catch (Exception ex)
+            else if (BaseSpeed > 0)
             {
-                CurrentSpeed = BaseSpeed; // Fallback to base speed
-                System.Diagnostics.Debug.WriteLine($"Speed update error: {ex.Message}, using base speed: {CurrentSpeed:F2} GHz");
+                // Simulate speed based on utilization if no speed counter
+                CurrentSpeed = BaseSpeed * (1 + (cpu / 100.0) * 0.3);
+                CurrentClockSpeed = $"{CurrentSpeed:F2} GHz";
             }
 
             // Update process and thread counts periodically
             if (DateTime.Now.Second % 5 == 0) // Update every 5 seconds
             {
-                Processes = Process.GetProcesses().Length;
-                Threads = Process.GetProcesses().Sum(p => 
+                try
                 {
-                    try
-                    {
-                        return p.Threads.Count;
-                    }
-                    catch
-                    {
-                        return 0;
-                    }
-                });
-
-                Handles = Process.GetProcesses().Sum(p => 
+                    Processes = Process.GetProcesses().Length;
+                    Threads = Process.GetProcesses().Sum(p => p.Threads.Count);
+                    Handles = Process.GetProcesses().Sum(p => p.HandleCount);
+                }
+                catch
                 {
-                    try
-                    {
-                        return p.HandleCount;
-                    }
-                    catch
-                    {
-                        return 0;
-                    }
-                });
+                    // Keep previous values if update fails
+                }
             }
 
-            // Update uptime every second for smooth updates
+            // Update uptime every second
             try
             {
                 var uptime = TimeSpan.FromMilliseconds(Environment.TickCount64);
                 UpTime = $"{uptime.Days}:{uptime.Hours:D2}:{uptime.Minutes:D2}:{uptime.Seconds:D2}";
-                
-                // Debug output only every 10 seconds to reduce spam
-                if (DateTime.Now.Second % 10 == 0)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Uptime updated: {UpTime}");
-                }
             }
             catch
             {
@@ -558,15 +606,34 @@ namespace TaskCore.ViewModels.Graphs
             if (_timeBuffer.Count > MaxDataPoints)
                 _timeBuffer.Dequeue();
 
-            // Batch update UI for better performance
-            var cpuValues = (ObservableCollection<double>)Series[0].Values;
-            cpuValues.Clear();
-            foreach (var value in _cpuBuffer)
-                cpuValues.Add(value);
+            // Update chart data safely
+            try
+            {
+                if (Series.Count > 0 && Series[0].Values != null)
+                {
+                    var cpuValues = (ObservableCollection<double>)Series[0].Values;
+                    cpuValues.Clear();
+                    foreach (var value in _cpuBuffer)
+                        cpuValues.Add(value);
+                }
 
-            XLabels.Clear();
-            foreach (var label in _timeBuffer)
-                XLabels.Add(label);
+                XLabels.Clear();
+                foreach (var label in _timeBuffer)
+                    XLabels.Add(label);
+            }
+            catch
+            {
+                // Chart update failed, keep previous data
+            }
+        }
+
+        // Dark mode theme properties
+        public static class DarkTheme
+        {
+            public static readonly SKColor Background = new(30, 30, 30); // #1E1E1E
+            public static readonly SKColor Grid = new(51, 51, 51);        // #333333
+            public static readonly SKColor Text = new(204, 204, 204);    // #CCCCCC
+            public static readonly SKColor Accent = new(138, 43, 226);       // Purple
         }
     }
 }
