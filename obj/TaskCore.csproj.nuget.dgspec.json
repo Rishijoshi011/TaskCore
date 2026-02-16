@@ -54,6 +54,10 @@
               "target": "Package",
               "version": "[8.4.0, )"
             },
+            "LibreHardwareMonitorLib": {
+              "target": "Package",
+              "version": "[0.9.4, )"
+            },
             "LiveChartsCore": {
               "target": "Package",
               "version": "[2.0.0-rc6.1, )"
@@ -66,13 +70,9 @@
               "target": "Package",
               "version": "[2.0.0-rc6.1, )"
             },
-            "Microsoft.VisualBasic": {
-              "target": "Package",
-              "version": "[10.3.0, )"
-            },
             "System.Management": {
               "target": "Package",
-              "version": "[8.0.0, )"
+              "version": "[9.0.0, )"
             }
           },
           "imports": [
