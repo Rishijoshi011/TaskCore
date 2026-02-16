@@ -1,8 +1,13 @@
 ﻿<UserControl x:Class="TaskCore.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:TaskCore.ViewModels"
              Background="{StaticResource BackgroundPrimary}"
              Padding="20">
+
+    <UserControl.DataContext>
+        <vm:SettingsViewModel/>
+    </UserControl.DataContext>
 
     <Grid>
 
@@ -25,17 +30,272 @@
                 VerticalAlignment="Stretch"
                 HorizontalAlignment="Stretch">
 
-            <Grid>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
 
-                <TextBlock Text="Watchdog settings and preferences will appear here..."
-                           Foreground="{StaticResource TextSecondary}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           FontSize="16"
-                           Opacity="0.8"
-                           TextWrapping="Wrap"/>
+                    <TextBlock Text="Application Settings" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0 0 0 10"/>
 
-            </Grid>
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Auto-Start with Windows" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <TextBlock Text="Adds/removes registry startup entry" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutoStartWithWindows}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="220"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Refresh Interval" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <TextBlock Text="Controls how often graphs/process list refresh" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding RefreshIntervals}"
+                                  SelectedValuePath="ValueMs"
+                                  DisplayMemberPath="Label"
+                                  SelectedValue="{Binding RefreshIntervalMs}"
+                                  Height="28"
+                                  Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Prefer Admin for Protected Actions" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <TextBlock Text="When needed (e.g., killing protected processes), you can relaunch elevated" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10 0 0 0">
+                            <ToggleButton IsChecked="{Binding PreferAdminForProtectedActions}" Style="{StaticResource GreenSwitchToggle}"/>
+                            <Button Content="Relaunch as Admin" Command="{Binding RelaunchAsAdminCommand}" Height="28" Margin="10 0 0 0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Separator Margin="0 0 0 20"/>
+
+                    <TextBlock Text="Watchdog Advanced Controls" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0 0 0 10"/>
+
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Watchdog Enabled" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <TextBlock Text="Start/Stop watchdog actions (alert/log/kill)" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding WatchdogEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="220"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Watchdog Mode" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <TextBlock Text="Alert Only / Auto Kill / Log Only" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding WatchdogModes}"
+                                  SelectedItem="{Binding WatchdogMode}"
+                                  Height="28"
+                                  Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Watchdog Logging" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <TextBlock Text="Writes to /Logs/watchdog_log.txt" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding WatchdogLoggingEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Sound Alert" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <TextBlock Text="Enable/Disable sound alert" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding WatchdogSoundAlertEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Separator Margin="0 20 0 20"/>
+
+                    <TextBlock Text="Watchdog Targets" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0 0 0 10"/>
+
+                    <Grid Margin="0 0 0 10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox Grid.Column="0"
+                                 Height="32"
+                                 Padding="6"
+                                 Text="{Binding WatchdogProcessSearch, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="{StaticResource BackgroundSecondary}"
+                                 Foreground="{StaticResource TextPrimary}"
+                                 BorderBrush="{StaticResource AccentBrush}"
+                                 VerticalContentAlignment="Center"/>
+
+                        <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshWatchdogProcessListCommand}" Height="32" Margin="10 0 0 0" Style="{StaticResource SmallActionButton}"/>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="200"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="Running Processes" Foreground="{StaticResource TextSecondary}" FontSize="12" Grid.Column="0" Grid.Row="0" Margin="0 0 0 6"/>
+                        <TextBlock Text="Watched" Foreground="{StaticResource TextSecondary}" FontSize="12" Grid.Column="1" Grid.Row="0" Margin="0 0 0 6"/>
+
+                        <ListBox Grid.Column="0" Grid.Row="1"
+                                 ItemsSource="{Binding WatchdogAvailableProcesses}"
+                                 SelectedItem="{Binding SelectedAvailableProcess}"
+                                 Background="{StaticResource BackgroundSecondary}"
+                                 Foreground="{StaticResource TextPrimary}"
+                                 BorderBrush="{StaticResource BackgroundCard}"/>
+
+                        <ListBox Grid.Column="1" Grid.Row="1"
+                                 ItemsSource="{Binding WatchdogWatchedProcesses}"
+                                 SelectedItem="{Binding SelectedWatchedProcess}"
+                                 Background="{StaticResource BackgroundSecondary}"
+                                 Foreground="{StaticResource TextPrimary}"
+                                 BorderBrush="{StaticResource BackgroundCard}"
+                                 Margin="10 0 0 0"/>
+
+                        <StackPanel Grid.ColumnSpan="2" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 10 0 0">
+                            <Button Content="Add" Command="{Binding AddWatchedProcessCommand}" Style="{StaticResource SmallActionButton}"/>
+                            <Button Content="Remove" Command="{Binding RemoveWatchedProcessCommand}" Style="{StaticResource SmallActionButton}" Margin="10 0 0 0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Separator Margin="0 20 0 20"/>
+
+                    <TextBlock Text="Watchdog Status" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0 0 0 10"/>
+
+                    <Grid Margin="0 0 0 10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0 0 10 0">
+                            <TextBlock Text="Logs directory:" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock x:Name="LogsDirText"
+                                           Grid.Column="0"
+                                           Text="{Binding WatchdogLogsDirectory}"
+                                           Foreground="{StaticResource TextPrimary}"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Cursor="Hand"
+                                           ToolTip="Double click to copy">
+                                    <TextBlock.InputBindings>
+                                        <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding CopyLogsDirectoryCommand}"/>
+                                    </TextBlock.InputBindings>
+                                </TextBlock>
+
+                                <Button Grid.Column="1"
+                                        Content="Copy"
+                                        Command="{Binding CopyLogsDirectoryCommand}"
+                                        Style="{StaticResource SmallActionButton}"
+                                        Margin="10 0 0 0"/>
+                            </Grid>
+                            <TextBlock Text="{Binding CopyStatusText}" Foreground="#22C55E" FontSize="11" Margin="0 4 0 0"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Today's log file:" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock x:Name="TodaysLogText"
+                                           Grid.Column="0"
+                                           Text="{Binding WatchdogTodaysLogFile}"
+                                           Foreground="{StaticResource TextPrimary}"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Cursor="Hand"
+                                           ToolTip="Double click to copy">
+                                    <TextBlock.InputBindings>
+                                        <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding CopyTodaysLogFileCommand}"/>
+                                    </TextBlock.InputBindings>
+                                </TextBlock>
+
+                                <Button Grid.Column="1"
+                                        Content="Copy"
+                                        Command="{Binding CopyTodaysLogFileCommand}"
+                                        Style="{StaticResource SmallActionButton}"
+                                        Margin="10 0 0 0"/>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Background="{StaticResource BackgroundSecondary}" BorderBrush="{StaticResource BackgroundCard}" BorderThickness="1" Padding="8">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="180"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="Last 20 activities" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0 0 0 6"/>
+
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding WatchdogRecentActivity}"
+                                     Background="Transparent"
+                                     Foreground="{StaticResource TextPrimary}"
+                                     BorderThickness="0"/>
+                        </Grid>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
 
         </Border>
 

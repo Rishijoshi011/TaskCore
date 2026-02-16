@@ -78,9 +78,6 @@ namespace TaskCore.ViewModels.Graphs
         [ObservableProperty]
         private string infSection = "Unknown";
 
-        [ObservableProperty]
-        private string utilizationSource = "";
-
         private readonly ObservableCollection<double> _values = new();
         private readonly DispatcherTimer _timer;
         private const int MaxPoints = 60;
@@ -100,6 +97,8 @@ namespace TaskCore.ViewModels.Graphs
         private (double? usedGb, double? totalGb)? _cachedWmiVram;
         private int _wmiUtilTaskRunning;
         private int _wmiVramTaskRunning;
+
+        private double? _wmiAdapterRamTotalGb;
 
         private readonly string? _adapterMemoryInstance;
         private readonly string? _luidToken;
@@ -159,6 +158,24 @@ namespace TaskCore.ViewModels.Graphs
                 var name = match?["Name"]?.ToString();
                 if (!string.IsNullOrWhiteSpace(name))
                     GpuName = name;
+
+                try
+                {
+                    var adapterRamObj = match?["AdapterRAM"];
+                    if (adapterRamObj != null)
+                    {
+                        var bytes = Convert.ToDouble(adapterRamObj);
+                        if (bytes > 0)
+                        {
+                            _wmiAdapterRamTotalGb = bytes / (1024.0 * 1024.0 * 1024.0);
+                            // If we don't later get a better "Dedicated Limit" value, at least show something.
+                            TotalMemoryText = $"{_wmiAdapterRamTotalGb.Value:F1} GB";
+                        }
+                    }
+                }
+                catch
+                {
+                }
 
                 if (!string.IsNullOrWhiteSpace(GpuName))
                 {
@@ -467,7 +484,6 @@ namespace TaskCore.ViewModels.Graphs
                     }
 
                     gpu = Math.Round(Math.Clamp(max, 0, 100), 1);
-                    UtilizationSource = "3D";
                 }
                 catch
                 {
@@ -486,7 +502,6 @@ namespace TaskCore.ViewModels.Graphs
                     }
 
                     gpu = Math.Round(Math.Clamp(max, 0, 100), 1);
-                    UtilizationSource = "Any";
                 }
                 catch
                 {
@@ -504,7 +519,6 @@ namespace TaskCore.ViewModels.Graphs
                     if (_cachedWmiUtil.HasValue)
                     {
                         gpu = _cachedWmiUtil.Value;
-                        UtilizationSource = _cachedWmiUtilSource;
                     }
                     else
                     {
@@ -695,8 +709,16 @@ namespace TaskCore.ViewModels.Graphs
                         }
                         else
                         {
-                            TotalMemoryText = "N/A";
-                            CurrentMemoryUsageText = "N/A";
+                            // Still show used bytes if we can read it even without a known total.
+                            if (usedBytes > 0)
+                                CurrentMemoryUsageText = $"{usedBytes / (1024.0 * 1024.0 * 1024.0):F1} GB";
+                            else
+                                CurrentMemoryUsageText = "N/A";
+
+                            if (_wmiAdapterRamTotalGb.HasValue)
+                                TotalMemoryText = $"{_wmiAdapterRamTotalGb.Value:F1} GB";
+                            else
+                                TotalMemoryText = "N/A";
                         }
                     }
                     return;

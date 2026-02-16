@@ -19,6 +19,7 @@ namespace TaskCore.Services
 
         private readonly object _lock = new();
         private readonly Dictionary<string, float> _gpuTempsByName = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, float> _storageTempsByName = new(StringComparer.OrdinalIgnoreCase);
         private float? _cpuPackageTemp;
         private float? _memoryTemp;
         private float? _anyTemp;
@@ -58,6 +59,7 @@ namespace TaskCore.Services
                     }
 
                     _gpuTempsByName.Clear();
+                    _storageTempsByName.Clear();
                     _cpuPackageTemp = null;
                     _memoryTemp = null;
                     _anyTemp = null;
@@ -214,6 +216,12 @@ namespace TaskCore.Services
                     if (temp.HasValue)
                         _memoryTemp = temp;
                 }
+                else if (hw.HardwareType == HardwareType.Storage)
+                {
+                    var temp = ReadTemperature(hw, preferredNames: ["temperature", "drive", "hdd", "ssd", "nvme", "composite"]);
+                    if (temp.HasValue)
+                        _storageTempsByName[hw.Name] = temp.Value;
+                }
             }
             catch
             {
@@ -266,6 +274,25 @@ namespace TaskCore.Services
                 if (_gpuTempsByName.Count > 0) return _gpuTempsByName.Values.First();
 
                 return _anyTemp;
+            }
+        }
+
+        public float? GetStorageTempByName(string? diskModelOrName)
+        {
+            if (string.IsNullOrWhiteSpace(diskModelOrName))
+            {
+                lock (_lock)
+                    return _storageTempsByName.Count > 0 ? _storageTempsByName.Values.FirstOrDefault() : _anyTemp;
+            }
+
+            lock (_lock)
+            {
+                if (_storageTempsByName.TryGetValue(diskModelOrName, out var v)) return v;
+
+                var key = _storageTempsByName.Keys.FirstOrDefault(k => k.Contains(diskModelOrName, StringComparison.OrdinalIgnoreCase) || diskModelOrName.Contains(k, StringComparison.OrdinalIgnoreCase));
+                if (key != null) return _storageTempsByName[key];
+
+                return _storageTempsByName.Count > 0 ? _storageTempsByName.Values.FirstOrDefault() : _anyTemp;
             }
         }
 

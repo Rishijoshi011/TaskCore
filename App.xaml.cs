@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
+using TaskCore.Services;
 
 namespace TaskCore
 {
@@ -14,6 +15,8 @@ namespace TaskCore
             LiveCharts.Configure(config =>
                 config.AddSkiaSharp()
             );
+
+            _ = WatchdogService.Instance;
         }
     }
 }

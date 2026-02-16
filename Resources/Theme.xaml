@@ -82,6 +82,45 @@
         </Setter>
     </Style>
 
+    <Style x:Key="ActionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Padding" Value="12 6"/>
+        <Setter Property="MinWidth" Value="90"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="6"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#3322C55E"/>
+                            <Setter Property="BorderBrush" Value="#22C55E"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="#5522C55E"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SmallActionButton" TargetType="Button" BasedOn="{StaticResource ActionButton}">
+        <Setter Property="MinWidth" Value="70"/>
+        <Setter Property="Padding" Value="10 5"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
     <!-- TITLE BAR BUTTON STYLE -->
     <Style x:Key="TitleBarButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
@@ -110,6 +149,51 @@
         <Setter Property="Padding" Value="12"/>
         <Setter Property="Margin" Value="10"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
+    </Style>
+
+    <!-- ======================= -->
+    <!--     TOGGLE (SWITCH)     -->
+    <!-- ======================= -->
+
+    <Style x:Key="GreenSwitchToggle" TargetType="ToggleButton">
+        <Setter Property="Width" Value="60"/>
+        <Setter Property="Height" Value="28"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Background" Value="#555555"/>
+        <Setter Property="BorderBrush" Value="#555555"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Grid>
+                        <Border x:Name="Track"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="14"/>
+                        <Ellipse x:Name="Thumb"
+                                 Width="22" Height="22"
+                                 Fill="#E6E6E6"
+                                 Margin="3"
+                                 HorizontalAlignment="Left"/>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Track" Property="Background" Value="#22C55E"/>
+                            <Setter TargetName="Track" Property="BorderBrush" Value="#22C55E"/>
+                            <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Opacity" Value="0.95"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- ======================= -->
@@ -191,8 +275,11 @@
 
                         <!-- CONTENT -->
                         <ContentPresenter Margin="8,3,30,3"
-                                      VerticalAlignment="Center"
-                                      HorizontalAlignment="Left"/>
+                                          VerticalAlignment="Center"
+                                          HorizontalAlignment="Left"
+                                          Content="{TemplateBinding SelectionBoxItem}"
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
 
                         <!-- DROPDOWN BUTTON -->
                         <ToggleButton x:Name="Toggle"
@@ -251,6 +338,10 @@
                             <Setter TargetName="Border"
                                 Property="BorderBrush"
                                 Value="{StaticResource AccentPressedBrush}"/>
+                        </Trigger>
+
+                        <Trigger Property="HasItems" Value="False">
+                            <Setter TargetName="Border" Property="MinHeight" Value="22"/>
                         </Trigger>
 
                     </ControlTemplate.Triggers>
