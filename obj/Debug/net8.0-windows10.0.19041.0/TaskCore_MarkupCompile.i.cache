@@ -16,5 +16,5 @@ C:\Users\rishi.joshi\temp_pro\TaskCore\App.xaml
 225-1805778337
 MainWindow.xaml;Resources\Theme.xaml;Views\DetailsView.xaml;Views\GraphsView.xaml;Views\Graphs\CpuGraphView.xaml;Views\Graphs\DiskCardView.xaml;Views\Graphs\DiskGraphView.xaml;Views\Graphs\GpuCardView.xaml;Views\Graphs\GpuGraphView.xaml;Views\Graphs\MemoryGraphView.xaml;Views\Graphs\NetworkCardView.xaml;Views\Graphs\NetworkGraphView.xaml;Views\ProcessesView.xaml;Views\SettingsView.xaml;
 
-True
+False
 
