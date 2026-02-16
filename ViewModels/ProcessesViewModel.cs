@@ -24,8 +24,8 @@ namespace TaskCore.ViewModels
         private ObservableCollection<ProcessGroup> processGroups = new();
 
         // FILTER PROPERTIES
-        partial void OnSearchQueryChanged(string value) => ApplyFilters();
-        partial void OnMemoryFilterChanged(double value) => ApplyFilters();
+        partial void OnSearchQueryChanged(string value) => DebouncedApplyFilters();
+        partial void OnMemoryFilterChanged(double value) => DebouncedApplyFilters();
 
         [ObservableProperty]
         private string searchQuery = string.Empty;
@@ -36,12 +36,46 @@ namespace TaskCore.ViewModels
         [ObservableProperty]
         private ProcessItem? selectedProcess;
 
+        [ObservableProperty]
+        private ProcessGroup? selectedGroup;
+
+        [RelayCommand]
+        private void SelectProcess(ProcessItem? item)
+        {
+            if (item == null) return;
+            SelectedProcess = item;
+            SelectedGroup = null; // Clear group selection when individual process selected
+        }
+
+        [RelayCommand]
+        private void SelectGroup(ProcessGroup? group)
+        {
+            if (group == null) return;
+            SelectedGroup = group;
+            SelectedProcess = null; // Clear individual selection
+            group.IsExpanded = !group.IsExpanded; // Toggle expand/collapse
+        }
+
+        partial void OnSelectedProcessChanged(ProcessItem? value)
+        {
+            EndTaskCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnSelectedGroupChanged(ProcessGroup? value)
+        {
+            EndTaskCommand.NotifyCanExecuteChanged();
+        }
+
         // 🔥 NEW: LOADING SPINNER BINDING
         [ObservableProperty]
         public bool isLoading = false;
 
+        private bool _hasLoadedOnce = false;
+
         // Prevent overlapping refreshes
         private bool _isRefreshing = false;
+
+        private CancellationTokenSource? _filterCts;
 
         public ProcessesViewModel()
         {
@@ -54,10 +88,42 @@ namespace TaskCore.ViewModels
             // Setup auto-refresh timer
             _timer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(7)
+                Interval = TimeSpan.FromMilliseconds(1000)
             };
             _timer.Tick += async (s, e) => await LoadProcessListAsync();
             _timer.Start();
+
+            try
+            {
+                RefreshIntervalService.RefreshIntervalChanged += OnRefreshIntervalChanged;
+                OnRefreshIntervalChanged(RefreshIntervalService.CurrentMs);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                AppViewStateService.ViewChanged += OnViewChanged;
+                OnViewChanged(AppViewStateService.CurrentView);
+            }
+            catch
+            {
+            }
+        }
+
+        private void OnViewChanged(string viewName)
+        {
+            try
+            {
+                if (viewName == "Processes")
+                    _timer.Start();
+                else
+                    _timer.Stop();
+            }
+            catch
+            {
+            }
         }
 
         private static bool IsInDesignMode()
@@ -72,18 +138,33 @@ namespace TaskCore.ViewModels
             if (_isRefreshing) return;
 
             _isRefreshing = true;
-            IsLoading = true;     // show spinner
+            if (!_hasLoadedOnce || ProcessGroups.Count == 0)
+                IsLoading = true;
 
             try
             {
                 var groups = await Task.Run(() => _service.GetGroupedProcesses());
                 _allGroups = groups;
                 ApplyFilters();
+                _hasLoadedOnce = true;
             }
             finally
             {
-                IsLoading = false; // hide spinner
+                IsLoading = false;
                 _isRefreshing = false;
+            }
+        }
+
+        private void OnRefreshIntervalChanged(int ms)
+        {
+            try
+            {
+                var normalized = RefreshIntervalService.Normalize(ms);
+                if (normalized < 2000) normalized = 2000;
+                _timer.Interval = TimeSpan.FromMilliseconds(normalized);
+            }
+            catch
+            {
             }
         }
 
@@ -109,7 +190,12 @@ namespace TaskCore.ViewModels
             }
 
             // Update UI list safely
-            UpdateObservableCollection(ProcessGroups, filtered);
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                ProcessGroups.Clear();
+                foreach (var grp in filtered)
+                    ProcessGroups.Add(grp);
+            }));
 
             // 🔄 Restore selected process if it still exists
             if (oldSelected != null)
@@ -126,30 +212,91 @@ namespace TaskCore.ViewModels
             }
         }
 
-
-        // Safe UI update
-        private void UpdateObservableCollection<T>(
-            ObservableCollection<T> target,
-            IEnumerable<T> source)
+        private void DebouncedApplyFilters()
         {
-            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            _filterCts?.Cancel();
+            _filterCts = new CancellationTokenSource();
+            var token = _filterCts.Token;
+
+            _ = Task.Run(async () =>
             {
-                target.Clear();
-                foreach (var item in source)
-                    target.Add(item);
-            }));
+                try
+                {
+                    await Task.Delay(300, token);
+                    if (!token.IsCancellationRequested)
+                        ApplyFilters();
+                }
+                catch { /* ignored */ }
+            }, token);
         }
+
 
         [RelayCommand]
         private void EndTask()
         {
-            var proc = SelectedProcess?.UnderlyingProcess;
-
-            if (proc == null || proc.HasExited)
+            // Handle group selection - kill all processes in group
+            if (SelectedGroup != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[EndTask] Killing all processes in group: {SelectedGroup.GroupName} ({SelectedGroup.Items.Count} processes)");
+                int killed = 0;
+                foreach (var item in SelectedGroup.Items)
+                {
+                    try
+                    {
+                        var proc = System.Diagnostics.Process.GetProcessById(item.PID);
+                        if (!proc.HasExited)
+                        {
+                            proc.Kill();
+                            killed++;
+                        }
+                    }
+                    catch { /* ignore failures */ }
+                }
+                System.Diagnostics.Debug.WriteLine($"[EndTask] Killed {killed}/{SelectedGroup.Items.Count} processes");
+                SelectedGroup = null;
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(500);
+                    Application.Current.Dispatcher.BeginInvoke(() => _ = LoadProcessListAsync());
+                });
                 return;
+            }
 
-            try { proc.Kill(); }
-            catch { /* access denied / system process */ }
+            // Handle individual process selection
+            if (SelectedProcess == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[EndTask] No process or group selected");
+                return;
+            }
+
+            var pid = SelectedProcess.PID;
+            System.Diagnostics.Debug.WriteLine($"[EndTask] Attempting to kill PID {pid} - {SelectedProcess.Name}");
+
+            try
+            {
+                var proc = System.Diagnostics.Process.GetProcessById(pid);
+                if (proc.HasExited)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[EndTask] Process {pid} already exited");
+                    return;
+                }
+
+                proc.Kill();
+                System.Diagnostics.Debug.WriteLine($"[EndTask] Successfully killed PID {pid}");
+
+                SelectedProcess = null;
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(500);
+                    Application.Current.Dispatcher.BeginInvoke(() => _ = LoadProcessListAsync());
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[EndTask] Failed to kill PID {pid}: {ex.Message}");
+            }
         }
+
+        private bool CanEndTask() => SelectedProcess != null || SelectedGroup != null;
     }
 }

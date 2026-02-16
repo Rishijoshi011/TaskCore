@@ -1,2 +1,14 @@
 2026-02-16 13:48:13 | Discord.exe | Killed
 2026-02-16 13:48:13 | Discord.exe | Killed
+2026-02-16 13:57:17 | Discord.exe | Killed
+2026-02-16 13:57:17 | Discord.exe | Killed
+2026-02-16 13:57:17 | Discord.exe | Killed
+2026-02-16 13:57:17 | Discord.exe | Killed
+2026-02-16 13:57:17 | Discord.exe | Killed
+2026-02-16 13:57:17 | Discord.exe | Killed
+2026-02-16 13:58:51 | Discord.exe | Killed
+2026-02-16 13:58:51 | Discord.exe | Killed
+2026-02-16 13:58:51 | Discord.exe | Killed
+2026-02-16 13:58:51 | Discord.exe | Killed
+2026-02-16 13:58:51 | Discord.exe | Killed
+2026-02-16 13:58:51 | Discord.exe | Killed

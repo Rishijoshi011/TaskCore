@@ -13,12 +13,33 @@ namespace TaskCore.Services
         // CPU counters per PID
         private readonly Dictionary<int, PerformanceCounter> cpuCounters = new();
 
+        private static bool IsProcessAccessible(Process proc)
+        {
+            try
+            {
+                _ = proc.Handle;
+                return true;
+            }
+            catch (Win32Exception)
+            {
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public List<ProcessGroup> GetGroupedProcesses()
         {
             var groups = new Dictionary<string, ProcessGroup>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var proc in Process.GetProcesses())
             {
+                // Skip inaccessible processes early to avoid exceptions
+                if (!IsProcessAccessible(proc))
+                    continue;
+
                 try
                 {
                     // Name
@@ -39,7 +60,7 @@ namespace TaskCore.Services
                         CpuUsage = Math.Round(cpu, 1),
                         MemoryMB = Math.Round(memMb, 1),
                         Path = path,
-                        UnderlyingProcess = proc
+                        Icon = IconService.GetIconForPath(path)
                     };
 
                     // Add or get group
@@ -47,7 +68,9 @@ namespace TaskCore.Services
                     {
                         group = new ProcessGroup
                         {
-                            GroupName = name
+                            GroupName = name,
+                            Items = new ObservableCollection<ProcessItem>(),
+                            Icon = item.Icon
                         };
                         groups[name] = group;
                     }
@@ -106,6 +129,8 @@ namespace TaskCore.Services
                     counter = new PerformanceCounter("Process", "% Processor Time", proc.ProcessName, true);
                     counter.NextValue(); // warm-up
                     cpuCounters[proc.Id] = counter;
+                    // Return 0 for newly created counters (warm-up call)
+                    return 0;
                 }
 
                 return counter.NextValue() / Environment.ProcessorCount;

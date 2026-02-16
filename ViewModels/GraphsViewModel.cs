@@ -7,6 +7,7 @@ using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;
+using TaskCore.Services;
 
 namespace TaskCore.ViewModels
 {
@@ -61,9 +62,41 @@ namespace TaskCore.ViewModels
             xLabels = new ObservableCollection<string>();
 
             // Timer Update
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.CurrentMs) };
             _timer.Tick += UpdateGraphs;
             _timer.Start();
+
+            try
+            {
+                RefreshIntervalService.RefreshIntervalChanged += OnRefreshIntervalChanged;
+                OnRefreshIntervalChanged(RefreshIntervalService.CurrentMs);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                AppViewStateService.ViewChanged += OnViewChanged;
+                OnViewChanged(AppViewStateService.CurrentView);
+            }
+            catch
+            {
+            }
+        }
+
+        private void OnViewChanged(string viewName)
+        {
+            try
+            {
+                if (viewName == "Graphs")
+                    _timer.Start();
+                else
+                    _timer.Stop();
+            }
+            catch
+            {
+            }
         }
 
         private void UpdateGraphs(object? sender, EventArgs e)
@@ -74,15 +107,32 @@ namespace TaskCore.ViewModels
             double usedRam = GetTotalMemoryMB() - freeRam;
 
             // Add values
-            ((ObservableCollection<double>)CpuSeries[0].Values).Add(cpuVal);
-            ((ObservableCollection<double>)RamSeries[0].Values).Add(usedRam);
+            if (CpuSeries.Count > 0 && CpuSeries[0].Values is ObservableCollection<double> cpuList)
+                cpuList.Add(cpuVal);
+
+            if (RamSeries.Count > 0 && RamSeries[0].Values is ObservableCollection<double> ramList)
+                ramList.Add(usedRam);
 
             XLabels.Add(DateTime.Now.ToString("HH:mm:ss"));
 
             // Keep only last 60 points
-            Trim<double>((ICollection<double>)CpuSeries[0].Values);
-            Trim<double>((ICollection<double>)RamSeries[0].Values);
+            if (CpuSeries.Count > 0 && CpuSeries[0].Values is ICollection<double> cpuTrim)
+                Trim<double>(cpuTrim);
+
+            if (RamSeries.Count > 0 && RamSeries[0].Values is ICollection<double> ramTrim)
+                Trim<double>(ramTrim);
             Trim<string>(XLabels);
+        }
+
+        private void OnRefreshIntervalChanged(int ms)
+        {
+            try
+            {
+                _timer.Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.Normalize(ms));
+            }
+            catch
+            {
+            }
         }
 
         private double GetTotalMemoryMB()

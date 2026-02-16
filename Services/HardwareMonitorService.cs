@@ -37,9 +37,17 @@ namespace TaskCore.Services
 
             _computer.Open();
 
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.CurrentMs) };
             _timer.Tick += (_, __) => Refresh();
             _timer.Start();
+
+            try
+            {
+                RefreshIntervalService.RefreshIntervalChanged += OnRefreshIntervalChanged;
+            }
+            catch
+            {
+            }
 
             Refresh();
         }
@@ -71,6 +79,17 @@ namespace TaskCore.Services
 
                     TryDebugLogTempSensors();
                 }
+            }
+            catch
+            {
+            }
+        }
+
+        private void OnRefreshIntervalChanged(int ms)
+        {
+            try
+            {
+                _timer.Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.Normalize(ms));
             }
             catch
             {

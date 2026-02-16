@@ -136,9 +136,52 @@ namespace TaskCore.ViewModels.Graphs
             TryInitCounters();
             ScheduleWmiInfoRefresh();
 
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.CurrentMs) };
             _timer.Tick += (_, __) => Tick();
             _timer.Start();
+
+            try
+            {
+                RefreshIntervalService.RefreshIntervalChanged += OnRefreshIntervalChanged;
+                OnRefreshIntervalChanged(RefreshIntervalService.CurrentMs);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                AppViewStateService.ViewChanged += OnViewChanged;
+                OnViewChanged(AppViewStateService.CurrentView);
+            }
+            catch
+            {
+            }
+        }
+
+        private void OnViewChanged(string viewName)
+        {
+            try
+            {
+                if (viewName == "Graphs")
+                    _timer.Start();
+                else
+                    _timer.Stop();
+            }
+            catch
+            {
+            }
+        }
+
+        private void OnRefreshIntervalChanged(int ms)
+        {
+            try
+            {
+                _timer.Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.Normalize(ms));
+            }
+            catch
+            {
+            }
         }
 
         private void TryInitCounters()

@@ -93,13 +93,40 @@
                             <StackPanel Margin="0 0 0 6">
 
                                 <!-- GROUP HEADER -->
-                                <Border Background="{StaticResource BackgroundSecondary}"
+                                <Button Command="{Binding DataContext.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"
+                                        Background="{StaticResource BackgroundSecondary}"
+                                        Foreground="{StaticResource TextPrimary}"
+                                        BorderThickness="0"
                                         Padding="10"
-                                        CornerRadius="4"
-                                        MouseLeftButtonDown="GroupHeader_Click">
+                                        Margin="0 0 0 2"
+                                        HorizontalContentAlignment="Stretch">
+
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                            <Setter Property="Background" Value="{StaticResource BackgroundSecondary}"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}"
+                                                                CornerRadius="4"
+                                                                Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Stretch"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#4A4A4A"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
 
                                     <Grid>
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="24"/>
                                             <ColumnDefinition Width="24"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="90"/>
@@ -109,21 +136,34 @@
 
                                         <TextBlock Text="{Binding IsExpanded, Converter={StaticResource BoolToArrowConverter}}"
                                                    Foreground="{StaticResource AccentBrush}"
-                                                   FontSize="14"/>
+                                                   FontSize="14"
+                                                   VerticalAlignment="Center"/>
 
-                                        <TextBlock Grid.Column="1" Text="{Binding GroupName}"
-                                                   Foreground="{StaticResource TextPrimary}" FontWeight="Bold"/>
+                                        <Image Grid.Column="1" 
+                                               Source="{Binding Icon}" 
+                                               Width="16" 
+                                               Height="16"
+                                               Stretch="Uniform"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Center"/>
 
-                                        <TextBlock Grid.Column="2" Text="{Binding TotalCpu, StringFormat={}{0}%}"
-                                                   Foreground="{StaticResource TextSecondary}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding GroupName}"
+                                                   Foreground="{StaticResource TextPrimary}" FontWeight="Bold"
+                                                   VerticalAlignment="Center"/>
 
-                                        <TextBlock Grid.Column="3" Text="{Binding TotalMemory, StringFormat={}{0} MB}"
-                                                   Foreground="{StaticResource TextSecondary}"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding TotalCpu, StringFormat={}{0}%}"
+                                                   Foreground="{StaticResource TextSecondary}"
+                                                   VerticalAlignment="Center"/>
 
-                                        <TextBlock Grid.Column="4" Text="{Binding Items[0].PID}"
-                                                   Foreground="{StaticResource TextSecondary}"/>
+                                        <TextBlock Grid.Column="4" Text="{Binding TotalMemory, StringFormat={}{0} MB}"
+                                                   Foreground="{StaticResource TextSecondary}"
+                                                   VerticalAlignment="Center"/>
+
+                                        <TextBlock Grid.Column="5" Text="{Binding Items[0].PID}"
+                                                   Foreground="{StaticResource TextSecondary}"
+                                                   VerticalAlignment="Center"/>
                                     </Grid>
-                                </Border>
+                                </Button>
 
                                 <!-- CHILD PROCESSES -->
                                 <ItemsControl ItemsSource="{Binding Items}">
@@ -137,11 +177,36 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
 
-                                            <Border Background="{StaticResource BackgroundPrimary}"
-                                                    CornerRadius="4"
+                                            <Button Command="{Binding DataContext.SelectProcessCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Background="{StaticResource BackgroundPrimary}"
+                                                    Foreground="{StaticResource TextPrimary}"
+                                                    BorderThickness="0"
                                                     Padding="8"
                                                     Margin="0 2 0 0"
-                                                    MouseLeftButtonDown="ProcessRow_Click">
+                                                    HorizontalContentAlignment="Stretch">
+
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                        <Setter Property="Background" Value="{StaticResource BackgroundPrimary}"/>
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border Background="{TemplateBinding Background}"
+                                                                            CornerRadius="4"
+                                                                            Padding="{TemplateBinding Padding}">
+                                                                        <ContentPresenter HorizontalAlignment="Stretch"/>
+                                                                    </Border>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="#3A3A3A"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
 
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
@@ -152,10 +217,17 @@
                                                         <ColumnDefinition Width="120"/>
                                                     </Grid.ColumnDefinitions>
 
-                                                    <TextBlock/>
+                                                    <Image Grid.Column="0" 
+                                                           Source="{Binding Icon}" 
+                                                           Width="16" 
+                                                           Height="16"
+                                                           Stretch="Uniform"
+                                                           VerticalAlignment="Center"
+                                                           HorizontalAlignment="Center"/>
 
                                                     <TextBlock Grid.Column="1" Text="{Binding Name}"
-                                                               Foreground="{StaticResource TextPrimary}"/>
+                                                               Foreground="{StaticResource TextPrimary}"
+                                                               VerticalAlignment="Center"/>
 
                                                     <TextBlock Grid.Column="2" Text="{Binding CpuUsage, StringFormat={}{0}%}"
                                                                Foreground="{StaticResource TextSecondary}"/>
@@ -166,7 +238,7 @@
                                                     <TextBlock Grid.Column="4" Text="{Binding PID}"
                                                                Foreground="{StaticResource TextSecondary}"/>
                                                 </Grid>
-                                            </Border>
+                                            </Button>
 
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

@@ -128,9 +128,52 @@ namespace TaskCore.ViewModels.Graphs
             for (int i = 0; i < 10; i++)
                 _values.Add(0);
 
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.CurrentMs) };
             _timer.Tick += (_, __) => Tick();
             _timer.Start();
+
+            try
+            {
+                RefreshIntervalService.RefreshIntervalChanged += OnRefreshIntervalChanged;
+                OnRefreshIntervalChanged(RefreshIntervalService.CurrentMs);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                AppViewStateService.ViewChanged += OnViewChanged;
+                OnViewChanged(AppViewStateService.CurrentView);
+            }
+            catch
+            {
+            }
+        }
+
+        private void OnViewChanged(string viewName)
+        {
+            try
+            {
+                if (viewName == "Graphs")
+                    _timer.Start();
+                else
+                    _timer.Stop();
+            }
+            catch
+            {
+            }
+        }
+
+        private void OnRefreshIntervalChanged(int ms)
+        {
+            try
+            {
+                _timer.Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.Normalize(ms));
+            }
+            catch
+            {
+            }
         }
 
         private void InitializeGpuInfo(string? gpuNameHint)
@@ -462,9 +505,11 @@ namespace TaskCore.ViewModels.Graphs
 
         private void Tick()
         {
+            System.Diagnostics.Debug.WriteLine($"[GpuGraph] Tick fired - CurrentUtil: {CurrentUtilization:F1}%");
             UpdateUtilization();
             UpdateVram();
             UpdateTemperature();
+            System.Diagnostics.Debug.WriteLine($"[GpuGraph] After update - CurrentUtil: {CurrentUtilization:F1}%");
             AppendPoint(CurrentUtilization);
         }
 
@@ -484,9 +529,11 @@ namespace TaskCore.ViewModels.Graphs
                     }
 
                     gpu = Math.Round(Math.Clamp(max, 0, 100), 1);
+                    System.Diagnostics.Debug.WriteLine($"[GpuGraph] Using 3D counters: {gpu:F1}% (from {_gpu3dCounters.Count} counters)");
                 }
-                catch
+                catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[GpuGraph] 3D counter error: {ex.Message}");
                     gpu = CurrentUtilization;
                 }
             }
@@ -502,27 +549,28 @@ namespace TaskCore.ViewModels.Graphs
                     }
 
                     gpu = Math.Round(Math.Clamp(max, 0, 100), 1);
+                    System.Diagnostics.Debug.WriteLine($"[GpuGraph] Using AnyEngine counters: {gpu:F1}%");
                 }
-                catch
+                catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[GpuGraph] AnyEngine counter error: {ex.Message}");
                     gpu = CurrentUtilization;
                 }
             }
             else
             {
-                // WMI can be slow and will hang the UI if called in this timer.
-                // Use cached values that are refreshed in the background.
                 ScheduleWmiUtilRefresh();
-
                 lock (_wmiCacheLock)
                 {
                     if (_cachedWmiUtil.HasValue)
                     {
                         gpu = _cachedWmiUtil.Value;
+                        System.Diagnostics.Debug.WriteLine($"[GpuGraph] Using WMI cached: {gpu:F1}%");
                     }
                     else
                     {
                         gpu = CurrentUtilization;
+                        System.Diagnostics.Debug.WriteLine($"[GpuGraph] No counters available, using current: {gpu:F1}%");
                     }
                 }
             }
@@ -752,9 +800,11 @@ namespace TaskCore.ViewModels.Graphs
                 _values.Add(value);
                 while (_values.Count > MaxPoints)
                     _values.RemoveAt(0);
+                System.Diagnostics.Debug.WriteLine($"[GpuGraph] Added point: {value:F1}% (total points: {_values.Count})");
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[GpuGraph] Error adding point: {ex.Message}");
             }
         }
 

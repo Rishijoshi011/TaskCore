@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "vjX5bIjmthg=",
+  "dgSpecHash": "yYUlR+HdR1s=",
   "success": true,
   "projectFilePath": "C:\\Users\\rishi.joshi\\temp_pro\\TaskCore\\TaskCore.csproj",
   "expectedPackageFiles": [
@@ -14,6 +14,7 @@
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\livechartscore.skiasharpview.wpf\\2.0.0-rc6.1\\livechartscore.skiasharpview.wpf.2.0.0-rc6.1.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\microsoft.netcore.platforms\\5.0.0\\microsoft.netcore.platforms.5.0.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\microsoft.win32.registry\\5.0.0\\microsoft.win32.registry.5.0.0.nupkg.sha512",
+    "C:\\Users\\rishi.joshi\\.nuget\\packages\\microsoft.win32.systemevents\\8.0.0\\microsoft.win32.systemevents.8.0.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\mono.posix.netstandard\\1.0.0\\mono.posix.netstandard.1.0.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\opentk\\4.3.0\\opentk.4.3.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\opentk.compute\\4.3.0\\opentk.compute.4.3.0.nupkg.sha512",
@@ -50,6 +51,7 @@
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\skiasharp.views.desktop.common\\3.119.0\\skiasharp.views.desktop.common.3.119.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\skiasharp.views.wpf\\3.119.0\\skiasharp.views.wpf.3.119.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\system.codedom\\9.0.0\\system.codedom.9.0.0.nupkg.sha512",
+    "C:\\Users\\rishi.joshi\\.nuget\\packages\\system.drawing.common\\8.0.0\\system.drawing.common.8.0.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\system.io.filesystem.accesscontrol\\5.0.0\\system.io.filesystem.accesscontrol.5.0.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\system.io.ports\\9.0.0\\system.io.ports.9.0.0.nupkg.sha512",
     "C:\\Users\\rishi.joshi\\.nuget\\packages\\system.management\\9.0.0\\system.management.9.0.0.nupkg.sha512",

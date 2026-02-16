@@ -106,6 +106,14 @@ namespace TaskCore.ViewModels
             if (!RefreshIntervals.Any(x => x.ValueMs == RefreshIntervalMs))
                 RefreshIntervalMs = 1000;
 
+            try
+            {
+                RefreshIntervalService.Set(RefreshIntervalMs);
+            }
+            catch
+            {
+            }
+
             if (!WatchdogModes.Contains(WatchdogMode))
                 WatchdogMode = "Alert Only";
 
@@ -155,6 +163,14 @@ namespace TaskCore.ViewModels
         {
             _settings.RefreshIntervalMs = value;
             AppSettingsService.Save(_settings);
+
+            try
+            {
+                RefreshIntervalService.Set(value);
+            }
+            catch
+            {
+            }
         }
 
         partial void OnWatchdogModeChanged(string value)

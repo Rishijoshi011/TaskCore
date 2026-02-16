@@ -31,9 +31,13 @@ namespace TaskCore.Services
         private readonly DispatcherTimer _timer;
         private int _tickRunning;
 
+        private readonly object _cooldownLock = new();
+        private readonly Dictionary<string, DateTime> _lastActionUtcByTarget = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly TimeSpan _targetCooldown = TimeSpan.FromSeconds(5);
+
         private WatchdogService()
         {
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             _timer.Tick += (_, __) => Tick();
             _timer.Start();
         }
@@ -70,21 +74,28 @@ namespace TaskCore.Services
             if (targets.Count == 0)
                 return;
 
-            foreach (var proc in Process.GetProcesses())
+            foreach (var target in targets)
             {
-                string name;
-                try { name = proc.ProcessName + ".exe"; }
+                var baseName = target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                    ? target[..^4]
+                    : target;
+
+                Process[] procs;
+                try { procs = Process.GetProcessesByName(baseName); }
                 catch { continue; }
 
-                if (!targets.Any(t => string.Equals(t, name, StringComparison.OrdinalIgnoreCase)))
-                    continue;
-
-                HandleHit(proc, name, settings);
+                foreach (var proc in procs)
+                {
+                    HandleHit(proc, target, settings);
+                }
             }
         }
 
         private void HandleHit(Process proc, string name, AppSettings settings)
         {
+            if (IsInCooldown(name))
+                return;
+
             var mode = settings.WatchdogMode ?? "Alert Only";
 
             if (string.Equals(mode, "Log Only", StringComparison.OrdinalIgnoreCase))
@@ -93,6 +104,7 @@ namespace TaskCore.Services
                     WatchdogLogger.Log(name, "Detected (Log Only)");
 
                 AddActivity($"{DateTime.Now:HH:mm:ss} | {name} | Detected (Log Only)");
+                MarkCooldown(name);
                 if (settings.WatchdogSoundAlertEnabled)
                     TryBeep();
                 return;
@@ -104,6 +116,7 @@ namespace TaskCore.Services
                     WatchdogLogger.Log(name, "Detected (Alert Only)");
 
                 AddActivity($"{DateTime.Now:HH:mm:ss} | {name} | Detected (Alert Only)");
+                MarkCooldown(name);
                 if (settings.WatchdogSoundAlertEnabled)
                     TryBeep();
                 return;
@@ -116,6 +129,49 @@ namespace TaskCore.Services
             }
         }
 
+        private bool IsInCooldown(string target)
+        {
+            try
+            {
+                var now = DateTime.UtcNow;
+                lock (_cooldownLock)
+                {
+                    if (_lastActionUtcByTarget.TryGetValue(target, out var last))
+                    {
+                        if ((now - last) < _targetCooldown)
+                            return true;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return false;
+        }
+
+        private void MarkCooldown(string target)
+        {
+            try
+            {
+                var now = DateTime.UtcNow;
+                lock (_cooldownLock)
+                {
+                    _lastActionUtcByTarget[target] = now;
+
+                    if (_lastActionUtcByTarget.Count > 200)
+                    {
+                        var cutoff = now - TimeSpan.FromMinutes(10);
+                        var keys = _lastActionUtcByTarget.Where(kv => kv.Value < cutoff).Select(kv => kv.Key).ToList();
+                        foreach (var k in keys) _lastActionUtcByTarget.Remove(k);
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
+
         private void TryKill(Process proc, string name, AppSettings settings)
         {
             try
@@ -125,6 +181,7 @@ namespace TaskCore.Services
                     WatchdogLogger.Log(name, "Killed");
 
                 AddActivity($"{DateTime.Now:HH:mm:ss} | {name} | Killed");
+                MarkCooldown(name);
                 if (settings.WatchdogSoundAlertEnabled)
                     TryBeep();
             }
@@ -134,6 +191,7 @@ namespace TaskCore.Services
                     WatchdogLogger.Log(name, "Kill failed: " + ex.GetType().Name);
 
                 AddActivity($"{DateTime.Now:HH:mm:ss} | {name} | Kill failed ({ex.GetType().Name})");
+                MarkCooldown(name);
 
                 if (settings.PreferAdminForProtectedActions && !ElevationService.IsRunningAsAdmin())
                 {

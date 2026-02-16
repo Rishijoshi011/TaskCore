@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using TaskCore.Views;
+using TaskCore.Services;
 
 namespace TaskCore
 {
@@ -17,25 +18,29 @@ namespace TaskCore
             // Default page
             Sidebar.SelectedIndex = 0;
             ContentArea.Content = new ProcessesView();
+            AppViewStateService.SetView("Processes");
         }
 
         private void Sidebar_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            switch (Sidebar.SelectedIndex)
+            string viewName = Sidebar.SelectedIndex switch
             {
-                case 0:
-                    ContentArea.Content = new ProcessesView();
-                    break;
-                case 1:
-                    ContentArea.Content = new GraphsView();
-                    break;
-                case 2:
-                    ContentArea.Content = new DetailsView();
-                    break;
-                case 3:
-                    ContentArea.Content = new SettingsView();
-                    break;
+                0 => "Processes",
+                1 => "Graphs",
+                2 => "Details",
+                3 => "Settings",
+                _ => "Unknown"
+            };
+
+            switch (viewName)
+            {
+                case "Processes": ContentArea.Content = new ProcessesView(); break;
+                case "Graphs": ContentArea.Content = new GraphsView(); break;
+                case "Details": ContentArea.Content = new DetailsView(); break;
+                case "Settings": ContentArea.Content = new SettingsView(); break;
             }
+
+            AppViewStateService.SetView(viewName);
         }
 
         private void ToggleSidebar(object sender, RoutedEventArgs e)
