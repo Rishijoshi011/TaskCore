@@ -1,9 +1,11 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -39,6 +41,9 @@ namespace TaskCore.ViewModels
 
         [ObservableProperty]
         private bool watchdogSoundAlertEnabled;
+
+        [ObservableProperty]
+        private string customAlertSoundPath = string.Empty;
 
         [ObservableProperty]
         private string watchdogLogsDirectory = string.Empty;
@@ -107,6 +112,7 @@ namespace TaskCore.ViewModels
             WatchdogEnabled = _settings.WatchdogEnabled;
             WatchdogLoggingEnabled = _settings.WatchdogLoggingEnabled;
             WatchdogSoundAlertEnabled = _settings.WatchdogSoundAlertEnabled;
+            CustomAlertSoundPath = _settings.CustomAlertSoundPath ?? string.Empty;
 
             try
             {
@@ -207,6 +213,12 @@ namespace TaskCore.ViewModels
         partial void OnWatchdogSoundAlertEnabledChanged(bool value)
         {
             _settings.WatchdogSoundAlertEnabled = value;
+            AppSettingsService.Save(_settings);
+        }
+
+        partial void OnCustomAlertSoundPathChanged(string value)
+        {
+            _settings.CustomAlertSoundPath = value;
             AppSettingsService.Save(_settings);
         }
 
@@ -337,6 +349,43 @@ namespace TaskCore.ViewModels
         private void CopyTodaysLogFile()
         {
             CopyToClipboard(WatchdogTodaysLogFile);
+        }
+
+        [RelayCommand]
+        private void BrowseCustomAlertSound()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = "Select Alert Sound",
+                Filter = "WAV Audio (*.wav)|*.wav|All Files (*.*)|*.*",
+                Multiselect = false
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var sourcePath = dialog.FileName;
+                    if (!string.Equals(Path.GetExtension(sourcePath), ".wav", StringComparison.OrdinalIgnoreCase))
+                    {
+                        CustomAlertSoundPath = sourcePath;
+                        return;
+                    }
+
+                    var appDir = AppDomain.CurrentDomain.BaseDirectory;
+                    var soundsDir = Path.Combine(appDir, "Sounds");
+                    Directory.CreateDirectory(soundsDir);
+
+                    var destPath = Path.Combine(soundsDir, "watchdog_alert.wav");
+                    File.Copy(sourcePath, destPath, overwrite: true);
+
+                    CustomAlertSoundPath = destPath;
+                }
+                catch
+                {
+                    CustomAlertSoundPath = dialog.FileName;
+                }
+            }
         }
 
         private void CopyToClipboard(string text)

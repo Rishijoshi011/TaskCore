@@ -12,3 +12,12 @@
 2026-02-16 13:58:51 | Discord.exe | Killed
 2026-02-16 13:58:51 | Discord.exe | Killed
 2026-02-16 13:58:51 | Discord.exe | Killed
+2026-02-16 18:42:38 | Discord.exe | Killed
+2026-02-16 18:42:48 | Discord.exe | Killed
+2026-02-16 18:43:03 | Discord.exe | Killed
+2026-02-16 18:45:25 | Discord.exe | Killed
+2026-02-16 18:47:50 | Discord.exe | Killed
+2026-02-16 18:48:05 | Discord.exe | Killed
+2026-02-16 18:49:11 | Discord.exe | Killed
+2026-02-16 18:49:11 | WhatsApp.Root.exe | Killed
+2026-02-16 18:49:26 | Discord.exe | Killed

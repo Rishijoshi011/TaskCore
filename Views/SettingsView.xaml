@@ -152,7 +152,22 @@
                             <TextBlock Text="Enable/Disable sound alert" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                         </StackPanel>
 
-                        <ToggleButton Grid.Column="1" IsChecked="{Binding WatchdogSoundAlertEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="30 0 0 0">
+                            <ToggleButton IsChecked="{Binding WatchdogSoundAlertEnabled}" Style="{StaticResource GreenSwitchToggle}"/>
+                            <Button Content="Browse" Command="{Binding BrowseCustomAlertSoundCommand}" Height="32" Margin="10 0 0 0" Style="{StaticResource SmallActionButton}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Custom Sound" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <TextBlock Text="{Binding CustomAlertSoundPath}" Foreground="{StaticResource TextSecondary}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding CustomAlertSoundPath}"/>
+                        </StackPanel>
                     </Grid>
 
                     <Separator Margin="0 15 0 15"/>

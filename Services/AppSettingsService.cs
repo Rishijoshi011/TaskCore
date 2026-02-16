@@ -62,6 +62,8 @@ namespace TaskCore.Services
         public bool WatchdogSoundAlertEnabled { get; set; } = true;
         public bool WatchdogLoggingEnabled { get; set; } = true;
 
+        public string CustomAlertSoundPath { get; set; } = string.Empty;
+
         public System.Collections.Generic.List<string>? WatchdogTargets { get; set; } = new();
     }
 }

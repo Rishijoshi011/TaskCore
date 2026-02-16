@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Media;
 using System.Threading;
@@ -263,7 +264,18 @@ namespace TaskCore.Services
         {
             try
             {
-                SystemSounds.Beep.Play();
+                var settings = AppSettingsService.Load();
+                var path = settings.CustomAlertSoundPath;
+                if (!string.IsNullOrWhiteSpace(path) && File.Exists(path) &&
+                    string.Equals(Path.GetExtension(path), ".wav", StringComparison.OrdinalIgnoreCase))
+                {
+                    var player = new SoundPlayer(path);
+                    player.Play();
+                }
+                else
+                {
+                    SystemSounds.Beep.Play();
+                }
             }
             catch
             {
