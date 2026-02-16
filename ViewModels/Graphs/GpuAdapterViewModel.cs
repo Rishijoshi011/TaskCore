@@ -784,8 +784,33 @@ namespace TaskCore.ViewModels.Graphs
         {
             try
             {
-                var t = HardwareMonitorService.Instance.GetGpuTempByName(GpuName);
-                CurrentTemperatureText = t.HasValue ? $"{t.Value:F1}°C" : "N/A";
+                var hw = HardwareMonitorService.Instance;
+                float? t = null;
+
+                try
+                {
+                    t = hw.GetGpuTempByName(GpuName);
+                }
+                catch
+                {
+                    t = null;
+                }
+
+                if (!t.HasValue)
+                {
+                    try
+                    {
+                        t = hw.GetCpuPackageTemp();
+                    }
+                    catch
+                    {
+                        t = null;
+                    }
+                }
+
+                CurrentTemperatureText = (t.HasValue && t.Value > -50 && t.Value < 150)
+                    ? $"{t.Value:F1} °C"
+                    : "N/A";
             }
             catch
             {

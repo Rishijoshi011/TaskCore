@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,6 +16,8 @@ namespace TaskCore.ViewModels
     public partial class SettingsViewModel : ObservableObject
     {
         private readonly AppSettings _settings;
+
+        public string AppVersion { get; }
 
         [ObservableProperty]
         private bool autoStartWithWindows;
@@ -86,6 +89,16 @@ namespace TaskCore.ViewModels
         public SettingsViewModel()
         {
             _settings = AppSettingsService.Load();
+
+            try
+            {
+                var v = Assembly.GetExecutingAssembly().GetName().Version;
+                AppVersion = v != null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v1.0.0";
+            }
+            catch
+            {
+                AppVersion = "v1.0.0";
+            }
 
             AutoStartWithWindows = _settings.AutoStartWithWindows;
             PreferAdminForProtectedActions = _settings.PreferAdminForProtectedActions;

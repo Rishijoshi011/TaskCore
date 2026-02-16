@@ -48,15 +48,33 @@ namespace TaskCore
             if (_isSidebarCollapsed)
             {
                 // Expand sidebar
-                SidebarColumn.Width = new GridLength(220);
-                SidebarBorder.Visibility = Visibility.Visible;
+                var sb = TryFindResource("SidebarExpandStoryboard") as Storyboard;
+                if (sb != null)
+                {
+                    sb.Begin();
+                }
+                else
+                {
+                    // Fallback to instant expand
+                    SidebarColumn.Width = new GridLength(220);
+                    SidebarBorder.Visibility = Visibility.Visible;
+                }
                 _isSidebarCollapsed = false;
             }
             else
             {
                 // Collapse sidebar
-                SidebarColumn.Width = new GridLength(0);
-                SidebarBorder.Visibility = Visibility.Collapsed;
+                var sb = TryFindResource("SidebarCollapseStoryboard") as Storyboard;
+                if (sb != null)
+                {
+                    sb.Begin();
+                }
+                else
+                {
+                    // Fallback to instant collapse
+                    SidebarColumn.Width = new GridLength(0);
+                    SidebarBorder.Visibility = Visibility.Collapsed;
+                }
                 _isSidebarCollapsed = true;
             }
         }

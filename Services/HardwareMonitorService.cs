@@ -219,13 +219,13 @@ namespace TaskCore.Services
 
                 if (hw.HardwareType == HardwareType.Cpu)
                 {
-                    var temp = ReadTemperature(hw, preferredNames: ["package", "cpu package", "tctl", "tdie", "core", "cpu"]);
+                    var temp = ReadTemperature(hw, preferredNames: ["package", "cpu package", "tctl", "tdie", "core", "cpu", "die", "processor"]);
                     if (temp.HasValue)
                         _cpuPackageTemp = temp;
                 }
                 else if (hw.HardwareType == HardwareType.GpuNvidia || hw.HardwareType == HardwareType.GpuAmd || hw.HardwareType == HardwareType.GpuIntel)
                 {
-                    var temp = ReadTemperature(hw, preferredNames: ["gpu core", "gpu", "core", "hot spot", "hotspot", "junction", "temperature"]);
+                    var temp = ReadTemperature(hw, preferredNames: ["gpu core", "gpu", "core", "hot spot", "hotspot", "junction", "temperature", "graphics", "gt", "intel"]);
                     if (temp.HasValue)
                         _gpuTempsByName[hw.Name] = temp.Value;
                 }

@@ -14,6 +14,27 @@
 
     <Border Background="{StaticResource BackgroundPrimary}">
         <Grid>
+            <Grid.Resources>
+                <!-- Smooth sidebar width animation -->
+                <Storyboard x:Key="SidebarCollapseStoryboard">
+                    <DoubleAnimation Storyboard.TargetName="SidebarColumn"
+                                   Storyboard.TargetProperty="Width"
+                                   To="0" Duration="0:0:0.25" />
+                    <ObjectAnimationUsingKeyFrames Storyboard.TargetName="SidebarBorder"
+                                                   Storyboard.TargetProperty="Visibility">
+                        <DiscreteObjectKeyFrame KeyTime="0:0:0.25" Value="{x:Static Visibility.Collapsed}" />
+                    </ObjectAnimationUsingKeyFrames>
+                </Storyboard>
+                <Storyboard x:Key="SidebarExpandStoryboard">
+                    <ObjectAnimationUsingKeyFrames Storyboard.TargetName="SidebarBorder"
+                                                   Storyboard.TargetProperty="Visibility">
+                        <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}" />
+                    </ObjectAnimationUsingKeyFrames>
+                    <DoubleAnimation Storyboard.TargetName="SidebarColumn"
+                                   Storyboard.TargetProperty="Width"
+                                   To="220" Duration="0:0:0.25" />
+                </Storyboard>
+            </Grid.Resources>
 
             <!-- ================= TOP BAR ================= -->
             <Grid Background="{StaticResource BackgroundSecondary}" Height="40" VerticalAlignment="Top">
@@ -39,6 +60,18 @@
                             Click="ToggleSidebar"
                             VerticalAlignment="Center"
                             Margin="8,0,12,0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="border" Background="Transparent" CornerRadius="4">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="border" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
                         <TextBlock Text="☰" 
                                    Foreground="{StaticResource TextPrimary}"
                                    FontSize="16" 
@@ -64,12 +97,8 @@
                            Style="{x:Null}">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border x:Name="border" Background="Transparent">
-                                    <TextBlock Text="−" 
-                                               Foreground="{StaticResource TextPrimary}"
-                                               FontSize="16" 
-                                               HorizontalAlignment="Center" 
-                                               VerticalAlignment="Center"/>
+                                <Border x:Name="border" Background="Transparent" CornerRadius="2">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
@@ -78,6 +107,11 @@
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
                         </Button.Template>
+                        <TextBlock Text="−" 
+                                   Foreground="{StaticResource TextPrimary}"
+                                   FontSize="16" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
                     </Button>
                     
                     <!-- Maximize -->
@@ -86,12 +120,8 @@
                            Style="{x:Null}">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border x:Name="border" Background="Transparent">
-                                    <TextBlock Text="▢"
-                                               Foreground="{StaticResource TextPrimary}"
-                                               FontSize="14"
-                                               HorizontalAlignment="Center" 
-                                               VerticalAlignment="Center"/>
+                                <Border x:Name="border" Background="Transparent" CornerRadius="2">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
@@ -100,6 +130,11 @@
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
                         </Button.Template>
+                        <TextBlock Text="▢"
+                                   Foreground="{StaticResource TextPrimary}"
+                                   FontSize="14"
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
                     </Button>
 
                     <!-- Close -->
@@ -108,12 +143,8 @@
                            Style="{x:Null}">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border x:Name="border" Background="Transparent">
-                                    <TextBlock Text="×"
-                                               Foreground="{StaticResource TextPrimary}"
-                                               FontSize="18" 
-                                               HorizontalAlignment="Center" 
-                                               VerticalAlignment="Center"/>
+                                <Border x:Name="border" Background="Transparent" CornerRadius="2">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
@@ -123,6 +154,11 @@
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
                         </Button.Template>
+                        <TextBlock Text="×"
+                                   Foreground="{StaticResource TextPrimary}"
+                                   FontSize="18" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
                     </Button>
                     
                 </StackPanel>
@@ -143,7 +179,7 @@
                 <Border x:Name="SidebarBorder"
                         Grid.Column="0"
                         Background="{StaticResource BackgroundSecondary}"
-                        Padding="20 25">
+                        Padding="20 30">
 
                     <StackPanel>
 
@@ -165,8 +201,8 @@
 
                             <ListBox.ItemContainerStyle>
                                 <Style TargetType="ListBoxItem">
-                                    <Setter Property="Margin" Value="0 3"/>
-                                    <Setter Property="Padding" Value="12 10"/>
+                                    <Setter Property="Margin" Value="0 5"/>
+                                    <Setter Property="Padding" Value="15 12"/>
                                     <Setter Property="Cursor" Value="Hand"/>
                                     <Setter Property="Template">
                                         <Setter.Value>
@@ -181,11 +217,39 @@
                                                     <Trigger Property="IsMouseOver" Value="True">
                                                         <Setter TargetName="bd" Property="Background"
                                                                 Value="#3A3A3A"/>
+                                                        <Setter TargetName="bd" Property="RenderTransform">
+                                                            <Setter.Value>
+                                                                <TranslateTransform X="2"/>
+                                                            </Setter.Value>
+                                                        </Setter>
                                                     </Trigger>
                                                     <Trigger Property="IsSelected" Value="True">
                                                         <Setter TargetName="bd" Property="Background"
                                                                 Value="#5A5A5A"/>
+                                                        <Setter TargetName="bd" Property="RenderTransform">
+                                                            <Setter.Value>
+                                                                <TranslateTransform X="4"/>
+                                                            </Setter.Value>
+                                                        </Setter>
                                                     </Trigger>
+                                                    <EventTrigger RoutedEvent="MouseEnter">
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="bd"
+                                                                               Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                                               To="2" Duration="0:0:0.15"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </EventTrigger>
+                                                    <EventTrigger RoutedEvent="MouseLeave">
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="bd"
+                                                                               Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                                               To="0" Duration="0:0:0.15"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </EventTrigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
                                         </Setter.Value>
@@ -197,32 +261,32 @@
                             <ListBoxItem>
                                 <StackPanel Orientation="Horizontal">
                                     <Image Source="pack://application:,,,/TaskCore;component/Resources/Icons/Processes.png"
-                                           Width="18" Height="18" Margin="0 0 12 0"/>
-                                    <TextBlock Text="Processes" FontWeight="Medium"/>
+                                           Width="20" Height="20" Margin="0 0 14 0"/>
+                                    <TextBlock Text="Processes" FontWeight="Medium" FontSize="15"/>
                                 </StackPanel>
                             </ListBoxItem>
 
                             <ListBoxItem>
                                 <StackPanel Orientation="Horizontal">
                                     <Image Source="pack://application:,,,/TaskCore;component/Resources/Icons/Graphs.png"
-                                           Width="18" Height="18" Margin="0 0 12 0"/>
-                                    <TextBlock Text="Graphs" FontWeight="Medium"/>
+                                           Width="20" Height="20" Margin="0 0 14 0"/>
+                                    <TextBlock Text="Graphs" FontWeight="Medium" FontSize="15"/>
                                 </StackPanel>
                             </ListBoxItem>
 
                             <ListBoxItem>
                                 <StackPanel Orientation="Horizontal">
                                     <Image Source="pack://application:,,,/TaskCore;component/Resources/Icons/Details.png"
-                                           Width="18" Height="18" Margin="0 0 12 0"/>
-                                    <TextBlock Text="Details" FontWeight="Medium"/>
+                                           Width="20" Height="20" Margin="0 0 14 0"/>
+                                    <TextBlock Text="Details" FontWeight="Medium" FontSize="15"/>
                                 </StackPanel>
                             </ListBoxItem>
 
                             <ListBoxItem>
                                 <StackPanel Orientation="Horizontal">
                                     <Image Source="pack://application:,,,/TaskCore;component/Resources/Icons/Settings.png"
-                                           Width="18" Height="18" Margin="0 0 12 0"/>
-                                    <TextBlock Text="Settings" FontWeight="Medium"/>
+                                           Width="20" Height="20" Margin="0 0 14 0"/>
+                                    <TextBlock Text="Settings" FontWeight="Medium" FontSize="15"/>
                                 </StackPanel>
                             </ListBoxItem>
 
@@ -236,7 +300,7 @@
                 <!-- ************ CONTENT AREA ************ -->
                 <ContentControl x:Name="ContentArea"
                                 Grid.Column="1"
-                                Margin="20"/>
+                                Margin="10,0,10,10"/>
             </Grid>
 
         </Grid>
