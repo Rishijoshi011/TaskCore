@@ -366,11 +366,29 @@ namespace TaskCore.ViewModels.Graphs
                         };
                     }
 
-                    // Virtualization - basic check
+                    // Virtualization - try firmware flag first
                     var virtEnabled = cpuInfo["VirtualizationFirmwareEnabled"] as bool?;
                     if (virtEnabled.HasValue)
                     {
                         Virtualization = virtEnabled.Value ? "Enabled" : "Disabled";
+                    }
+                    else
+                    {
+                        // Fallback: if a hypervisor is present, virtualization must be enabled
+                        try
+                        {
+                            using var osSearcher = new ManagementObjectSearcher("SELECT HypervisorPresent FROM Win32_OperatingSystem");
+                            var os = osSearcher.Get().Cast<ManagementObject>().FirstOrDefault();
+                            var hypervisorPresent = os?["HypervisorPresent"] as bool?;
+                            if (hypervisorPresent == true)
+                            {
+                                Virtualization = "Enabled";
+                            }
+                        }
+                        catch
+                        {
+                            // ignore, keep previous value
+                        }
                     }
 
                     // Extra info if available
@@ -382,6 +400,10 @@ namespace TaskCore.ViewModels.Graphs
                         Stepping = cpuInfo["Stepping"]?.ToString() ?? Stepping;
                     if (string.IsNullOrEmpty(Level) || Level == "Unknown")
                         Level = cpuInfo["Level"]?.ToString() ?? Level;
+                    if (string.IsNullOrEmpty(SocketDesignation) || SocketDesignation == "Unknown")
+                        SocketDesignation = cpuInfo["SocketDesignation"]?.ToString() ?? SocketDesignation;
+                    if (string.IsNullOrEmpty(ProcessorType) || ProcessorType == "Unknown")
+                        ProcessorType = cpuInfo["ProcessorType"]?.ToString() ?? ProcessorType;
 
                     // Get cache using Win32_CacheMemory (more reliable)
                     TryGetCacheFromWin32CacheMemory();
