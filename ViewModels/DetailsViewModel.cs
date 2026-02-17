@@ -3,6 +3,9 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
 using TaskCore.Services;
 
 namespace TaskCore.ViewModels
@@ -32,7 +35,69 @@ namespace TaskCore.ViewModels
         [ObservableProperty]
         private string longestSessionText = "-";
 
+        [ObservableProperty]
+        private string copyStatusText = string.Empty;
+
+        private CancellationTokenSource? _copyCts;
+
         public string SessionLogsDirectory => AppSessionLogService.LogDirectory;
+
+        [RelayCommand]
+        private void CopySessionLogsDirectory()
+        {
+            var text = SessionLogsDirectory;
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            try
+            {
+                Clipboard.SetText(text);
+                ShowCopyStatus("Copied!");
+            }
+            catch
+            {
+                try
+                {
+                    Clipboard.SetDataObject(text);
+                    ShowCopyStatus("Copied!");
+                }
+                catch
+                {
+                    ShowCopyStatus("Copy failed");
+                }
+            }
+        }
+
+        private void ShowCopyStatus(string msg)
+        {
+            try
+            {
+                CopyStatusText = msg;
+
+                _copyCts?.Cancel();
+                _copyCts = new CancellationTokenSource();
+                var token = _copyCts.Token;
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await Task.Delay(1500, token);
+                        if (token.IsCancellationRequested) return;
+
+                        Application.Current?.Dispatcher?.BeginInvoke(() =>
+                        {
+                            try { CopyStatusText = string.Empty; } catch { }
+                        });
+                    }
+                    catch
+                    {
+                    }
+                });
+            }
+            catch
+            {
+            }
+        }
 
         [ObservableProperty] private bool showSummaryApp = true;
         [ObservableProperty] private bool showSummarySessions = true;
