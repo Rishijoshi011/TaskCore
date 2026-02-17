@@ -1,8 +1,17 @@
 ﻿<UserControl x:Class="TaskCore.Views.DetailsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:TaskCore.ViewModels"
              Background="{StaticResource BackgroundPrimary}"
              Padding="20">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </UserControl.Resources>
+
+    <UserControl.DataContext>
+        <vm:DetailsViewModel/>
+    </UserControl.DataContext>
 
     <Grid>
 
@@ -12,7 +21,7 @@
         </Grid.RowDefinitions>
 
         <!-- ====== HEADER ====== -->
-        <TextBlock Text="Detailed Task Information"
+        <TextBlock Text="Session Tracker"
                    FontSize="26"
                    FontWeight="Bold"
                    Foreground="{StaticResource AccentBrush}"
@@ -20,25 +29,265 @@
                    Grid.Row="0"/>
 
         <!-- ====== DETAILS CARD ====== -->
-        <Border Style="{StaticResource CardPanel}"
-                Grid.Row="1"
-                VerticalAlignment="Stretch"
-                HorizontalAlignment="Stretch">
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-            <Grid>
+            <!-- Controls -->
+            <Border Grid.Row="0" Style="{StaticResource CardPanel}" Margin="0" Padding="14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <!-- Placeholder text until actual process info is bound -->
-                <TextBlock Text="Process details will appear here..."
-                           Foreground="{StaticResource TextSecondary}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           FontSize="16"
-                           TextWrapping="Wrap"
-                           Opacity="0.8"/>
+                    <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0 0 12 0">
+                        <TextBlock Text="Date" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0 0 0 4"/>
+                        <DatePicker SelectedDate="{Binding SelectedDate}" Width="150" Height="32" Style="{StaticResource DarkDatePicker}" BorderThickness="0" BorderBrush="{StaticResource BackgroundSecondary}"/>
+                    </StackPanel>
 
-            </Grid>
+                    <StackPanel Grid.Column="1" Orientation="Vertical" Margin="0 0 12 0">
+                        <TextBlock Text="Search" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0 0 0 4"/>
+                        <TextBox Width="320" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FlatTextBox}"/>
+                    </StackPanel>
 
-        </Border>
+                    <TextBlock Grid.Column="2"
+                               VerticalAlignment="Bottom"
+                               Margin="0 0 10 4"
+                               Text="{Binding SessionLogsDirectory, StringFormat=Logs: {0}}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11"
+                               TextTrimming="CharacterEllipsis"/>
+
+                    <Button Grid.Column="3" Content="Refresh" Command="{Binding RefreshCommand}" Height="32" Style="{StaticResource ActionButton}"/>
+                </Grid>
+            </Border>
+
+            <!-- Overview cards -->
+            <UniformGrid Grid.Row="1" Columns="4" Margin="0 14 0 0">
+                <Border Style="{StaticResource CardPanel}" Margin="0 0 10 0" Padding="14">
+                    <StackPanel>
+                        <TextBlock Text="Apps" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        <TextBlock Text="{Binding AppSummaries.Count}" Foreground="{StaticResource TextPrimary}" FontSize="20" FontWeight="Bold" Margin="0 6 0 0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardPanel}" Margin="0 0 10 0" Padding="14">
+                    <StackPanel>
+                        <TextBlock Text="Sessions" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        <TextBlock Text="{Binding Sessions.Count}" Foreground="{StaticResource TextPrimary}" FontSize="20" FontWeight="Bold" Margin="0 6 0 0"/>
+                    </StackPanel>
+                </Border>
+                <Border Margin="0 0 10 0" Padding="14">
+                    <StackPanel>
+                        <TextBlock Text="Top App (by sessions)" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        <TextBlock Text="{Binding TopAppName}" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0 6 0 0" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding TopAppSessionsText}" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                    </StackPanel>
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource CardPanel}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding TopAppName}" Value="-">
+                                    <Setter Property="Opacity" Value="0.35"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                </Border>
+                <Border Margin="0" Padding="14">
+                    <StackPanel>
+                        <TextBlock Text="Longest Session" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        <TextBlock Text="{Binding LongestSessionText}" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0 6 0 0"/>
+                    </StackPanel>
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource CardPanel}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding LongestSessionText}" Value="-">
+                                    <Setter Property="Opacity" Value="0.35"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                </Border>
+            </UniformGrid>
+
+            <TextBlock Grid.Row="2" Text="App Summary" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0 18 0 8"/>
+
+            <Border Grid.Row="3"
+                    Background="{StaticResource BackgroundCard}"
+                    BorderBrush="#339A4DFF"
+                    BorderThickness="4"
+                    CornerRadius="10"
+                    SnapsToDevicePixels="True"
+                    Padding="0"
+                    Margin="0">
+                <Border.Clip>
+                    <RectangleGeometry RadiusX="10" RadiusY="10" Rect="0,0,10000,10000"/>
+                </Border.Clip>
+
+                <DataGrid ItemsSource="{Binding AppSummaries}" Style="{StaticResource DarkDataGrid}" AlternationCount="2" AutoGenerateColumns="False">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu Style="{StaticResource DarkContextMenu}">
+                            <ContextMenu.Resources>
+                                <Style TargetType="MenuItem">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                                    <Setter Property="Padding" Value="10,6"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="MenuItem">
+                                                <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="22"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Width="16" Height="16" CornerRadius="3" BorderThickness="1" BorderBrush="{StaticResource AccentBrush}" Background="{StaticResource BackgroundCard}" VerticalAlignment="Center">
+                                                            <TextBlock x:Name="Check" Text="✓" Foreground="{StaticResource AccentBrush}" FontSize="12" FontWeight="Bold"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                                                        </Border>
+                                                        <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsCheckable" Value="False">
+                                                        <Setter TargetName="Check" Property="Visibility" Value="Collapsed"/>
+                                                        <Setter TargetName="Bd" Property="Padding" Value="10,6"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsChecked" Value="True">
+                                                        <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                                                        <Setter TargetName="Bd" Property="Background" Value="#229A4DFF"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsHighlighted" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#33FFFFFF"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Opacity" Value="0.5"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ContextMenu.Resources>
+                            <MenuItem Header="Columns" IsEnabled="False"/>
+                            <Separator Style="{StaticResource DarkMenuSeparator}"/>
+                            <MenuItem Header="App" IsCheckable="True" IsChecked="{Binding ShowSummaryApp, Mode=TwoWay}"/>
+                            <MenuItem Header="Sessions" IsCheckable="True" IsChecked="{Binding ShowSummarySessions, Mode=TwoWay}"/>
+                            <MenuItem Header="Longest" IsCheckable="True" IsChecked="{Binding ShowSummaryLongest, Mode=TwoWay}"/>
+                            <MenuItem Header="Peak CPU" IsCheckable="True" IsChecked="{Binding ShowSummaryPeakCpu, Mode=TwoWay}"/>
+                            <MenuItem Header="Avg CPU" IsCheckable="True" IsChecked="{Binding ShowSummaryAvgCpu, Mode=TwoWay}"/>
+                            <MenuItem Header="Peak Mem" IsCheckable="True" IsChecked="{Binding ShowSummaryPeakMem, Mode=TwoWay}"/>
+                            <MenuItem Header="Avg Mem" IsCheckable="True" IsChecked="{Binding ShowSummaryAvgMem, Mode=TwoWay}"/>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="App" Binding="{Binding AppName}" Width="*" Visibility="{Binding ShowSummaryApp, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Sessions" Binding="{Binding SessionCount}" Width="90" Visibility="{Binding ShowSummarySessions, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Longest" Binding="{Binding LongestSessionDisplay}" Width="110" Visibility="{Binding ShowSummaryLongest, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Peak CPU" Binding="{Binding PeakCpuPercent, StringFormat={}{0}%}" Width="95" Visibility="{Binding ShowSummaryPeakCpu, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Avg CPU" Binding="{Binding AverageCpuPercent, StringFormat={}{0}%}" Width="95" Visibility="{Binding ShowSummaryAvgCpu, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Peak Mem" Binding="{Binding PeakMemoryMb, StringFormat={}{0} MB}" Width="110" Visibility="{Binding ShowSummaryPeakMem, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Avg Mem" Binding="{Binding AverageMemoryMb, StringFormat={}{0} MB}" Width="110" Visibility="{Binding ShowSummaryAvgMem, Converter={StaticResource BoolToVisibility}}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+
+            <TextBlock Grid.Row="4" Text="Sessions" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0 18 0 8"/>
+
+            <Border Grid.Row="5"
+                    Background="{StaticResource BackgroundCard}"
+                    BorderBrush="#339A4DFF"
+                    BorderThickness="4"
+                    CornerRadius="10"
+                    SnapsToDevicePixels="True"
+                    Padding="0"
+                    Margin="0">
+                <Border.Clip>
+                    <RectangleGeometry RadiusX="10" RadiusY="10" Rect="0,0,10000,10000"/>
+                </Border.Clip>
+
+                <DataGrid ItemsSource="{Binding Sessions}" Style="{StaticResource DarkDataGrid}" AlternationCount="2" AutoGenerateColumns="False"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu Style="{StaticResource DarkContextMenu}">
+                            <ContextMenu.Resources>
+                                <Style TargetType="MenuItem">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                                    <Setter Property="Padding" Value="10,6"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="MenuItem">
+                                                <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="22"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Width="16" Height="16" CornerRadius="3" BorderThickness="1" BorderBrush="{StaticResource AccentBrush}" Background="{StaticResource BackgroundCard}" VerticalAlignment="Center">
+                                                            <TextBlock x:Name="Check" Text="✓" Foreground="{StaticResource AccentBrush}" FontSize="12" FontWeight="Bold"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                                                        </Border>
+                                                        <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsCheckable" Value="False">
+                                                        <Setter TargetName="Check" Property="Visibility" Value="Collapsed"/>
+                                                        <Setter TargetName="Bd" Property="Padding" Value="10,6"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsChecked" Value="True">
+                                                        <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                                                        <Setter TargetName="Bd" Property="Background" Value="#229A4DFF"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsHighlighted" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#33FFFFFF"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Opacity" Value="0.5"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ContextMenu.Resources>
+                            <MenuItem Header="Columns" IsEnabled="False"/>
+                            <Separator Style="{StaticResource DarkMenuSeparator}"/>
+                            <MenuItem Header="App" IsCheckable="True" IsChecked="{Binding ShowSessionApp, Mode=TwoWay}"/>
+                            <MenuItem Header="PID" IsCheckable="True" IsChecked="{Binding ShowSessionPid, Mode=TwoWay}"/>
+                            <MenuItem Header="Start" IsCheckable="True" IsChecked="{Binding ShowSessionStart, Mode=TwoWay}"/>
+                            <MenuItem Header="End" IsCheckable="True" IsChecked="{Binding ShowSessionEnd, Mode=TwoWay}"/>
+                            <MenuItem Header="Duration" IsCheckable="True" IsChecked="{Binding ShowSessionDuration, Mode=TwoWay}"/>
+                            <MenuItem Header="Peak CPU" IsCheckable="True" IsChecked="{Binding ShowSessionPeakCpu, Mode=TwoWay}"/>
+                            <MenuItem Header="Avg CPU" IsCheckable="True" IsChecked="{Binding ShowSessionAvgCpu, Mode=TwoWay}"/>
+                            <MenuItem Header="Peak Mem" IsCheckable="True" IsChecked="{Binding ShowSessionPeakMem, Mode=TwoWay}"/>
+                            <MenuItem Header="Avg Mem" IsCheckable="True" IsChecked="{Binding ShowSessionAvgMem, Mode=TwoWay}"/>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="App" Binding="{Binding AppName}" Width="*" Visibility="{Binding ShowSessionApp, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="80" Visibility="{Binding ShowSessionPid, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Start" Binding="{Binding StartDisplay}" Width="95" Visibility="{Binding ShowSessionStart, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="End" Binding="{Binding EndDisplay}" Width="95" Visibility="{Binding ShowSessionEnd, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Duration" Binding="{Binding DurationDisplay}" Width="110" Visibility="{Binding ShowSessionDuration, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Peak CPU" Binding="{Binding PeakCpuPercent, StringFormat={}{0}%}" Width="95" Visibility="{Binding ShowSessionPeakCpu, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Avg CPU" Binding="{Binding AverageCpuPercent, StringFormat={}{0}%}" Width="95" Visibility="{Binding ShowSessionAvgCpu, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Peak Mem" Binding="{Binding PeakMemoryMb, StringFormat={}{0} MB}" Width="110" Visibility="{Binding ShowSessionPeakMem, Converter={StaticResource BoolToVisibility}}"/>
+                        <DataGridTextColumn Header="Avg Mem" Binding="{Binding AverageMemoryMb, StringFormat={}{0} MB}" Width="110" Visibility="{Binding ShowSessionAvgMem, Converter={StaticResource BoolToVisibility}}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </Grid>
 
     </Grid>
 

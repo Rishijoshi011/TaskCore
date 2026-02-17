@@ -17,6 +17,7 @@ namespace TaskCore
             );
 
             _ = WatchdogService.Instance;
+            _ = AppSessionTrackerService.Instance;
         }
     }
 }

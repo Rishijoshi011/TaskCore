@@ -153,7 +153,6 @@ C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\Micr
 C:\Users\rishi.joshi\temp_pro\TaskCore\bin\Debug\net8.0-windows10.0.19041.0\WinRT.Runtime.dll
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\TaskCore.csproj.AssemblyReference.cache
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Resources\Theme.baml
-C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\DetailsView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\GraphsView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\DiskCardView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\GpuCardView.baml
@@ -177,6 +176,7 @@ C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Gene
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\TaskCore_MarkupCompile.cache
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\TaskCore_MarkupCompile.lref
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\MainWindow.baml
+C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\DetailsView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\CpuGraphView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\DiskGraphView.baml
 C:\Users\rishi.joshi\temp_pro\TaskCore\obj\Debug\net8.0-windows10.0.19041.0\Views\Graphs\GpuGraphView.baml

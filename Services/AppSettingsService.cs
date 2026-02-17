@@ -65,5 +65,8 @@ namespace TaskCore.Services
         public string CustomAlertSoundPath { get; set; } = string.Empty;
 
         public System.Collections.Generic.List<string>? WatchdogTargets { get; set; } = new();
+
+        public System.Collections.Generic.Dictionary<string, bool>? SessionTrackerSummaryColumns { get; set; } = new();
+        public System.Collections.Generic.Dictionary<string, bool>? SessionTrackerSessionColumns { get; set; } = new();
     }
 }
