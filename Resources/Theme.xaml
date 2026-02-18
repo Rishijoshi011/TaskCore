@@ -78,6 +78,38 @@
 
         <Setter Property="Padding" Value="6"/>
 
+        <Setter Property="BorderBrush" Value="{StaticResource BackgroundCard}"/>
+
+        <Setter Property="BorderThickness" Value="1"/>
+
+        <Setter Property="Template">
+
+            <Setter.Value>
+
+                <ControlTemplate TargetType="ContextMenu">
+
+                    <Border Background="{TemplateBinding Background}" 
+
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+
+                            BorderThickness="{TemplateBinding BorderThickness}"
+
+                            CornerRadius="4">
+
+                        <ScrollViewer CanContentScroll="True">
+
+                            <ItemsPresenter Margin="{TemplateBinding Padding}"/>
+
+                        </ScrollViewer>
+
+                    </Border>
+
+                </ControlTemplate>
+
+            </Setter.Value>
+
+        </Setter>
+
     </Style>
 
 
