@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using TaskCore.Services;
+using System.Text.Json;
+using System.IO;
 
 namespace TaskCore.ViewModels
 {
@@ -16,6 +18,12 @@ namespace TaskCore.ViewModels
 
         [ObservableProperty]
         private DateTime selectedDate = DateTime.Today;
+
+        [ObservableProperty]
+        private DateTime startDate = DateTime.Today.AddDays(-7);
+
+        [ObservableProperty]
+        private DateTime endDate = DateTime.Today;
 
         [ObservableProperty]
         private string searchQuery = string.Empty;
@@ -40,7 +48,62 @@ namespace TaskCore.ViewModels
 
         private CancellationTokenSource? _copyCts;
 
-        public string SessionLogsDirectory => AppSessionLogService.LogDirectory;
+        public string SessionLogsDirectory => UsageTrackingService.GetBaseDirectory();
+
+        // Helper method to safely extract values from JsonElement
+        private static T SafeGetValue<T>(Dictionary<string, object> dict, string key, Func<JsonElement, T> converter, T defaultValue = default)
+        {
+            try
+            {
+                if (dict.TryGetValue(key, out var value) && value is JsonElement element)
+                {
+                    return converter(element);
+                }
+            }
+            catch
+            {
+                // Return default on any error
+            }
+            return defaultValue;
+        }
+
+        private static int SafeGetInt(Dictionary<string, object> dict, string key)
+        {
+            if (!dict.TryGetValue(key, out var val)) return 0;
+            if (val is JsonElement el)
+            {
+                if (el.ValueKind == JsonValueKind.Number) return el.GetInt32();
+                if (int.TryParse(el.GetString(), out var parsed)) return parsed;
+                return 0;
+            }
+            if (int.TryParse(val?.ToString(), out var i)) return i;
+            return 0;
+        }
+
+        private static double SafeGetDouble(Dictionary<string, object> dict, string key)
+        {
+            if (!dict.TryGetValue(key, out var val)) return 0.0;
+            if (val is JsonElement el)
+            {
+                if (el.ValueKind == JsonValueKind.Number) return el.GetDouble();
+                if (double.TryParse(el.GetString(), out var parsed)) return parsed;
+                return 0.0;
+            }
+            if (double.TryParse(val?.ToString(), out var d)) return d;
+            return 0.0;
+        }
+
+        private static DateTime SafeGetDateTime(Dictionary<string, object> dict, string key)
+        {
+            if (!dict.TryGetValue(key, out var val)) return DateTime.MinValue;
+            if (val is JsonElement el)
+            {
+                if (el.ValueKind == JsonValueKind.String) return DateTime.Parse(el.GetString()!);
+                return DateTime.MinValue;
+            }
+            if (DateTime.TryParse(val?.ToString(), out var dt)) return dt;
+            return DateTime.MinValue;
+        }
 
         [RelayCommand]
         private void CopySessionLogsDirectory()
@@ -234,84 +297,186 @@ namespace TaskCore.ViewModels
             try
             {
                 var date = DateOnly.FromDateTime(SelectedDate);
-                var log = AppSessionLogService.LoadDay(date);
-                var list = (log.Sessions ?? new()).ToList();
+                var sessions = UsageTrackingService.GetDailySessions(date);
 
+                // DEBUG: write session count and first entry to a debug file
+                try
+                {
+                    var debugFile = Path.Combine(UsageTrackingService.GetBaseDirectory(), "debug-refresh.txt");
+                    var lines = new List<string>
+                    {
+                        $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Refresh for date {date:yyyy-MM-dd}",
+                        $"Sessions count: {sessions.Count}"
+                    };
+                    if (sessions.Count > 0)
+                    {
+                        var first = sessions.First();
+                        lines.Add("First session keys: " + string.Join(", ", first.Keys));
+                        lines.Add($"First session sample: app={first.GetValueOrDefault("app")}, pid={first.GetValueOrDefault("processId")}");
+                    }
+                    File.AppendAllLines(debugFile, lines);
+                }
+                catch { }
+
+                // Apply search filter
                 var q = SearchQuery ?? string.Empty;
                 if (!string.IsNullOrWhiteSpace(q))
                 {
-                    list = list.Where(s => (s.AppName ?? string.Empty).Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+                    sessions = sessions.Where(s => 
+                        (s["app"]?.ToString() ?? string.Empty).Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
                 }
 
+                // Group sessions by app for summaries
+                var appGroups = sessions.GroupBy(s => s["app"]?.ToString() ?? "Unknown")
+                                       .ToDictionary(g => g.Key, g => g.ToList());
+
+                // Update app summaries
+                AppSummaries = new ObservableCollection<SessionSummaryItem>(
+                    appGroups.Select(kvp => new SessionSummaryItem
+                    {
+                        AppName = kvp.Key,
+                        SessionCount = kvp.Value.Count,
+                        LongestSessionSeconds = kvp.Value.Max(s => SafeGetInt(s, "durationSeconds")),
+                        PeakCpuPercent = kvp.Value.Average(s => SafeGetDouble(s, "peakCpuPercent")),
+                        AverageCpuPercent = kvp.Value.Average(s => SafeGetDouble(s, "averageCpuPercent")),
+                        PeakMemoryMb = kvp.Value.Average(s => SafeGetDouble(s, "peakMemoryMB")),
+                        AverageMemoryMb = kvp.Value.Average(s => SafeGetDouble(s, "averageMemoryMB"))
+                    })
+                    .OrderByDescending(s => s.LongestSessionSeconds)
+                );
+
+                // Update sessions list (all sessions, ordered by start time)
                 Sessions = new ObservableCollection<SessionRecordItem>(
-                    list
-                        .OrderByDescending(s => s.StartTimeLocal)
+                    sessions
+                        .OrderByDescending(s => SafeGetDateTime(s, "startTimeUtc"))
                         .Select(s => new SessionRecordItem
                         {
-                            AppName = s.AppName,
-                            ProcessId = s.ProcessId,
-                            ProcessPath = s.ProcessPath,
-                            StartTimeLocal = s.StartTimeLocal,
-                            EndTimeLocal = s.EndTimeLocal,
-                            DurationSeconds = s.DurationSeconds,
-                            PeakCpuPercent = s.PeakCpuPercent,
-                            AverageCpuPercent = s.AverageCpuPercent,
-                            PeakMemoryMb = s.PeakMemoryMb,
-                            AverageMemoryMb = s.AverageMemoryMb
-                        }));
+                            AppName = s["app"]?.ToString() ?? "Unknown",
+                            ProcessId = SafeGetInt(s, "processId"),
+                            StartTimeLocal = SafeGetDateTime(s, "startTimeUtc").ToLocalTime(),
+                            EndTimeLocal = SafeGetDateTime(s, "endTimeUtc").ToLocalTime(),
+                            DurationSeconds = SafeGetInt(s, "durationSeconds"),
+                            PeakCpuPercent = SafeGetDouble(s, "peakCpuPercent"),
+                            AverageCpuPercent = SafeGetDouble(s, "averageCpuPercent"),
+                            PeakMemoryMb = SafeGetDouble(s, "peakMemoryMB"),
+                            AverageMemoryMb = SafeGetDouble(s, "averageMemoryMB")
+                        })
+                );
 
-                var summaries = list
-                    .GroupBy(s => s.AppName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-                    .Select(g =>
-                    {
-                        var sessions = g.ToList();
-                        var longest = sessions.Count == 0 ? 0 : sessions.Max(x => x.DurationSeconds);
-                        var peakCpu = sessions.Count == 0 ? 0 : sessions.Max(x => x.PeakCpuPercent);
-                        var peakMem = sessions.Count == 0 ? 0 : sessions.Max(x => x.PeakMemoryMb);
-
-                        var weightedCpuDen = sessions.Sum(x => Math.Max(1, x.SampleCount));
-                        var weightedMemDen = weightedCpuDen;
-                        var avgCpu = weightedCpuDen > 0 ? sessions.Sum(x => x.AverageCpuPercent * Math.Max(1, x.SampleCount)) / weightedCpuDen : 0;
-                        var avgMem = weightedMemDen > 0 ? sessions.Sum(x => x.AverageMemoryMb * Math.Max(1, x.SampleCount)) / weightedMemDen : 0;
-
-                        return new SessionSummaryItem
-                        {
-                            AppName = g.Key,
-                            SessionCount = sessions.Count,
-                            LongestSessionSeconds = longest,
-                            PeakCpuPercent = Math.Round(peakCpu, 1),
-                            AverageCpuPercent = Math.Round(avgCpu, 1),
-                            PeakMemoryMb = Math.Round(peakMem, 1),
-                            AverageMemoryMb = Math.Round(avgMem, 1)
-                        };
-                    })
-                    .OrderByDescending(x => x.SessionCount)
-                    .ThenByDescending(x => x.PeakCpuPercent)
-                    .ToList();
-
-                AppSummaries = new ObservableCollection<SessionSummaryItem>(summaries);
-
-                var top = summaries.FirstOrDefault();
-                if (top == null || string.IsNullOrWhiteSpace(top.AppName))
-                {
-                    TopAppName = "-";
-                    TopAppSessionsText = "-";
-                    LongestSessionText = "-";
-                }
-                else
-                {
-                    TopAppName = top.AppName;
-                    TopAppSessionsText = $"{top.SessionCount} sessions";
-                    LongestSessionText = top.LongestSessionDisplay;
-                }
+                // Update summary stats
+                UpdateSummaryStats(appGroups);
             }
-            catch
+            catch (Exception ex)
             {
-                Sessions = new ObservableCollection<SessionRecordItem>();
-                AppSummaries = new ObservableCollection<SessionSummaryItem>();
+                // Clear data on error
+                AppSummaries.Clear();
+                Sessions.Clear();
+                UpdateSummaryStats(new Dictionary<string, List<Dictionary<string, object>>>());
+                
+                // Log error
+                try
+                {
+                    var errorFile = Path.Combine(UsageTrackingService.GetBaseDirectory(), "errors.txt");
+                    File.AppendAllText(errorFile, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] UI Refresh error: {ex.Message}\n");
+                }
+                catch { }
+            }
+        }
+
+        private void UpdateSummaryStats(Dictionary<string, List<Dictionary<string, object>>> appGroups)
+        {
+            if (appGroups.Any())
+            {
+                // Top app by total runtime
+                var topApp = appGroups.OrderByDescending(kvp => kvp.Value.Sum(s => SafeGetInt(s, "durationSeconds"))).First();
+                TopAppName = topApp.Key;
+                TopAppSessionsText = $"{topApp.Value.Count} sessions";
+
+                // Longest single session
+                var longestSession = appGroups.SelectMany(kvp => kvp.Value)
+                                             .OrderByDescending(s => SafeGetInt(s, "durationSeconds"))
+                                             .First();
+                var duration = SafeGetInt(longestSession, "durationSeconds");
+                LongestSessionText = $"{longestSession["app"]} ({TimeSpan.FromSeconds(duration):hh\\:mm\\:ss})";
+            }
+            else
+            {
                 TopAppName = "-";
                 TopAppSessionsText = "-";
                 LongestSessionText = "-";
+            }
+        }
+
+        [RelayCommand]
+        private void RefreshData()
+        {
+            try
+            {
+                // Validate and reload session data for the selected date
+                Refresh();
+                ShowCopyStatus("Refreshed");
+            }
+            catch (Exception ex)
+            {
+                // Handle errors (e.g., file not found, invalid JSON) gracefully
+                ShowCopyStatus($"Refresh failed: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private void ExportToCsv()
+        {
+            try
+            {
+                var start = DateOnly.FromDateTime(StartDate);
+                var end = DateOnly.FromDateTime(EndDate);
+                var csv = UsageTrackingService.ExportToCsv(start, end);
+                
+                var fileName = $"usage-export-{start:yyyy-MM-dd}-to-{end:yyyy-MM-dd}.csv";
+                var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), fileName);
+                File.WriteAllText(filePath, csv);
+                
+                ShowCopyStatus($"Exported to {fileName}");
+            }
+            catch (Exception ex)
+            {
+                ShowCopyStatus($"Export failed: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private void ExportToJson()
+        {
+            try
+            {
+                var start = DateOnly.FromDateTime(StartDate);
+                var end = DateOnly.FromDateTime(EndDate);
+                var json = UsageTrackingService.ExportToJson(start, end);
+                
+                var fileName = $"usage-export-{start:yyyy-MM-dd}-to-{end:yyyy-MM-dd}.json";
+                var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), fileName);
+                File.WriteAllText(filePath, json);
+                
+                ShowCopyStatus($"Exported to {fileName}");
+            }
+            catch (Exception ex)
+            {
+                ShowCopyStatus($"Export failed: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private void CleanupOldData()
+        {
+            try
+            {
+                UsageTrackingService.CleanupOldFiles();
+                ShowCopyStatus("Cleanup completed");
+                Refresh(); // Refresh to show updated data
+            }
+            catch (Exception ex)
+            {
+                ShowCopyStatus($"Cleanup failed: {ex.Message}");
             }
         }
     }

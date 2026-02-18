@@ -17,7 +17,8 @@ namespace TaskCore
             );
 
             _ = WatchdogService.Instance;
-            _ = AppSessionTrackerService.Instance;
+            // _ = AppSessionTrackerService.Instance; // DISABLED - using UsageTrackingService instead
+            _ = UsageTrackingService.Instance;
         }
     }
 }

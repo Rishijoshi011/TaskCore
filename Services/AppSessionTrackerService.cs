@@ -39,9 +39,9 @@ namespace TaskCore.Services
 
         private readonly string[] _ignoredPathPrefixes =
         {
-            @"C:\\Windows\\System32\\",
-            @"C:\\Windows\\SysWOW64\\",
-            @"C:\\Windows\\"
+            @"C:\Windows\System32\",
+            @"C:\Windows\SysWOW64\",
+            @"C:\Windows\"
         };
 
         private AppSessionTrackerService()
@@ -277,8 +277,8 @@ namespace TaskCore.Services
 
                 var norm = path.Replace('/', '\\');
 
-                if (norm.StartsWith(@"C:\\Program Files\\", StringComparison.OrdinalIgnoreCase)) return true;
-                if (norm.StartsWith(@"C:\\Program Files (x86)\\", StringComparison.OrdinalIgnoreCase)) return true;
+                if (norm.StartsWith(@"C:\Program Files\", StringComparison.OrdinalIgnoreCase)) return true;
+                if (norm.StartsWith(@"C:\Program Files (x86)\", StringComparison.OrdinalIgnoreCase)) return true;
 
                 var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData).Replace('/', '\\');
                 var roamingAppData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData).Replace('/', '\\');
@@ -288,7 +288,7 @@ namespace TaskCore.Services
 
                 // Custom installed paths: if it exists and is not under Windows directory, allow.
                 // This catches e.g. D:\Apps\..., portable apps, etc.
-                if (File.Exists(norm) && !norm.StartsWith(@"C:\\Windows\\", StringComparison.OrdinalIgnoreCase))
+                if (File.Exists(norm) && !norm.StartsWith(@"C:\Windows\", StringComparison.OrdinalIgnoreCase))
                     return true;
             }
             catch

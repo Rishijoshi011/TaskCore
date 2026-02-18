@@ -702,13 +702,17 @@
 
     <Style x:Key="DarkDataGridColumnHeader" TargetType="DataGridColumnHeader">
 
-        <Setter Property="Background" Value="#22000000"/>
+        <Setter Property="Background" Value="{StaticResource BackgroundSecondary}"/>
 
-        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
 
         <Setter Property="FontWeight" Value="SemiBold"/>
 
+        <Setter Property="FontSize" Value="12"/>
+
         <Setter Property="Padding" Value="10,10"/>
+
+        <Setter Property="Height" Value="34"/>
 
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
 
@@ -724,6 +728,8 @@
 
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
 
+        <Setter Property="MinHeight" Value="34"/>
+
         <Setter Property="BorderThickness" Value="0"/>
 
         <Setter Property="RowBackground" Value="Transparent"/>
@@ -731,6 +737,8 @@
         <Setter Property="AlternatingRowBackground" Value="#1AFFFFFF"/>
 
         <Setter Property="HeadersVisibility" Value="Column"/>
+
+        <Setter Property="ColumnHeaderHeight" Value="34"/>
 
         <Setter Property="GridLinesVisibility" Value="None"/>
 
@@ -823,8 +831,6 @@
         </Setter>
 
     </Style>
-
-
 
     <!-- TITLE BAR BUTTON STYLE -->
 
