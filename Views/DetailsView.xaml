@@ -143,13 +143,55 @@
                           MaxHeight="300"
                           MinHeight="120">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="2*"/>
-                        <DataGridTextColumn Header="Sessions" Binding="{Binding SessionCount}" Width="80"/>
-                        <DataGridTextColumn Header="Longest" Binding="{Binding LongestSessionDisplay}" Width="90"/>
-                        <DataGridTextColumn Header="Peak CPU %" Binding="{Binding PeakCpuPercent, StringFormat={}{0:F1}}" Width="85"/>
-                        <DataGridTextColumn Header="Avg CPU %" Binding="{Binding AverageCpuPercent, StringFormat={}{0:F1}}" Width="85"/>
-                        <DataGridTextColumn Header="Peak Memory" Binding="{Binding PeakMemoryMb, StringFormat={}{0:F0} MB}" Width="85"/>
-                        <DataGridTextColumn Header="Avg Memory" Binding="{Binding AverageMemoryMb, StringFormat={}{0:F0} MB}" Width="85"/>
+                        <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Sessions" Binding="{Binding SessionCount}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Longest" Binding="{Binding LongestSessionDisplay}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Peak CPU %" Binding="{Binding PeakCpuPercent, StringFormat={}{0:F1}}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Avg CPU %" Binding="{Binding AverageCpuPercent, StringFormat={}{0:F1}}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Peak Memory" Binding="{Binding PeakMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Avg Memory" Binding="{Binding AverageMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>
@@ -169,22 +211,76 @@
 
                 <DataGrid ItemsSource="{Binding Sessions}"
                           Style="{StaticResource DarkDataGrid}"
-                          AutoGenerateColumns="False"
+                          AutoGenerateColumns="True"
                           HeadersVisibility="Column"
-                          MaxHeight="400"
-                          MinHeight="140"
+                          
+                          
                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
                           ScrollViewer.VerticalScrollBarVisibility="Auto">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="2*"/>
-                        <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="60"/>
-                        <DataGridTextColumn Header="Start" Binding="{Binding StartDisplay}" Width="90"/>
-                        <DataGridTextColumn Header="End" Binding="{Binding EndDisplay}" Width="90"/>
-                        <DataGridTextColumn Header="Duration" Binding="{Binding DurationDisplay}" Width="80"/>
-                        <DataGridTextColumn Header="Peak CPU %" Binding="{Binding PeakCpuPercent, StringFormat={}{0:F1}}" Width="80"/>
-                        <DataGridTextColumn Header="Avg CPU %" Binding="{Binding AverageCpuPercent, StringFormat={}{0:F1}}" Width="80"/>
-                        <DataGridTextColumn Header="Peak Memory" Binding="{Binding PeakMemoryMb, StringFormat={}{0:F0} MB}" Width="80"/>
-                        <DataGridTextColumn Header="Avg Memory" Binding="{Binding AverageMemoryMb, StringFormat={}{0:F0} MB}" Width="80"/>
+                        <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Start" Binding="{Binding StartDisplay}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="End" Binding="{Binding EndDisplay}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Duration" Binding="{Binding DurationDisplay}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Peak CPU %" Binding="{Binding PeakCpuPercent, StringFormat={}{0:F1}}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Avg CPU %" Binding="{Binding AverageCpuPercent, StringFormat={}{0:F1}}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Peak Memory" Binding="{Binding PeakMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Avg Memory" Binding="{Binding AverageMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>
