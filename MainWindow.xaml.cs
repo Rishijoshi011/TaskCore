@@ -11,13 +11,18 @@ namespace TaskCore
     {
         private bool _isSidebarCollapsed = false;
 
+        private readonly ProcessesView _processesView = new ProcessesView();
+        private readonly GraphsView _graphsView = new GraphsView();
+        private readonly DetailsView _detailsView = new DetailsView();
+        private readonly SettingsView _settingsView = new SettingsView();
+
         public MainWindow()
         {
             InitializeComponent();
 
             // Default page
             Sidebar.SelectedIndex = 0;
-            ContentArea.Content = new ProcessesView();
+            ContentArea.Content = _processesView;
             AppViewStateService.SetView("Processes");
         }
 
@@ -34,10 +39,10 @@ namespace TaskCore
 
             switch (viewName)
             {
-                case "Processes": ContentArea.Content = new ProcessesView(); break;
-                case "Graphs": ContentArea.Content = new GraphsView(); break;
-                case "Details": ContentArea.Content = new DetailsView(); break;
-                case "Settings": ContentArea.Content = new SettingsView(); break;
+                case "Processes": ContentArea.Content = _processesView; break;
+                case "Graphs": ContentArea.Content = _graphsView; break;
+                case "Details": ContentArea.Content = _detailsView; break;
+                case "Settings": ContentArea.Content = _settingsView; break;
             }
 
             AppViewStateService.SetView(viewName);

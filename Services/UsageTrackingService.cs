@@ -19,6 +19,7 @@ namespace TaskCore.Services
         private readonly DispatcherTimer _timer;
         private readonly Dictionary<int, (DateTime start, string name, string path)> _tracked = new();
         private readonly Dictionary<int, (double peakCpu, double totalCpu, double peakMem, double totalMem, int samples)> _metrics = new();
+        private readonly Dictionary<int, int> _missCountByPid = new();
         private readonly object _lock = new();
         private int _tickRunning;
 
@@ -95,14 +96,24 @@ namespace TaskCore.Services
 
                 lock (_lock)
                 {
-                    var ended = _tracked.Keys.Where(pid => !current.ContainsKey(pid)).ToList();
-
-                    foreach (var pid in ended)
+                    foreach (var pid in _tracked.Keys.ToList())
                     {
+                        if (current.ContainsKey(pid))
+                        {
+                            _missCountByPid.Remove(pid);
+                            continue;
+                        }
+
+                        if (!_missCountByPid.TryGetValue(pid, out var miss)) miss = 0;
+                        miss++;
+                        _missCountByPid[pid] = miss;
+
+                        if (miss < 3)
+                            continue;
+
                         var (start, name, path) = _tracked[pid];
                         var end = DateTime.Now;
 
-                        // Get metrics if available
                         double peakCpu = 0, avgCpu = 0, peakMem = 0, avgMem = 0;
                         if (_metrics.TryGetValue(pid, out var metric))
                         {
@@ -115,6 +126,7 @@ namespace TaskCore.Services
                         UsageStorage.AppendSession(name, pid, path, start, end, peakCpu, avgCpu, peakMem, avgMem);
                         _tracked.Remove(pid);
                         _metrics.Remove(pid);
+                        _missCountByPid.Remove(pid);
                     }
 
                     foreach (var kvp in current)
@@ -133,6 +145,7 @@ namespace TaskCore.Services
                             }
 
                             _tracked[kvp.Key] = (DateTime.Now, kvp.Value, path);
+                            _missCountByPid.Remove(kvp.Key);
                         }
 
                         // Collect metrics for running processes
@@ -528,16 +541,14 @@ namespace TaskCore.Services
                 }
                 catch
                 {
-                    // Access denied = likely system process
-                    return true;
+                    return false;
                 }
 
                 return false;
             }
             catch
             {
-                // If we can't access process info, assume it's system
-                return true;
+                return false;
             }
         }
     }

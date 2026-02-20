@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using TaskCore.Services;
 using System.Text.Json;
 using System.IO;
@@ -15,6 +17,12 @@ namespace TaskCore.ViewModels
     public partial class DetailsViewModel : ObservableObject
     {
         private readonly AppSettings _settings;
+
+        private readonly DispatcherTimer _refreshTimer;
+        private int _refreshInFlight;
+
+        private List<SessionSummaryItem> _allAppSummaries = new();
+        private List<SessionRecordItem> _allSessions = new();
 
         [ObservableProperty]
         private DateTime selectedDate = DateTime.Today;
@@ -33,6 +41,27 @@ namespace TaskCore.ViewModels
 
         [ObservableProperty]
         private ObservableCollection<SessionRecordItem> sessions = new();
+
+        [ObservableProperty]
+        private ObservableCollection<SessionSummaryItem> pagedAppSummaries = new();
+
+        [ObservableProperty]
+        private ObservableCollection<SessionRecordItem> pagedSessions = new();
+
+        [ObservableProperty]
+        private int summaryPageIndex;
+
+        [ObservableProperty]
+        private int sessionsPageIndex;
+
+        public int SummaryPageSize { get; } = 12;
+        public int SessionsPageSize { get; } = 20;
+
+        public int SummaryTotalPages => Math.Max(1, (int)Math.Ceiling((_allAppSummaries.Count) / (double)SummaryPageSize));
+        public int SessionsTotalPages => Math.Max(1, (int)Math.Ceiling((_allSessions.Count) / (double)SessionsPageSize));
+
+        public string SummaryPageText => $"Page {Math.Min(SummaryTotalPages, SummaryPageIndex + 1)} / {SummaryTotalPages}";
+        public string SessionsPageText => $"Page {Math.Min(SessionsTotalPages, SessionsPageIndex + 1)} / {SessionsTotalPages}";
 
         [ObservableProperty]
         private string topAppName = "-";
@@ -105,6 +134,17 @@ namespace TaskCore.ViewModels
             return DateTime.MinValue;
         }
 
+        private static string SafeGetString(Dictionary<string, object> dict, string key)
+        {
+            if (!dict.TryGetValue(key, out var val)) return string.Empty;
+            if (val is JsonElement el)
+            {
+                if (el.ValueKind == JsonValueKind.String) return el.GetString() ?? string.Empty;
+                return string.Empty;
+            }
+            return val?.ToString() ?? string.Empty;
+        }
+
         [RelayCommand]
         private void CopySessionLogsDirectory()
         {
@@ -128,6 +168,94 @@ namespace TaskCore.ViewModels
                     ShowCopyStatus("Copy failed");
                 }
             }
+        }
+
+        private void CoercePageIndexes()
+        {
+            try
+            {
+                var maxSummary = Math.Max(0, SummaryTotalPages - 1);
+                var maxSessions = Math.Max(0, SessionsTotalPages - 1);
+
+                if (SummaryPageIndex > maxSummary) SummaryPageIndex = maxSummary;
+                if (SessionsPageIndex > maxSessions) SessionsPageIndex = maxSessions;
+                if (SummaryPageIndex < 0) SummaryPageIndex = 0;
+                if (SessionsPageIndex < 0) SessionsPageIndex = 0;
+            }
+            catch
+            {
+            }
+        }
+
+        private void ApplyPaging()
+        {
+            try
+            {
+                var summarySkip = SummaryPageIndex * SummaryPageSize;
+                var sessionsSkip = SessionsPageIndex * SessionsPageSize;
+
+                PagedAppSummaries = new ObservableCollection<SessionSummaryItem>(
+                    _allAppSummaries.Skip(summarySkip).Take(SummaryPageSize));
+
+                PagedSessions = new ObservableCollection<SessionRecordItem>(
+                    _allSessions.Skip(sessionsSkip).Take(SessionsPageSize));
+
+                OnPropertyChanged(nameof(SummaryTotalPages));
+                OnPropertyChanged(nameof(SessionsTotalPages));
+                OnPropertyChanged(nameof(SummaryPageText));
+                OnPropertyChanged(nameof(SessionsPageText));
+            }
+            catch
+            {
+            }
+        }
+
+        partial void OnSummaryPageIndexChanged(int value)
+        {
+            try
+            {
+                CoercePageIndexes();
+                ApplyPaging();
+            }
+            catch
+            {
+            }
+        }
+
+        partial void OnSessionsPageIndexChanged(int value)
+        {
+            try
+            {
+                CoercePageIndexes();
+                ApplyPaging();
+            }
+            catch
+            {
+            }
+        }
+
+        [RelayCommand]
+        private void SummaryPrevPage()
+        {
+            if (SummaryPageIndex > 0) SummaryPageIndex--;
+        }
+
+        [RelayCommand]
+        private void SummaryNextPage()
+        {
+            if (SummaryPageIndex < (SummaryTotalPages - 1)) SummaryPageIndex++;
+        }
+
+        [RelayCommand]
+        private void SessionsPrevPage()
+        {
+            if (SessionsPageIndex > 0) SessionsPageIndex--;
+        }
+
+        [RelayCommand]
+        private void SessionsNextPage()
+        {
+            if (SessionsPageIndex < (SessionsTotalPages - 1)) SessionsPageIndex++;
         }
 
         private void ShowCopyStatus(string msg)
@@ -184,7 +312,65 @@ namespace TaskCore.ViewModels
         {
             _settings = AppSettingsService.Load();
             LoadColumnPreferences();
+
+            _refreshTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromSeconds(2)
+            };
+            _refreshTimer.Tick += (_, __) => RefreshIfActive();
+            AppViewStateService.ViewChanged += OnViewChanged;
+            if (string.Equals(AppViewStateService.CurrentView, "Details", StringComparison.OrdinalIgnoreCase))
+                _refreshTimer.Start();
+
             Refresh();
+        }
+
+        private void OnViewChanged(string viewName)
+        {
+            try
+            {
+                if (string.Equals(viewName, "Details", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!_refreshTimer.IsEnabled)
+                        _refreshTimer.Start();
+                    Refresh();
+                }
+                else
+                {
+                    if (_refreshTimer.IsEnabled)
+                        _refreshTimer.Stop();
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private void RefreshIfActive()
+        {
+            try
+            {
+                if (!string.Equals(AppViewStateService.CurrentView, "Details", StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                if (!DateOnly.FromDateTime(SelectedDate).Equals(DateOnly.FromDateTime(DateTime.Today)))
+                    return;
+
+                if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1)
+                    return;
+
+                try
+                {
+                    Refresh();
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _refreshInFlight, 0);
+                }
+            }
+            catch
+            {
+            }
         }
 
         private void LoadColumnPreferences()
@@ -299,6 +485,62 @@ namespace TaskCore.ViewModels
                 var date = DateOnly.FromDateTime(SelectedDate);
                 var sessions = UsageTrackingService.GetDailySessions(date);
 
+                // Exclude Windows/system processes (keep only user-facing apps)
+                try
+                {
+                    var windowsDir = (Environment.GetFolderPath(Environment.SpecialFolder.Windows) ?? string.Empty).Trim();
+                    var systemApps = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        "system",
+                        "idle",
+                        "registry",
+                        "csrss",
+                        "smss",
+                        "wininit",
+                        "winlogon",
+                        "services",
+                        "lsass",
+                        "svchost",
+                        "conhost",
+                        "dwm",
+                        "sihost",
+                        "taskhostw",
+                        "runtimebroker",
+                        "searchindexer",
+                        "shellexperiencehost",
+                        "startmenuexperiencehost",
+                        "applicationframehost",
+                        "spoolsv",
+                        "audiodg",
+                        "fontdrvhost",
+                        "wmi",
+                        "wmiprvse",
+                        "ctfmon"
+                    };
+
+                    sessions = sessions.Where(s =>
+                    {
+                        var appRaw = SafeGetString(s, "app").Trim();
+                        if (string.IsNullOrWhiteSpace(appRaw)) return false;
+
+                        var appBase = appRaw.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                            ? appRaw[..^4]
+                            : appRaw;
+
+                        if (systemApps.Contains(appBase)) return false;
+
+                        var processPath = SafeGetString(s, "processPath").Trim();
+                        if (!string.IsNullOrWhiteSpace(windowsDir) && !string.IsNullOrWhiteSpace(processPath))
+                        {
+                            if (processPath.StartsWith(windowsDir, StringComparison.OrdinalIgnoreCase))
+                                return false;
+                        }
+
+                        return true;
+                    }).ToList();
+                }
+                catch { }
+
                 // DEBUG: write session count and first entry to a debug file
                 try
                 {
@@ -331,8 +573,7 @@ namespace TaskCore.ViewModels
                                        .ToDictionary(g => g.Key, g => g.ToList());
 
                 // Update app summaries
-                AppSummaries = new ObservableCollection<SessionSummaryItem>(
-                    appGroups.Select(kvp => new SessionSummaryItem
+                _allAppSummaries = appGroups.Select(kvp => new SessionSummaryItem
                     {
                         AppName = kvp.Key,
                         SessionCount = kvp.Value.Count,
@@ -343,11 +584,12 @@ namespace TaskCore.ViewModels
                         AverageMemoryMb = kvp.Value.Average(s => SafeGetDouble(s, "averageMemoryMB"))
                     })
                     .OrderByDescending(s => s.LongestSessionSeconds)
-                );
+                    .ToList();
+
+                AppSummaries = new ObservableCollection<SessionSummaryItem>(_allAppSummaries);
 
                 // Update sessions list (all sessions, ordered by start time)
-                Sessions = new ObservableCollection<SessionRecordItem>(
-                    sessions
+                _allSessions = sessions
                         .OrderByDescending(s => SafeGetDateTime(s, "startTimeUtc"))
                         .Select(s => new SessionRecordItem
                         {
@@ -361,7 +603,12 @@ namespace TaskCore.ViewModels
                             PeakMemoryMb = SafeGetDouble(s, "peakMemoryMB"),
                             AverageMemoryMb = SafeGetDouble(s, "averageMemoryMB")
                         })
-                );
+                        .ToList();
+
+                Sessions = new ObservableCollection<SessionRecordItem>(_allSessions);
+
+                CoercePageIndexes();
+                ApplyPaging();
 
                 // Update summary stats
                 UpdateSummaryStats(appGroups);
@@ -371,6 +618,14 @@ namespace TaskCore.ViewModels
                 // Clear data on error
                 AppSummaries.Clear();
                 Sessions.Clear();
+                PagedAppSummaries.Clear();
+                PagedSessions.Clear();
+                _allAppSummaries = new List<SessionSummaryItem>();
+                _allSessions = new List<SessionRecordItem>();
+                OnPropertyChanged(nameof(SummaryTotalPages));
+                OnPropertyChanged(nameof(SessionsTotalPages));
+                OnPropertyChanged(nameof(SummaryPageText));
+                OnPropertyChanged(nameof(SessionsPageText));
                 UpdateSummaryStats(new Dictionary<string, List<Dictionary<string, object>>>());
                 
                 // Log error
