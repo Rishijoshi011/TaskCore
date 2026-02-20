@@ -311,6 +311,13 @@ namespace TaskCore.ViewModels
         [ObservableProperty] private bool showSessionPeakMem = true;
         [ObservableProperty] private bool showSessionAvgMem = true;
 
+        [ObservableProperty] private bool showRunningApp = true;
+        [ObservableProperty] private bool showRunningPid = true;
+        [ObservableProperty] private bool showRunningStart = true;
+        [ObservableProperty] private bool showRunningDuration = true;
+        [ObservableProperty] private bool showRunningCpu = true;
+        [ObservableProperty] private bool showRunningMem = true;
+
         public DetailsViewModel()
         {
             _settings = AppSettingsService.Load();

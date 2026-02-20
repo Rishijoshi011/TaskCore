@@ -37,7 +37,7 @@ namespace TaskCore.Services
             _timer.Start();
         }
 
-        // Public methods for UI
+        
         public static List<Dictionary<string, object>> GetDailySessions(DateOnly date)
         {
             return UsageStorage.GetDailySessions(date);
@@ -68,15 +68,69 @@ namespace TaskCore.Services
             return UsageStorage.ValidateAndRepairFile(date);
         }
 
-        // Get currently running apps for real-time display
+        // Get currently running apps for real-time display (filtered based on user settings)
         public List<(string appName, int firstPid, string path, DateTime startTime, double peakCpu, double avgCpu, double peakMem, double avgMem)> GetCurrentlyRunning()
         {
+            var settings = AppSettingsService.Load();
+            var filterMode = settings.ProcessFilterMode;
+            var selectedProcesses = settings.SelectedProcesses ?? new List<string>();
+
+            // DEBUG
+            try
+            {
+                File.AppendAllText(Path.Combine(UsageStorage.BaseDirectory, "debug-filter.txt"),
+                    $"[{DateTime.Now:HH:mm:ss}] GetCurrentlyRunning called - FilterMode={filterMode}, Selected={string.Join(",", selectedProcesses)}, Tracked={string.Join(",", _trackedApps.Keys)}\n");
+            }
+            catch { }
+
             lock (_lock)
             {
                 var result = new List<(string, int, string, DateTime, double, double, double, double)>();
                 foreach (var kvp in _trackedApps)
                 {
                     var appName = kvp.Key;
+                    
+                    // Apply filter based on mode
+                    if (filterMode == 2) // SelectedOnly
+                    {
+                        // Only show if in user's selected list
+                        if (!selectedProcesses.Contains(appName, StringComparer.OrdinalIgnoreCase))
+                        {
+                            // DEBUG
+                            try
+                            {
+                                File.AppendAllText(Path.Combine(UsageStorage.BaseDirectory, "debug-filter.txt"),
+                                    $"[{DateTime.Now:HH:mm:ss}] SKIPPED {appName} - not in selected list\n");
+                            }
+                            catch { }
+                            continue;
+                        }
+                    }
+                    else if (filterMode == 1) // ExcludeWindows (default)
+                    {
+                        // Skip system processes
+                        if (IsSystemAppName(appName))
+                        {
+                            // DEBUG
+                            try
+                            {
+                                File.AppendAllText(Path.Combine(UsageStorage.BaseDirectory, "debug-filter.txt"),
+                                    $"[{DateTime.Now:HH:mm:ss}] SKIPPED {appName} - is system app\n");
+                            }
+                            catch { }
+                            continue;
+                        }
+                    }
+                    // mode 0 (All) - no filtering
+                    
+                    // DEBUG
+                    try
+                    {
+                        File.AppendAllText(Path.Combine(UsageStorage.BaseDirectory, "debug-filter.txt"),
+                            $"[{DateTime.Now:HH:mm:ss}] ADDED {appName} to result\n");
+                    }
+                    catch { }
+
                     var (start, path, pids) = kvp.Value;
                     var firstPid = pids.FirstOrDefault();
                     
@@ -93,6 +147,187 @@ namespace TaskCore.Services
                 }
                 return result;
             }
+        }
+
+        // Filter out system app names from UI display
+        private static bool IsSystemAppName(string appName)
+        {
+            if (string.IsNullOrWhiteSpace(appName)) return false;
+            
+            var name = appName.ToLowerInvariant();
+            
+            // Core Windows system processes
+            if (name == "system" || 
+                name == "idle" ||
+                name == "registry" ||
+                name.StartsWith("svchost") || 
+                name.StartsWith("csrss") ||
+                name.StartsWith("wininit") ||
+                name.StartsWith("smss") ||
+                name.StartsWith("dwm") ||
+                name.StartsWith("lsass") ||
+                name.StartsWith("lsm") ||
+                name.StartsWith("services") ||
+                name.StartsWith("winlogon") ||
+                name.StartsWith("conhost") ||
+                name.StartsWith("sihost") ||
+                name.StartsWith("taskhost") ||
+                name.StartsWith("runtimebroker") ||
+                name.StartsWith("searchindexer") ||
+                name.StartsWith("fontdrvhost") ||
+                name.StartsWith("spoolsv") ||
+                name.StartsWith("wmi") ||
+                name.StartsWith("wmiprvse") ||
+                name.StartsWith("ctfmon") ||
+                name.StartsWith("secure system") ||
+                name.StartsWith("memory compression") ||
+                name.StartsWith("audiodg"))
+                return true;
+
+            // Services ending with svc (case insensitive - catch SVC, Svc, svc)
+            if (name.EndsWith("svc") || name.EndsWith("service") || name.EndsWith("serv") ||
+                name.Contains("svc") || name.Contains("SVC"))
+                return true;
+
+            // Windows Update and core worker processes
+            if (name.Contains("usocore") || name.Contains("uso") || name.Contains("worker") ||
+                name.Contains("trustedinstaller") || name.Contains("tiworker"))
+                return true;
+
+            // More Windows core services
+            if (name.StartsWith("core") || name.StartsWith("smsvchost") ||
+                name.Contains("clr") || name.Contains("mscorsvw") || name.Contains("ngen"))
+                return true;
+
+            // Security/Auth services
+            if (name.Contains("crypto") || name.Contains("vault") || name.Contains("keyiso") ||
+                name.Contains("samss") || name.Contains("ntlm") || name.Contains("kerberos"))
+                return true;
+
+            // Network related services
+            if (name.Contains("network") || name.Contains("net") || name.Contains("tcp") ||
+                name.Contains("ip") || name.Contains("dhcp") || name.Contains("dns") ||
+                name.Contains("proxy") || name.Contains("tunnel"))
+                return true;
+
+            // More host processes
+            if (name.Contains("svchost") || name.Contains("taskhost") || name.Contains("rdp") ||
+                name.Contains("termsrv") || name.Contains("winlogon"))
+                return true;
+
+            // WMI and instrumentation
+            if (name.Contains("wmi") || name.Contains("wmiprvse") || name.Contains("wbem"))
+                return true;
+
+            // Graphics/display drivers
+            if (name.StartsWith("igfx") || name.Contains("display") || name.Contains("gpu"))
+                return true;
+
+            // Root/embedded processes
+            if (name.Contains("root") || name.Contains("embedded"))
+                return true;
+
+            // Development tools and IDE-related
+            if (name.Contains("devenv") ||
+                name.Contains("copilot") ||
+                name.Contains("language_server") ||
+                name.Contains("servicehub") ||
+                name.StartsWith("msbuild") ||
+                name.Contains("vbcsccompiler") ||
+                name.Contains("perfwatson") ||
+                name.Contains("vbcscompiler") ||
+                name.Contains("openconsole") ||
+                name.Contains("livepreviewsurface") ||
+                name.Contains("sapiservice") ||
+                name.Contains("snippingtool") ||
+                name.Contains("sqlceip") ||
+                name.Contains("sqlwriter") ||
+                name.Contains("sqlservr") ||
+                name.StartsWith("dotnet") ||
+                name.Contains("omnisharp") ||
+                name.Contains("browserlink") ||
+                name.StartsWith("windsurf") ||
+                name.Contains("taskcore"))
+                return true;
+
+            // Edge/Chrome helpers and WebView
+            if (name.Contains("webview2") ||
+                name.Contains("crashpad") ||
+                name.Contains("crashhandler") ||
+                name.Contains("bravecrash") ||
+                name.EndsWith("helper") ||
+                name.Contains("renderer"))
+                return true;
+
+            // Microsoft background services (expanded)
+            if (name.Contains("onlinent") ||
+                name.Contains("oninit") ||
+                name.Contains("update") ||
+                name.Contains("install") ||
+                name.Contains("agent") ||
+                name.Contains("broker") ||
+                name.Contains("daemon") ||
+                name.Contains("host") ||
+                name.Contains("widget") ||
+                name.Contains("experience") ||
+                name.Contains("lsalso") ||
+                name.Contains("sihost"))
+                return true;
+
+            // Antivirus/Security services (common patterns + specific AV products)
+            if (name.Contains("av") ||
+                name.Contains("sec") ||
+                name.Contains("protect") ||
+                name.Contains("guard") ||
+                name.Contains("shield") ||
+                name.Contains("scan") ||
+                name.Contains("defender") ||
+                name.Contains("firewall") ||
+                name.Contains("qh") ||           // Quick Heal
+                name.Contains("mcafee") ||
+                name.Contains("norton") ||
+                name.Contains("kaspersky") ||
+                name.Contains("avast") ||
+                name.Contains("avg") ||
+                name.Contains("bitdefender") ||
+                name.Contains("eset") ||
+                name.Contains("fsecure") ||
+                name.Contains("sophos") ||
+                name.Contains("trend") ||
+                name.Contains("symantec") ||
+                name.Contains("malwarebytes"))
+                return true;
+
+            // Database and cache services
+            if (name.Contains("sql") ||
+                name.Contains("redis") ||
+                name.Contains("mongo") ||
+                name.Contains("postgres") ||
+                name.Contains("mysql") ||
+                name.Contains("mssql"))
+                return true;
+
+            // Background services and utilities (aggressive filtering)
+            if (name.EndsWith("nt") ||
+                name.Contains("serv") ||
+                name.Contains("hub") ||
+                name.Contains("control") ||
+                name.Contains("wait") ||
+                name.Contains("dialog") ||
+                name.Contains("detour") ||
+                name.Contains("identity") ||
+                name.Contains("intelli") ||
+                name.Contains("roslyn") ||
+                name.Contains("index") ||
+                name.Contains("datawarehouse") ||
+                name.Contains("warehouse") ||
+                name.Contains("anydesk") ||
+                name.Contains("onedrive") ||
+                name.Contains("update") ||
+                name.Contains("sync"))
+                return true;
+
+            return false;
         }
 
         private void KickTick()
@@ -117,9 +352,26 @@ namespace TaskCore.Services
         {
             try
             {
+                // Load settings to check filter mode
+                var settings = AppSettingsService.Load();
+                var filterMode = settings.ProcessFilterMode;
+                var selectedProcesses = settings.SelectedProcesses ?? new List<string>();
+
                 var allProcesses = Process.GetProcesses();
+                
+                // Filter based on mode - if SelectedOnly, include selected processes even if they look like system processes
                 var current = allProcesses
-                    .Where(p => !IsSystemProcess(p))
+                    .Where(p => {
+                        var isSystem = IsSystemProcess(p);
+                        var name = p.ProcessName;
+                        
+                        // In SelectedOnly mode, always track processes in the user's selected list
+                        if (filterMode == 2 && selectedProcesses.Contains(name, StringComparer.OrdinalIgnoreCase))
+                            return true;
+                        
+                        // Otherwise use standard filtering
+                        return !isSystem;
+                    })
                     .ToDictionary(p => p.Id, p => p.ProcessName);
 
                 // DEBUG: Log what processes are being tracked vs filtered
@@ -270,12 +522,32 @@ namespace TaskCore.Services
             }
         }
 
+        private readonly Dictionary<int, (DateTime time, TimeSpan cpu)> _cpuSnapshots = new();
+
         private double GetCpuUsage(Process process)
         {
             try
             {
                 process.Refresh();
-                return process.TotalProcessorTime.TotalMilliseconds / Environment.ProcessorCount;
+                var currentTime = DateTime.UtcNow;
+                var currentCpu = process.TotalProcessorTime;
+                var pid = process.Id;
+
+                if (_cpuSnapshots.TryGetValue(pid, out var snapshot))
+                {
+                    var timeDelta = (currentTime - snapshot.time).TotalMilliseconds;
+                    var cpuDelta = (currentCpu - snapshot.cpu).TotalMilliseconds;
+
+                    if (timeDelta > 0)
+                    {
+                        var cpuPercent = (cpuDelta / timeDelta / Environment.ProcessorCount) * 100;
+                        _cpuSnapshots[pid] = (currentTime, currentCpu);
+                        return Math.Min(Math.Max(cpuPercent, 0), 100);
+                    }
+                }
+
+                _cpuSnapshots[pid] = (currentTime, currentCpu);
+                return 0;
             }
             catch
             {
@@ -286,8 +558,7 @@ namespace TaskCore.Services
         private static class UsageStorage
         {
             public static string BaseDirectory => Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "TaskCore",
+                AppSettingsService.BaseDirectory,
                 "SessionLogs");
 
             public static void EnsureDirectory()

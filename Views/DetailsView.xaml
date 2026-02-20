@@ -256,43 +256,53 @@
                               VerticalAlignment="Center"
                               VerticalContentAlignment="Center"
                               x:Name="CurrentlyRunningGrid">
+                        <DataGrid.ContextMenu>
+                            <ContextMenu Style="{StaticResource DarkContextMenu}">
+                                <MenuItem Header="Application" IsCheckable="True" IsChecked="{Binding PlacementTarget.DataContext.ShowRunningApp, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Style="{StaticResource DarkMenuItem}"/>
+                                <MenuItem Header="PID" IsCheckable="True" IsChecked="{Binding PlacementTarget.DataContext.ShowRunningPid, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Style="{StaticResource DarkMenuItem}"/>
+                                <MenuItem Header="Started" IsCheckable="True" IsChecked="{Binding PlacementTarget.DataContext.ShowRunningStart, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Style="{StaticResource DarkMenuItem}"/>
+                                <MenuItem Header="Duration" IsCheckable="True" IsChecked="{Binding PlacementTarget.DataContext.ShowRunningDuration, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Style="{StaticResource DarkMenuItem}"/>
+                                <MenuItem Header="CPU %" IsCheckable="True" IsChecked="{Binding PlacementTarget.DataContext.ShowRunningCpu, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Style="{StaticResource DarkMenuItem}"/>
+                                <MenuItem Header="Memory" IsCheckable="True" IsChecked="{Binding PlacementTarget.DataContext.ShowRunningMem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Style="{StaticResource DarkMenuItem}"/>
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="2*" MinWidth="120">
+                            <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="2*" MinWidth="120" Visibility="{Binding Data.ShowRunningApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="*" MinWidth="60">
+                            <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="*" MinWidth="60" Visibility="{Binding Data.ShowRunningPid, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Started" Binding="{Binding StartTimeLocal, StringFormat={}{0:HH:mm:ss}}" Width="*" MinWidth="70">
+                            <DataGridTextColumn Header="Started" Binding="{Binding StartTimeLocal, StringFormat={}{0:HH:mm:ss}}" Width="*" MinWidth="70" Visibility="{Binding Data.ShowRunningStart, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Duration" Binding="{Binding DurationDisplay}" Width="*" MinWidth="70">
+                            <DataGridTextColumn Header="Duration" Binding="{Binding DurationDisplay}" Width="*" MinWidth="70" Visibility="{Binding Data.ShowRunningDuration, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="CPU %" Binding="{Binding CurrentCpuPercent, StringFormat={}{0:F1}}" Width="*" MinWidth="60">
+                            <DataGridTextColumn Header="CPU %" Binding="{Binding CurrentCpuPercent, StringFormat={}{0:F1}}" Width="*" MinWidth="60" Visibility="{Binding Data.ShowRunningCpu, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Memory" Binding="{Binding CurrentMemoryMb, StringFormat={}{0:F0} MB}" Width="*" MinWidth="80">
+                            <DataGridTextColumn Header="Memory" Binding="{Binding CurrentMemoryMb, StringFormat={}{0:F0} MB}" Width="*" MinWidth="80" Visibility="{Binding Data.ShowRunningMem, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>

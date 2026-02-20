@@ -7,7 +7,7 @@ namespace TaskCore.Services
     {
         private static readonly object _lock = new();
 
-        private static readonly string _dir = Path.Combine(AppContext.BaseDirectory, "Logs");
+        private static readonly string _dir = Path.Combine(AppSettingsService.BaseDirectory, "Logs");
         private static string TodayPath => Path.Combine(_dir, $"watchdog_{DateTime.Now:yyyy-MM-dd}.txt");
 
         public static string LogDirectory => _dir;

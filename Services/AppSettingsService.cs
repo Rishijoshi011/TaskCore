@@ -8,9 +8,11 @@ namespace TaskCore.Services
     {
         private static readonly object _lock = new();
 
-        private static readonly string _dir = Path.Combine(
+        public static string BaseDirectory { get; } = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TaskCore");
+
+        private static readonly string _dir = BaseDirectory;
 
         private static readonly string _path = Path.Combine(_dir, "settings.json");
 
@@ -68,5 +70,18 @@ namespace TaskCore.Services
 
         public System.Collections.Generic.Dictionary<string, bool>? SessionTrackerSummaryColumns { get; set; } = new();
         public System.Collections.Generic.Dictionary<string, bool>? SessionTrackerSessionColumns { get; set; } = new();
+
+        // Process filter mode for Currently Running table: 0=All, 1=ExcludeWindows, 2=SelectedOnly
+        public int ProcessFilterMode { get; set; } = 1;
+
+        // List of user-selected process names to show when ProcessFilterMode=2
+        public System.Collections.Generic.List<string>? SelectedProcesses { get; set; } = new();
+    }
+
+    public enum ProcessFilterMode
+    {
+        All = 0,
+        ExcludeWindows = 1,
+        SelectedOnly = 2
     }
 }

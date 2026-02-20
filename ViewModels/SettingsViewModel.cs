@@ -84,11 +84,32 @@ namespace TaskCore.ViewModels
         private ObservableCollection<string> watchdogWatchedProcesses = new();
 
         [ObservableProperty]
+        private int processFilterMode = 1;
+
+        [ObservableProperty]
+        private ObservableCollection<string> selectedProcesses = new();
+
+        [ObservableProperty]
+        private ObservableCollection<string> availableForSelection = new();
+
+        [ObservableProperty]
+        private string? selectedProcessToRemove;
+
+        [ObservableProperty]
         private string? selectedAvailableProcess;
 
         [ObservableProperty]
         private string? selectedWatchedProcess;
 
+        [ObservableProperty]
+        private string? selectedProcessSearch = string.Empty;
+
+        partial void OnSelectedProcessSearchChanged(string? value)
+        {
+            ApplySelectedProcessFilter();
+        }
+
+        private System.Windows.Threading.DispatcherTimer? _refreshTimer;
         private List<string> _availableAll = new();
 
         public SettingsViewModel()
@@ -151,6 +172,18 @@ namespace TaskCore.ViewModels
 
             RefreshWatchdogProcessList();
 
+            ProcessFilterMode = _settings.ProcessFilterMode;
+            if (ProcessFilterMode < 0 || ProcessFilterMode > 2) ProcessFilterMode = 1;
+            
+            SelectedProcesses = new ObservableCollection<string>(
+                (_settings.SelectedProcesses ?? new List<string>())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(s => s));
+
+            RefreshAvailableForSelection();
+            StartRefreshTimer();
+
             try
             {
                 WatchdogLogsDirectory = WatchdogLogger.LogDirectory;
@@ -163,6 +196,57 @@ namespace TaskCore.ViewModels
             catch
             {
             }
+        }
+
+        private void StartRefreshTimer()
+        {
+            _refreshTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            _refreshTimer.Tick += (_, __) => ApplySelectedProcessFilter();
+            _refreshTimer.Start();
+        }
+
+        private void ApplySelectedProcessFilter()
+        {
+            try
+            {
+                var q = SelectedProcessSearch ?? string.Empty;
+                var running = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var p in Process.GetProcesses())
+                {
+                    try { running.Add(p.ProcessName); } catch { }
+                }
+
+                var selectedSet = new HashSet<string>(SelectedProcesses ?? new ObservableCollection<string>(), StringComparer.OrdinalIgnoreCase);
+                var available = running
+                    .Where(r => !selectedSet.Contains(r))
+                    .Where(r => string.IsNullOrWhiteSpace(q) || r.Contains(q, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(r => r)
+                    .ToList();
+
+                AvailableForSelection = new ObservableCollection<string>(available);
+            }
+            catch
+            {
+                AvailableForSelection = new ObservableCollection<string>();
+            }
+        }
+
+        partial void OnProcessFilterModeChanged(int value)
+        {
+            _settings.ProcessFilterMode = value;
+            AppSettingsService.Save(_settings);
+        }
+
+        partial void OnSelectedProcessesChanged(ObservableCollection<string> value)
+        {
+            _settings.SelectedProcesses = value
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s)
+                .ToList();
+
+            AppSettingsService.Save(_settings);
+            RefreshAvailableForSelection();
         }
 
         partial void OnAutoStartWithWindowsChanged(bool value)
@@ -303,6 +387,55 @@ namespace TaskCore.ViewModels
             WatchdogWatchedProcesses.Remove(match);
             SaveWatchdogTargets();
         }
+
+        [RelayCommand]
+        private void AddSelectedProcess()
+        {
+            var name = SelectedAvailableProcess;
+            if (string.IsNullOrWhiteSpace(name)) return;
+
+            if (SelectedProcesses.Any(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase)))
+                return;
+
+            SelectedProcesses.Add(name);
+            SaveSelectedProcesses();
+            RefreshAvailableForSelection();
+            OnPropertyChanged(nameof(SelectedProcesses));
+        }
+
+        [RelayCommand]
+        private void RemoveSelectedProcess()
+        {
+            var name = SelectedProcessToRemove;
+            if (string.IsNullOrWhiteSpace(name)) return;
+
+            var match = SelectedProcesses.FirstOrDefault(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase));
+            if (match == null) return;
+
+            SelectedProcesses.Remove(match);
+            SaveSelectedProcesses();
+            RefreshAvailableForSelection();
+            OnPropertyChanged(nameof(SelectedProcesses));
+        }
+
+        private void SaveSelectedProcesses()
+        {
+            try
+            {
+                _settings.SelectedProcesses = SelectedProcesses
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(s => s)
+                    .ToList();
+
+                AppSettingsService.Save(_settings);
+            }
+            catch
+            {
+            }
+        }
+
+        private void RefreshAvailableForSelection() => ApplySelectedProcessFilter();
 
         private void SaveWatchdogTargets()
         {
