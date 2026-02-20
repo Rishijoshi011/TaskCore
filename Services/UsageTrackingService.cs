@@ -17,9 +17,9 @@ namespace TaskCore.Services
         public static UsageTrackingService Instance => _instance.Value;
 
         private readonly DispatcherTimer _timer;
-        private readonly Dictionary<int, (DateTime start, string name, string path)> _tracked = new();
-        private readonly Dictionary<int, (double peakCpu, double totalCpu, double peakMem, double totalMem, int samples)> _metrics = new();
-        private readonly Dictionary<int, int> _missCountByPid = new();
+        private readonly Dictionary<string, (DateTime start, string path, HashSet<int> pids)> _trackedApps = new();
+        private readonly Dictionary<string, (double peakCpu, double totalCpu, double peakMem, double totalMem, int samples)> _appMetrics = new();
+        private readonly Dictionary<int, int> _missCountByApp = new();
         private readonly object _lock = new();
         private int _tickRunning;
 
@@ -68,6 +68,33 @@ namespace TaskCore.Services
             return UsageStorage.ValidateAndRepairFile(date);
         }
 
+        // Get currently running apps for real-time display
+        public List<(string appName, int firstPid, string path, DateTime startTime, double peakCpu, double avgCpu, double peakMem, double avgMem)> GetCurrentlyRunning()
+        {
+            lock (_lock)
+            {
+                var result = new List<(string, int, string, DateTime, double, double, double, double)>();
+                foreach (var kvp in _trackedApps)
+                {
+                    var appName = kvp.Key;
+                    var (start, path, pids) = kvp.Value;
+                    var firstPid = pids.FirstOrDefault();
+                    
+                    double peakCpu = 0, avgCpu = 0, peakMem = 0, avgMem = 0;
+                    if (_appMetrics.TryGetValue(appName, out var metric))
+                    {
+                        peakCpu = metric.peakCpu;
+                        avgCpu = metric.samples > 0 ? metric.totalCpu / metric.samples : 0;
+                        peakMem = metric.peakMem;
+                        avgMem = metric.samples > 0 ? metric.totalMem / metric.samples : 0;
+                    }
+                    
+                    result.Add((appName, firstPid, path, start, peakCpu, avgCpu, peakMem, avgMem));
+                }
+                return result;
+            }
+        }
+
         private void KickTick()
         {
             if (Interlocked.Exchange(ref _tickRunning, 1) == 1)
@@ -90,32 +117,62 @@ namespace TaskCore.Services
         {
             try
             {
-                var current = Process.GetProcesses()
+                var allProcesses = Process.GetProcesses();
+                var current = allProcesses
                     .Where(p => !IsSystemProcess(p))
                     .ToDictionary(p => p.Id, p => p.ProcessName);
 
+                // DEBUG: Log what processes are being tracked vs filtered
+                try
+                {
+                    var debugLines = new List<string>();
+                    debugLines.Add($"[{DateTime.Now:HH:mm:ss}] === TICK ===");
+                    debugLines.Add($"Total processes: {allProcesses.Length}");
+                    debugLines.Add($"Non-system processes: {current.Count}");
+                    debugLines.Add($"Currently tracked apps: {string.Join(", ", _trackedApps.Keys)}");
+                    
+                    var userApps = current.Values.Distinct().Where(n => 
+                        !n.StartsWith("svchost", StringComparison.OrdinalIgnoreCase) &&
+                        !n.StartsWith("csrss", StringComparison.OrdinalIgnoreCase) &&
+                        !n.StartsWith("dwm", StringComparison.OrdinalIgnoreCase));
+                    debugLines.Add($"User apps detected: {string.Join(", ", userApps.Take(10))}");
+                    
+                    File.AppendAllLines(Path.Combine(UsageStorage.BaseDirectory, "debug-tick.txt"), debugLines);
+                }
+                catch { }
+
+                // Group current processes by app name
+                var currentApps = current.Values.Distinct().ToHashSet();
+                var pidsByApp = current.GroupBy(kvp => kvp.Value)
+                                       .ToDictionary(g => g.Key, g => g.Select(x => x.Key).ToHashSet());
+
                 lock (_lock)
                 {
-                    foreach (var pid in _tracked.Keys.ToList())
+                    // Check for apps that have ended (no processes remain)
+                    foreach (var appName in _trackedApps.Keys.ToList())
                     {
-                        if (current.ContainsKey(pid))
+                        if (currentApps.Contains(appName))
                         {
-                            _missCountByPid.Remove(pid);
+                            // App still has at least one process running - reset miss count
+                            _missCountByApp.Remove(appName.GetHashCode());
                             continue;
                         }
 
-                        if (!_missCountByPid.TryGetValue(pid, out var miss)) miss = 0;
+                        // App has no processes - count misses
+                        var appKey = appName.GetHashCode();
+                        if (!_missCountByApp.TryGetValue(appKey, out var miss)) miss = 0;
                         miss++;
-                        _missCountByPid[pid] = miss;
+                        _missCountByApp[appKey] = miss;
 
-                        if (miss < 3)
+                        if (miss < 5)
                             continue;
 
-                        var (start, name, path) = _tracked[pid];
+                        // App session has truly ended - write one record
+                        var (start, path, pids) = _trackedApps[appName];
                         var end = DateTime.Now;
 
                         double peakCpu = 0, avgCpu = 0, peakMem = 0, avgMem = 0;
-                        if (_metrics.TryGetValue(pid, out var metric))
+                        if (_appMetrics.TryGetValue(appName, out var metric))
                         {
                             peakCpu = metric.peakCpu;
                             avgCpu = metric.samples > 0 ? metric.totalCpu / metric.samples : 0;
@@ -123,20 +180,36 @@ namespace TaskCore.Services
                             avgMem = metric.samples > 0 ? metric.totalMem / metric.samples : 0;
                         }
 
-                        UsageStorage.AppendSession(name, pid, path, start, end, peakCpu, avgCpu, peakMem, avgMem);
-                        _tracked.Remove(pid);
-                        _metrics.Remove(pid);
-                        _missCountByPid.Remove(pid);
+                        // Use first PID for reference (app-level session, not process-level)
+                        var firstPid = pids.FirstOrDefault();
+                        UsageStorage.AppendSession(appName, firstPid, path, start, end, peakCpu, avgCpu, peakMem, avgMem);
+
+                        // Debug log
+                        try
+                        {
+                            File.AppendAllText(Path.Combine(UsageStorage.BaseDirectory, "debug-track.txt"),
+                                $"[{DateTime.Now:HH:mm:ss}] END {appName} (App session) after {miss} misses, duration {(end - start).TotalSeconds:F0}s, PIDs seen: {pids.Count}\n");
+                        }
+                        catch { }
+
+                        _trackedApps.Remove(appName);
+                        _appMetrics.Remove(appName);
+                        _missCountByApp.Remove(appKey);
                     }
 
+                    // Check for new apps (first time we see any process for this app)
                     foreach (var kvp in current)
                     {
-                        if (!_tracked.ContainsKey(kvp.Key))
+                        var pid = kvp.Key;
+                        var appName = kvp.Value;
+
+                        if (!_trackedApps.ContainsKey(appName))
                         {
+                            // First time seeing this app - start tracking
                             string path;
                             try
                             {
-                                var p = Process.GetProcessById(kvp.Key);
+                                var p = Process.GetProcessById(pid);
                                 path = p.MainModule?.FileName ?? string.Empty;
                             }
                             catch
@@ -144,26 +217,40 @@ namespace TaskCore.Services
                                 path = string.Empty;
                             }
 
-                            _tracked[kvp.Key] = (DateTime.Now, kvp.Value, path);
-                            _missCountByPid.Remove(kvp.Key);
+                            _trackedApps[appName] = (DateTime.Now, path, new HashSet<int> { pid });
+                            _missCountByApp.Remove(appName.GetHashCode());
+
+                            // DEBUG: Log new app tracking
+                            try
+                            {
+                                File.AppendAllText(Path.Combine(UsageStorage.BaseDirectory, "debug-tick.txt"),
+                                    $"[{DateTime.Now:HH:mm:ss}] START tracking {appName} (PID {pid})\n");
+                            }
+                            catch { }
+                        }
+                        else
+                        {
+                            // App already tracked - add this PID to its set
+                            var existing = _trackedApps[appName];
+                            existing.pids.Add(pid);
                         }
 
-                        // Collect metrics for running processes
+                        // Collect metrics for this process and aggregate at app level
                         try
                         {
-                            var process = Process.GetProcessById(kvp.Key);
+                            var process = Process.GetProcessById(pid);
                             var cpuUsage = GetCpuUsage(process);
                             var memoryMB = process.WorkingSet64 / 1024.0 / 1024.0;
 
-                            if (_metrics.TryGetValue(kvp.Key, out var existingMetrics))
+                            if (_appMetrics.TryGetValue(appName, out var existingMetrics))
                             {
                                 var newPeakCpu = Math.Max(existingMetrics.peakCpu, cpuUsage);
                                 var newPeakMem = Math.Max(existingMetrics.peakMem, memoryMB);
-                                _metrics[kvp.Key] = (newPeakCpu, existingMetrics.totalCpu + cpuUsage, newPeakMem, existingMetrics.totalMem + memoryMB, existingMetrics.samples + 1);
+                                _appMetrics[appName] = (newPeakCpu, existingMetrics.totalCpu + cpuUsage, newPeakMem, existingMetrics.totalMem + memoryMB, existingMetrics.samples + 1);
                             }
                             else
                             {
-                                _metrics[kvp.Key] = (cpuUsage, cpuUsage, memoryMB, memoryMB, 1);
+                                _appMetrics[appName] = (cpuUsage, cpuUsage, memoryMB, memoryMB, 1);
                             }
                         }
                         catch
@@ -498,7 +585,6 @@ namespace TaskCore.Services
                         }
                     }
 
-                    // If we lost any lines, repair the file
                     if (validLines.Count != lines.Length)
                     {
                         File.WriteAllLines(file, validLines);

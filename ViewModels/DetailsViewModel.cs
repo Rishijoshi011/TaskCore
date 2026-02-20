@@ -25,6 +25,9 @@ namespace TaskCore.ViewModels
         private List<SessionRecordItem> _allSessions = new();
 
         [ObservableProperty]
+        private ObservableCollection<CurrentlyRunningItem> currentlyRunning = new();
+
+        [ObservableProperty]
         private DateTime selectedDate = DateTime.Today;
 
         [ObservableProperty]
@@ -485,61 +488,19 @@ namespace TaskCore.ViewModels
                 var date = DateOnly.FromDateTime(SelectedDate);
                 var sessions = UsageTrackingService.GetDailySessions(date);
 
-                // Exclude Windows/system processes (keep only user-facing apps)
-                try
-                {
-                    var windowsDir = (Environment.GetFolderPath(Environment.SpecialFolder.Windows) ?? string.Empty).Trim();
-                    var systemApps = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                // Update currently running apps (real-time)
+                var running = UsageTrackingService.Instance.GetCurrentlyRunning();
+                CurrentlyRunning = new ObservableCollection<CurrentlyRunningItem>(
+                    running.Select(r => new CurrentlyRunningItem
                     {
-                        "system",
-                        "idle",
-                        "registry",
-                        "csrss",
-                        "smss",
-                        "wininit",
-                        "winlogon",
-                        "services",
-                        "lsass",
-                        "svchost",
-                        "conhost",
-                        "dwm",
-                        "sihost",
-                        "taskhostw",
-                        "runtimebroker",
-                        "searchindexer",
-                        "shellexperiencehost",
-                        "startmenuexperiencehost",
-                        "applicationframehost",
-                        "spoolsv",
-                        "audiodg",
-                        "fontdrvhost",
-                        "wmi",
-                        "wmiprvse",
-                        "ctfmon"
-                    };
-
-                    sessions = sessions.Where(s =>
-                    {
-                        var appRaw = SafeGetString(s, "app").Trim();
-                        if (string.IsNullOrWhiteSpace(appRaw)) return false;
-
-                        var appBase = appRaw.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
-                            ? appRaw[..^4]
-                            : appRaw;
-
-                        if (systemApps.Contains(appBase)) return false;
-
-                        var processPath = SafeGetString(s, "processPath").Trim();
-                        if (!string.IsNullOrWhiteSpace(windowsDir) && !string.IsNullOrWhiteSpace(processPath))
-                        {
-                            if (processPath.StartsWith(windowsDir, StringComparison.OrdinalIgnoreCase))
-                                return false;
-                        }
-
-                        return true;
-                    }).ToList();
-                }
-                catch { }
+                        AppName = r.appName,
+                        ProcessId = r.firstPid,
+                        StartTimeLocal = r.startTime,
+                        CurrentCpuPercent = r.avgCpu,
+                        CurrentMemoryMb = r.avgMem,
+                        ProcessPath = r.path
+                    }).OrderBy(x => x.AppName)
+                );
 
                 // DEBUG: write session count and first entry to a debug file
                 try
