@@ -1,0 +1,9 @@
+UsageTrackingService (orchestrator)
+├── UsageProcessEnumerator - Process enumeration + filtering
+├── UsageMetricsSampler - CPU sampling
+├── UsageSessionTracker - Session state machine
+├── UsageTrackingStorage - File I/O + exports
+└── ProcessFilter - System process/app detection
+
+Models:
+└── UsageTrackingService.SessionRecord - Data model
