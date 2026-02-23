@@ -58,6 +58,7 @@ namespace TaskCore.Services
         public bool AutoStartWithWindows { get; set; } = false;
         public bool PreferAdminForProtectedActions { get; set; } = false;
         public int RefreshIntervalMs { get; set; } = 1000;
+        public bool MinimizeToTray { get; set; } = true;
 
         public string WatchdogMode { get; set; } = "Alert Only";
         public bool WatchdogEnabled { get; set; } = false;

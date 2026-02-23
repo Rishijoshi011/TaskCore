@@ -31,6 +31,9 @@ namespace TaskCore.ViewModels
         private int refreshIntervalMs;
 
         [ObservableProperty]
+        private bool minimizeToTray;
+
+        [ObservableProperty]
         private string watchdogMode = "Alert Only";
 
         [ObservableProperty]
@@ -129,6 +132,7 @@ namespace TaskCore.ViewModels
             AutoStartWithWindows = _settings.AutoStartWithWindows;
             PreferAdminForProtectedActions = _settings.PreferAdminForProtectedActions;
             RefreshIntervalMs = _settings.RefreshIntervalMs;
+            MinimizeToTray = _settings.MinimizeToTray;
             WatchdogMode = _settings.WatchdogMode;
             WatchdogEnabled = _settings.WatchdogEnabled;
             WatchdogLoggingEnabled = _settings.WatchdogLoggingEnabled;
@@ -274,6 +278,12 @@ namespace TaskCore.ViewModels
             catch
             {
             }
+        }
+
+        partial void OnMinimizeToTrayChanged(bool value)
+        {
+            _settings.MinimizeToTray = value;
+            AppSettingsService.Save(_settings);
         }
 
         partial void OnWatchdogModeChanged(string value)

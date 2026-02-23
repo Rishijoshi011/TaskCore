@@ -6,6 +6,7 @@
         xmlns:views="clr-namespace:TaskCore.Views"
         mc:Ignorable="d"
         Title="TaskCore"
+        Icon="pack://application:,,,/TaskCore;component/Resources/AppIcon/TaskCore_icon.ico"
         WindowStyle="None"
         ResizeMode="CanResize"
         Background="{StaticResource BackgroundPrimary}"

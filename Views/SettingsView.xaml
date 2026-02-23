@@ -64,6 +64,20 @@
                     <Grid Margin="0 0 0 15">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Close button should minimize the window" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <TextBlock Text="When enabled, closing the window minimizes it to the system tray" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding MinimizeToTray}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="220"/>
                         </Grid.ColumnDefinitions>
 

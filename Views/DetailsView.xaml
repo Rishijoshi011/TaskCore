@@ -177,20 +177,16 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="" Width="40" MinWidth="40">
+                            <DataGridTemplateColumn Header="Application" Width="2*" MinWidth="120" Visibility="{Binding Data.ShowSummaryApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Image Source="{Binding Icon}" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Image Source="{Binding Icon}" Width="20" Height="20" Stretch="Uniform" Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding AppName}" VerticalAlignment="Center"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="2*" MinWidth="120" Visibility="{Binding Data.ShowSummaryApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
                             <DataGridTextColumn Header="Sessions" Binding="{Binding SessionCount}" Width="*" MinWidth="70" Visibility="{Binding Data.ShowSummarySessions, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
@@ -284,20 +280,16 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="" Width="40" MinWidth="40">
+                            <DataGridTemplateColumn Header="Application" Width="2*" MinWidth="120" Visibility="{Binding Data.ShowRunningApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Image Source="{Binding Icon}" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Image Source="{Binding Icon}" Width="20" Height="20" Stretch="Uniform" Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding AppName}" VerticalAlignment="Center"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="2*" MinWidth="120" Visibility="{Binding Data.ShowRunningApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
                             <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="*" MinWidth="60" Visibility="{Binding Data.ShowRunningPid, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
@@ -387,20 +379,16 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="" Width="40" MinWidth="40">
+                            <DataGridTemplateColumn Header="Application" Width="2*" MinWidth="120" Visibility="{Binding Data.ShowSessionApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Image Source="{Binding Icon}" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Image Source="{Binding Icon}" Width="20" Height="20" Stretch="Uniform" Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding AppName}" VerticalAlignment="Center"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="2*" MinWidth="120" Visibility="{Binding Data.ShowSessionApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
                             <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="*" MinWidth="60" Visibility="{Binding Data.ShowSessionPid, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">

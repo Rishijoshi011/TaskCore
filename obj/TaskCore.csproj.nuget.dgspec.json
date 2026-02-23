@@ -103,6 +103,9 @@
             "Microsoft.Windows.SDK.NET.Ref.Windows": {
               "privateAssets": "all"
             },
+            "Microsoft.WindowsDesktop.App.WindowsForms": {
+              "privateAssets": "none"
+            },
             "Microsoft.WindowsDesktop.App.WPF": {
               "privateAssets": "none"
             }

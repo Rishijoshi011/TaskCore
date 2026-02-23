@@ -104,7 +104,17 @@ namespace TaskCore
 
         private void Close_Click(object sender, RoutedEventArgs e)
         {
-            Application.Current.Shutdown();
+            var settings = AppSettingsService.Load();
+            if (settings.MinimizeToTray)
+            {
+                // Minimize to tray instead of closing
+                Hide();
+            }
+            else
+            {
+                // Exit the application
+                Application.Current.Shutdown();
+            }
         }
     }
 }

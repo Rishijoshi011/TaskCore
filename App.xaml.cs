@@ -20,5 +20,16 @@ namespace TaskCore
             // _ = AppSessionTrackerService.Instance; // DISABLED - using UsageTrackingService instead
             _ = UsageTrackingService.Instance;
         }
+
+        protected override void OnActivated(EventArgs e)
+        {
+            base.OnActivated(e);
+
+            // Initialize tray icon once when window is activated
+            if (MainWindow is not null && TrayIconService.Instance is { IsInitialized: false })
+            {
+                TrayIconService.Instance.Initialize(MainWindow);
+            }
+        }
     }
 }
