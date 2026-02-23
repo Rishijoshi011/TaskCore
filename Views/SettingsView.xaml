@@ -24,7 +24,7 @@
         </Grid.RowDefinitions>
 
         <!-- ===== HEADER ===== -->
-        <StackPanel Grid.Row="0" Margin="0 0 0 30">
+        <StackPanel Grid.Row="0" Margin="0 0 0 0">
             <TextBlock Text="Settings"
                        FontSize="28"
                        FontWeight="Bold"
@@ -54,7 +54,11 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Auto-Start with Windows" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Auto-Start with Windows" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="Automatically start TaskCore when Windows boots.&#10;Adds an entry to Windows Registry (HKCU\Run)."/>
+                            </StackPanel>
                             <TextBlock Text="Adds/removes registry startup entry" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                         </StackPanel>
 
@@ -68,7 +72,11 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Close button should minimize the window" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Close button should minimize the window" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="When enabled, clicking X minimizes to system tray instead of closing.&#10;Right-click tray icon to fully exit."/>
+                            </StackPanel>
                             <TextBlock Text="When enabled, closing the window minimizes it to the system tray" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                         </StackPanel>
 
@@ -82,7 +90,11 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Refresh Interval" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Refresh Interval" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="How often to refresh process data and graphs.&#10;Lower = more real-time but higher CPU usage.&#10;Higher = less CPU usage but more delay."/>
+                            </StackPanel>
                             <TextBlock Text="Controls how often graphs/process list refresh" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                         </StackPanel>
 
@@ -102,7 +114,11 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Prefer Admin for Protected Actions" Foreground="{StaticResource TextPrimary}" FontSize="13"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Prefer Admin for Protected Actions" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="Some processes (system, antivirus) require admin rights to kill.&#10;When enabled, TaskCore will prompt to restart as Admin."/>
+                            </StackPanel>
                             <TextBlock Text="When needed (e.g., killing protected processes), you can relaunch elevated" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap"/>
                         </StackPanel>
 

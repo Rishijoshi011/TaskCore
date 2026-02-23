@@ -19,11 +19,14 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
         <StackPanel>
             <!-- Header -->
-            <TextBlock Text="Session Tracker"
-                       FontSize="26"
-                       FontWeight="Bold"
-                       Foreground="{StaticResource AccentBrush}"
-                       Margin="0 0 0 20"/>
+            <StackPanel Orientation="Horizontal" Margin="0 0 0 0">
+                <TextBlock Text="Session Tracker"
+                           FontSize="26"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource AccentBrush}"/>
+                <Control Style="{StaticResource InfoIcon}" Margin="10 0 0 0" VerticalAlignment="Center"
+                         ToolTip="Track application usage over time.&#10;View session history, export data, and analyze app activity."/>
+            </StackPanel>
 
             <!-- Controls Section -->
             <Border Style="{StaticResource CardPanel}" Margin="0 0 0 14" Padding="14">
@@ -78,12 +81,14 @@
                                 <MouseBinding MouseAction="LeftClick" Command="{Binding OpenSettingsCommand}"/>
                             </TextBlock.InputBindings>
                         </TextBlock>
+                        <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                                 ToolTip="Filter controls which apps are tracked.&#10;All Apps = Track everything&#10;Exclude DevTools = Skip VS Code, etc.&#10;Only DevTools = Track only dev tools"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
 
             <!-- Overview Cards -->
-            <UniformGrid Columns="4" Margin="0 0 0 14">
+            <UniformGrid Columns="4" Margin="0 14 0 14">
                 <Border Style="{StaticResource CardPanel}" Margin="0 0 10 0" Padding="14">
                     <StackPanel>
                         <TextBlock Text="Apps" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
@@ -136,7 +141,36 @@
                 </Grid>
             </Border>
 
-            <TextBlock Text="App Summary" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0 0 0 8"/>
+            <!-- Empty State -->
+            <Border Background="{StaticResource BackgroundCard}"
+                    BorderBrush="{StaticResource AccentBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="40"
+                    Margin="0 0 0 14"
+                    Visibility="{Binding AppSummaries.Count, Converter={StaticResource BoolToVisibility}, ConverterParameter=Inverted}">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Margin="0 0 0 16"/>
+                    <TextBlock Text="No Session Data Yet" 
+                               Foreground="{StaticResource TextPrimary}" 
+                               FontSize="18" 
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               Margin="0 0 0 8"/>
+                    <TextBlock Text="Start using applications and they will appear here.&#10;Session tracking begins automatically when apps are launched." 
+                               Foreground="{StaticResource TextSecondary}" 
+                               FontSize="13"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- App Summary Header with InfoIcon -->
+            <StackPanel Orientation="Horizontal" Margin="0 0 0 8" Visibility="{Binding AppSummaries.Count, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="App Summary" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold"/>
+                <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                         ToolTip="Overview of all applications used today.&#10;Shows session counts, CPU/memory usage stats.&#10;Right-click column headers to customize view."/>
+            </StackPanel>
 
             <Border Background="{StaticResource BackgroundCard}"
                     BorderBrush="#339A4DFF"
@@ -240,7 +274,12 @@
                 </Grid>
             </Border>
 
-            <TextBlock Text="Currently Running" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0 20 0 8"/>
+            <!-- Currently Running Header with InfoIcon -->
+            <StackPanel Orientation="Horizontal" Margin="0 20 0 8">
+                <TextBlock Text="Currently Running" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold"/>
+                <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                         ToolTip="Apps currently active and being tracked.&#10;Shows real-time CPU/memory usage.&#10;When closed, apps move to Old Sessions."/>
+            </StackPanel>
 
             <Border Background="{StaticResource BackgroundCard}"
                     BorderBrush="#339A4DFF"
@@ -336,7 +375,12 @@
                 </Grid>
             </Border>
 
-            <TextBlock Text="Old Sessions" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0 20 0 8"/>
+            <!-- Old Sessions Header with InfoIcon -->
+            <StackPanel Orientation="Horizontal" Margin="0 20 0 8">
+                <TextBlock Text="Old Sessions" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold"/>
+                <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                         ToolTip="Completed app sessions from today.&#10;Shows duration, peak/average CPU and memory usage.&#10;Data is saved locally and can be exported."/>
+            </StackPanel>
 
             <Border Background="{StaticResource BackgroundCard}"
                     BorderBrush="#339A4DFF"

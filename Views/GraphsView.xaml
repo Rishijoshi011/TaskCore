@@ -18,151 +18,37 @@
                    FontSize="26"
                    FontWeight="Bold"
                    Foreground="{StaticResource AccentBrush}"
-                   Margin="0 0 0 20"/>
+                   Margin="0 0 0 0"/>
 
         <!-- SUB-TABS (like Task Manager) -->
         <StackPanel Grid.Row="1"
                     Orientation="Horizontal"
                     Margin="0 0 0 20">
 
-            <Button Content="CPU" Width="80" Height="35" 
-                   Click="Cpu_Click"
-                   Background="#3A3A3A"
-                   Foreground="{StaticResource TextPrimary}"
-                   BorderThickness="0"
-                   Margin="0,0,8,0"
-                   FontSize="12"
-                   FontWeight="Medium">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" 
-                                Background="#3A3A3A"
-                                CornerRadius="6"
-                                Padding="12,8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#4A4A4A"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#5A5A5A"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+            <ToggleButton Content="CPU" Width="80" Height="35" 
+                   Checked="Cpu_Checked"
+                   Style="{StaticResource GraphTabToggle}"
+                   IsChecked="True"
+                   Margin="0,0,8,0"/>
             
-            <Button Content="Memory" Width="80" Height="35" 
-                   Click="Memory_Click"
-                   Background="#3A3A3A"
-                   Foreground="{StaticResource TextPrimary}"
-                   BorderThickness="0"
-                   Margin="0,0,8,0"
-                   FontSize="12"
-                   FontWeight="Medium">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" 
-                                Background="#3A3A3A"
-                                CornerRadius="6"
-                                Padding="12,8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#4A4A4A"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#5A5A5A"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+            <ToggleButton Content="Memory" Width="80" Height="35" 
+                   Checked="Memory_Checked"
+                   Style="{StaticResource GraphTabToggle}"
+                   Margin="0,0,8,0"/>
             
-            <Button Content="GPU" Width="80" Height="35" 
-                   Click="Gpu_Click"
-                   Background="#3A3A3A"
-                   Foreground="{StaticResource TextPrimary}"
-                   BorderThickness="0"
-                   Margin="0,0,8,0"
-                   FontSize="12"
-                   FontWeight="Medium">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" 
-                                Background="#3A3A3A"
-                                CornerRadius="6"
-                                Padding="12,8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#4A4A4A"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#5A5A5A"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+            <ToggleButton Content="GPU" Width="80" Height="35" 
+                   Checked="Gpu_Checked"
+                   Style="{StaticResource GraphTabToggle}"
+                   Margin="0,0,8,0"/>
             
-            <Button Content="Disk" Width="80" Height="35" 
-                   Click="Disk_Click"
-                   Background="#3A3A3A"
-                   Foreground="{StaticResource TextPrimary}"
-                   BorderThickness="0"
-                   Margin="0,0,8,0"
-                   FontSize="12"
-                   FontWeight="Medium">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" 
-                                Background="#3A3A3A"
-                                CornerRadius="6"
-                                Padding="12,8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#4A4A4A"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#5A5A5A"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+            <ToggleButton Content="Disk" Width="80" Height="35" 
+                   Checked="Disk_Checked"
+                   Style="{StaticResource GraphTabToggle}"
+                   Margin="0,0,8,0"/>
             
-            <Button Content="Network" Width="80" Height="35" 
-                   Click="Network_Click"
-                   Background="#3A3A3A"
-                   Foreground="{StaticResource TextPrimary}"
-                   BorderThickness="0"
-                   FontSize="12"
-                   FontWeight="Medium">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" 
-                                Background="#3A3A3A"
-                                CornerRadius="6"
-                                Padding="12,8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#4A4A4A"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#5A5A5A"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+            <ToggleButton Content="Network" Width="80" Height="35" 
+                   Checked="Network_Checked"
+                   Style="{StaticResource GraphTabToggle}"/>
 
         </StackPanel>
 

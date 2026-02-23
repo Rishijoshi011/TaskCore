@@ -31,6 +31,8 @@ namespace TaskCore.ViewModels
 
         public bool CanBrowseCustomSound => SoundAlertEnabled && SelectedSoundMode == "Custom";
 
+        public string LogsDirectoryPath => System.IO.Path.Combine(AppSettingsService.BaseDirectory, "RulesLogs");
+
         [ObservableProperty]
         private Rule? selectedRule;
 
@@ -47,6 +49,7 @@ namespace TaskCore.ViewModels
         public ICommand RefreshEventsCommand { get; }
         public ICommand ClearEventsCommand { get; }
         public ICommand BrowseCustomSoundCommand { get; }
+        public ICommand CopyLogsPathCommand { get; }
 
         // Editing properties
         [ObservableProperty]
@@ -100,6 +103,7 @@ namespace TaskCore.ViewModels
             RefreshEventsCommand = new RelayCommand(RefreshEvents);
             ClearEventsCommand = new RelayCommand(ClearEvents);
             BrowseCustomSoundCommand = new RelayCommand(BrowseCustomSound);
+            CopyLogsPathCommand = new RelayCommand(CopyLogsPathToClipboard);
 
             LoadRules();
             LoadRecentEvents();
@@ -311,6 +315,27 @@ namespace TaskCore.ViewModels
         private void ClearEvents()
         {
             RecentEvents.Clear();
+        }
+
+        private void CopyLogsPathToClipboard()
+        {
+            try
+            {
+                System.Windows.Clipboard.SetText(LogsDirectoryPath);
+                System.Windows.MessageBox.Show(
+                    "Log directory path copied to clipboard!",
+                    "Copied",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(
+                    $"Failed to copy path: {ex.Message}",
+                    "Error",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
+            }
         }
 
         /// <summary>

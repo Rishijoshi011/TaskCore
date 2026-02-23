@@ -56,11 +56,14 @@
                       SelectedValuePath="Tag">
 
                 <ComboBoxItem Content="All Memory" Tag="0"/>
-                <ComboBoxItem Content="> 100 MB" Tag="100"/>
-                <ComboBoxItem Content="> 250 MB" Tag="250"/>
-                <ComboBoxItem Content="> 500 MB" Tag="500"/>
-                <ComboBoxItem Content="> 1 GB" Tag="1024"/>
+                <ComboBoxItem Content="&gt; 100 MB" Tag="100"/>
+                <ComboBoxItem Content="&gt; 250 MB" Tag="250"/>
+                <ComboBoxItem Content="&gt; 500 MB" Tag="500"/>
+                <ComboBoxItem Content="&gt; 1 GB" Tag="1024"/>
             </ComboBox>
+            
+            <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                    ToolTip="Filter processes by memory usage.&#10;Shows only processes using more than the selected amount of RAM."/>
         </StackPanel>
 
         <!-- COLUMNS HEADER -->

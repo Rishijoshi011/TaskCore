@@ -53,7 +53,7 @@ namespace TaskCore.Views.Graphs {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/TaskCore;V3.2.0.0;component/views/graphs/diskcardview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/TaskCore;V3.2.1.0;component/views/graphs/diskcardview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\Views\Graphs\DiskCardView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

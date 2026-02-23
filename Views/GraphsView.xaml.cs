@@ -1,4 +1,5 @@
-﻿using System.Windows.Controls;
+﻿using System.Windows;
+using System.Windows.Controls;
 
 namespace TaskCore.Views
 {
@@ -12,19 +13,56 @@ namespace TaskCore.Views
             GraphContent.Content = new Graphs.CpuGraphView();
         }
 
-        private void Cpu_Click(object sender, System.Windows.RoutedEventArgs e)
-            => GraphContent.Content = new Graphs.CpuGraphView();
+        private void Cpu_Checked(object sender, RoutedEventArgs e)
+        {
+            if (GraphContent == null) return;
+            UncheckOthers(sender);
+            GraphContent.Content = new Graphs.CpuGraphView();
+        }
 
-        private void Memory_Click(object sender, System.Windows.RoutedEventArgs e)
-            => GraphContent.Content = new Graphs.MemoryGraphView();
+        private void Memory_Checked(object sender, RoutedEventArgs e)
+        {
+            if (GraphContent == null) return;
+            UncheckOthers(sender);
+            GraphContent.Content = new Graphs.MemoryGraphView();
+        }
 
-        private void Gpu_Click(object sender, System.Windows.RoutedEventArgs e)
-            => GraphContent.Content = new Graphs.GpuGraphView();
+        private void Gpu_Checked(object sender, RoutedEventArgs e)
+        {
+            if (GraphContent == null) return;
+            UncheckOthers(sender);
+            GraphContent.Content = new Graphs.GpuGraphView();
+        }
 
-        private void Disk_Click(object sender, System.Windows.RoutedEventArgs e)
-            => GraphContent.Content = new Graphs.DiskGraphView();
+        private void Disk_Checked(object sender, RoutedEventArgs e)
+        {
+            if (GraphContent == null) return;
+            UncheckOthers(sender);
+            GraphContent.Content = new Graphs.DiskGraphView();
+        }
 
-        private void Network_Click(object sender, System.Windows.RoutedEventArgs e)
-            => GraphContent.Content = new Graphs.NetworkGraphView();
+        private void Network_Checked(object sender, RoutedEventArgs e)
+        {
+            if (GraphContent == null) return;
+            UncheckOthers(sender);
+            GraphContent.Content = new Graphs.NetworkGraphView();
+        }
+
+        private void UncheckOthers(object? sender)
+        {
+            var current = sender as System.Windows.Controls.Primitives.ToggleButton;
+            if (current == null) return;
+            // Find parent StackPanel
+            if (current.Parent is StackPanel parent)
+            {
+                foreach (var child in parent.Children)
+                {
+                    if (child is System.Windows.Controls.Primitives.ToggleButton tb && tb != current)
+                    {
+                        tb.IsChecked = false;
+                    }
+                }
+            }
+        }
     }
 }

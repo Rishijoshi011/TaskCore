@@ -39,9 +39,7 @@
             <RowDefinition Height="Auto"/>
             <!-- Title -->
             <RowDefinition Height="Auto"/>
-            <!-- Enable toggle -->
-            <RowDefinition Height="Auto"/>
-            <!-- Add button -->
+            <!-- Enable toggle & Add button + Sound controls -->
             <RowDefinition Height="*"/>
             <!-- Rules list -->
             <RowDefinition Height="Auto"/>
@@ -65,45 +63,62 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
-            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                <CheckBox IsChecked="{Binding RulesEngineEnabled}"
-                          Content="Enable Rules Engine"
-                          Foreground="{StaticResource TextPrimary}"
-                          FontSize="14"/>
+            <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox IsChecked="{Binding RulesEngineEnabled}"
+                              Content="Enable Rules Engine"
+                              Foreground="{StaticResource TextPrimary}"
+                              FontSize="14"
+                              VerticalAlignment="Center"/>
+                    <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                               ToolTip="When enabled, TaskCore actively monitors processes&#10;and triggers actions when conditions are met.&#10;Disable to pause all rule monitoring."/>
+                </StackPanel>
+                <Button Content="+ Add New Rule"
+                        Command="{Binding AddRuleCommand}"
+                        Style="{StaticResource ActionButton}"
+                        Padding="12 8"
+                        FontWeight="SemiBold"
+                        HorizontalAlignment="Left"
+                        Margin="0 10 0 0"/>
             </StackPanel>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="Sound Alert" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0" VerticalAlignment="Center"/>
-                <ToggleButton IsChecked="{Binding SoundAlertEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="0 0 15 0"/>
-                <ComboBox ItemsSource="{Binding SoundModes}" 
-                          SelectedItem="{Binding SelectedSoundMode}" 
-                          IsEnabled="{Binding SoundAlertEnabled}"
-                          Width="120"
-                          Background="{StaticResource BackgroundSecondary}"
-                          Foreground="{StaticResource TextPrimary}"
-                          BorderBrush="{StaticResource BackgroundCard}"
-                          Margin="0 0 10 0"
-                          VerticalAlignment="Center"/>
-                <Button Content="Browse" 
-                        Command="{Binding BrowseCustomSoundCommand}" 
-                        Style="{StaticResource SmallActionButton}" 
-                        Height="28"
-                        IsEnabled="{Binding CanBrowseCustomSound}"/>
+            <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Sound Alert" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0" VerticalAlignment="Center"/>
+                    <Control Style="{StaticResource InfoIcon}" Margin="0 0 10 0" VerticalAlignment="Center"
+                               ToolTip="Play sound when rules trigger.&#10;Choose Silent, Default beep, or Custom WAV file."/>
+                    <ToggleButton IsChecked="{Binding SoundAlertEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="0 0 15 0"/>
+                    <ComboBox ItemsSource="{Binding SoundModes}" 
+                              SelectedItem="{Binding SelectedSoundMode}" 
+                              IsEnabled="{Binding SoundAlertEnabled}"
+                              Width="120"
+                              Background="{StaticResource BackgroundSecondary}"
+                              Foreground="{StaticResource TextPrimary}"
+                              BorderBrush="{StaticResource BackgroundCard}"
+                              Margin="0 0 10 0"
+                              VerticalAlignment="Center"/>
+                    <Button Content="Browse" 
+                            Command="{Binding BrowseCustomSoundCommand}" 
+                            Style="{StaticResource SmallActionButton}" 
+                            Height="28"
+                            IsEnabled="{Binding CanBrowseCustomSound}"/>
+                </StackPanel>
+                <TextBlock Text="{Binding LogsDirectoryPath}" 
+                           Foreground="{StaticResource TextSecondary}"
+                           FontSize="10"
+                           Margin="0 5 0 0"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip="Location where rule trigger events are logged.&#10;Double-click to copy path to clipboard.&#10;Logs are saved as daily files (yyyy-MM-dd.log)"
+                           Cursor="Hand">
+                    <TextBlock.InputBindings>
+                        <MouseBinding Command="{Binding CopyLogsPathCommand}" MouseAction="LeftDoubleClick"/>
+                    </TextBlock.InputBindings>
+                </TextBlock>
             </StackPanel>
         </Grid>
 
-        <!-- ADD BUTTON -->
-        <Button Grid.Row="2"
-                Content="+ Add New Rule"
-                Command="{Binding AddRuleCommand}"
-                Style="{StaticResource ActionButton}"
-                Padding="12 8"
-                FontWeight="SemiBold"
-                HorizontalAlignment="Left"
-                Margin="0 0 0 15"/>
-
         <!-- RULES LIST -->
-        <Border Grid.Row="3"
+        <Border Grid.Row="2"
                 Background="{StaticResource BackgroundSecondary}"
                 CornerRadius="8"
                 Padding="0"
@@ -221,7 +236,7 @@
         </Border>
 
         <!-- EVENTS HEADER -->
-        <Grid Grid.Row="4" Margin="0 20 0 10">
+        <Grid Grid.Row="3" Margin="0 20 0 10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -249,7 +264,7 @@
         </Grid>
 
         <!-- EVENTS LIST -->
-        <Border Grid.Row="5"
+        <Border Grid.Row="4"
                 Background="{StaticResource BackgroundSecondary}"
                 CornerRadius="8"
                 Padding="0"
@@ -310,7 +325,7 @@
         </Border>
 
         <!-- EDIT RULE MODAL -->
-        <Border Grid.Row="0" Grid.RowSpan="6"
+        <Border Grid.Row="0" Grid.RowSpan="5"
                 Background="#80000000"
                 Visibility="{Binding IsEditingRule, Converter={StaticResource BoolToVisibilityConverter}, FallbackValue=Collapsed}">
             <Border Background="{StaticResource BackgroundPrimary}"
@@ -347,127 +362,196 @@
                     </Grid>
 
                     <!-- Rule Name -->
-                    <TextBlock Text="Rule Name" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
+                    <TextBlock Text="Rule Name" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0 0 0 4"/>
                     <TextBox Text="{Binding EditRuleName}"
                              Background="{StaticResource BackgroundSecondary}"
                              Foreground="{StaticResource TextPrimary}"
                              BorderBrush="{StaticResource BackgroundCard}"
-                             Padding="8"
-                             Margin="0 0 0 15"/>
+                             Padding="10 8"
+                             Margin="0 0 0 18"/>
 
-                    <!-- Condition Type -->
-                    <TextBlock Text="Condition" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
-                    <ComboBox ItemsSource="{Binding ConditionTypes}"
-                              SelectedItem="{Binding EditConditionType}"
-                              Background="{StaticResource BackgroundSecondary}"
-                              Foreground="{StaticResource TextPrimary}"
-                              BorderBrush="{StaticResource BackgroundCard}"
-                              Padding="8"
-                              Margin="0 0 0 15">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Converter={StaticResource EnumToDescriptionConverter}}"/>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-
-                    <!-- Threshold (for CPU/Memory) -->
-                    <StackPanel Visibility="{Binding EditConditionType, Converter={StaticResource ConditionToVisibilityConverter}}">
-                        <TextBlock Text="Threshold" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBox Text="{Binding EditThresholdValue}"
-                                     Background="{StaticResource BackgroundSecondary}"
-                                     Foreground="{StaticResource TextPrimary}"
-                                     BorderBrush="{StaticResource BackgroundCard}"
-                                     Padding="8"
-                                     Width="100"/>
-                            <TextBlock Text="% (CPU) or MB (Memory)"
-                                       Foreground="{StaticResource TextSecondary}"
-                                       VerticalAlignment="Center"
-                                       Margin="10 0 0 0"/>
+                    <!-- CONDITION SECTION -->
+                    <Grid Margin="0 0 0 12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Condition Type -->
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal" Margin="0 0 0 4">
+                                <TextBlock Text="Condition" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="4 0 0 0"
+                                           ToolTip="What condition to check:&#10;• CPU Usage Above - When process CPU exceeds threshold&#10;• Memory Above - When process RAM exceeds threshold&#10;• Process Running - When target process starts&#10;• Process Not Running - When target process stops"/>
+                            </StackPanel>
+                            <ComboBox ItemsSource="{Binding ConditionTypes}"
+                                      SelectedItem="{Binding EditConditionType}"
+                                      Background="{StaticResource BackgroundSecondary}"
+                                      Foreground="{StaticResource TextPrimary}"
+                                      BorderBrush="{StaticResource BackgroundCard}"
+                                      Padding="8">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource EnumToDescriptionConverter}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                         </StackPanel>
-                    </StackPanel>
+
+                        <!-- Threshold (for CPU/Memory) -->
+                        <StackPanel Grid.Column="2" Visibility="{Binding EditConditionType, Converter={StaticResource ConditionToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal" Margin="0 0 0 4">
+                                <TextBlock Text="Threshold" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="4 0 0 0"
+                                           ToolTip="Value that triggers the condition:&#10;• For CPU: Percentage (0-100)&#10;• For Memory: Megabytes (MB)&#10;Example: 80 = 80% CPU or 80 MB RAM"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox Text="{Binding EditThresholdValue}"
+                                         Background="{StaticResource BackgroundSecondary}"
+                                         Foreground="{StaticResource TextPrimary}"
+                                         BorderBrush="{StaticResource BackgroundCard}"
+                                         Padding="10 8"
+                                         Width="70"/>
+                                <TextBlock Text="% / MB"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"
+                                           Margin="8 0 0 0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
 
                     <!-- Target Process -->
-                    <TextBlock Text="Target Process (optional)" Foreground="{StaticResource TextSecondary}" Margin="0 15 0 5"/>
+                    <StackPanel Orientation="Horizontal" Margin="0 0 0 4">
+                        <TextBlock Text="Target Process (optional)" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        <Control Style="{StaticResource InfoIcon}" Margin="4 0 0 0"
+                                   ToolTip="Process name to monitor. Leave empty to monitor all processes.&#10;Examples: chrome, msedge, notepad&#10;No need to include .exe extension"/>
+                    </StackPanel>
                     <TextBox Text="{Binding EditTargetProcessName}"
                              Background="{StaticResource BackgroundSecondary}"
                              Foreground="{StaticResource TextPrimary}"
                              BorderBrush="{StaticResource BackgroundCard}"
-                             Padding="8"
-                             Margin="0 0 0 15"/>
+                             Padding="10 8"
+                             Margin="0 0 0 18"/>
 
-                    <!-- Duration -->
-                    <TextBlock Text="Duration (seconds)" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
-                    <TextBox Text="{Binding EditDurationSeconds}"
-                             Background="{StaticResource BackgroundSecondary}"
-                             Foreground="{StaticResource TextPrimary}"
-                             BorderBrush="{StaticResource BackgroundCard}"
-                             Padding="8"
-                             Margin="0 0 0 15"/>
+                    <!-- ACTION SECTION -->
+                    <Grid Margin="0 0 0 12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Action Type -->
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal" Margin="0 0 0 4">
+                                <TextBlock Text="Action" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="4 0 0 0"
+                                           ToolTip="What action to take when rule triggers:&#10;• Show Notification - Display toast popup&#10;• Kill Process - Terminate the process&#10;• Set Priority - Change process priority&#10;• Log to File - Record event to log file"/>
+                            </StackPanel>
+                            <ComboBox ItemsSource="{Binding ActionTypes}"
+                                      SelectedItem="{Binding EditActionType}"
+                                      Background="{StaticResource BackgroundSecondary}"
+                                      Foreground="{StaticResource TextPrimary}"
+                                      BorderBrush="{StaticResource BackgroundCard}"
+                                      Padding="8">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource EnumToDescriptionConverter}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
 
-                    <!-- Action Type -->
-                    <TextBlock Text="Action" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
-                    <ComboBox ItemsSource="{Binding ActionTypes}"
-                              SelectedItem="{Binding EditActionType}"
-                              Background="{StaticResource BackgroundSecondary}"
-                              Foreground="{StaticResource TextPrimary}"
-                              BorderBrush="{StaticResource BackgroundCard}"
-                              Padding="8"
-                              Margin="0 0 0 15">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Converter={StaticResource EnumToDescriptionConverter}}"/>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
+                        <!-- Priority Level (for SetPriority) -->
+                        <StackPanel Grid.Column="2" Visibility="{Binding EditActionType, Converter={StaticResource ActionToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal" Margin="0 0 0 4">
+                                <TextBlock Text="Priority" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="4 0 0 0"
+                                           ToolTip="Process priority levels (Windows):&#10;• Low - Background tasks&#10;• BelowNormal - Less important&#10;• Normal - Default&#10;• AboveNormal - Higher preference&#10;• High - Important tasks&#10;• RealTime - Critical (use with caution)"/>
+                            </StackPanel>
+                            <ComboBox ItemsSource="{Binding PriorityOptions}"
+                                      SelectedItem="{Binding EditActionParameter}"
+                                      Background="{StaticResource BackgroundSecondary}"
+                                      Foreground="{StaticResource TextPrimary}"
+                                      BorderBrush="{StaticResource BackgroundCard}"
+                                      Padding="8"/>
+                        </StackPanel>
+                    </Grid>
 
-                    <!-- Action Parameter (for SetPriority) -->
-                    <StackPanel Visibility="{Binding EditActionType, Converter={StaticResource ActionToVisibilityConverter}}">
-                        <TextBlock Text="Priority Level" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
-                        <ComboBox ItemsSource="{Binding PriorityOptions}"
-                                  SelectedItem="{Binding EditActionParameter}"
-                                  Background="{StaticResource BackgroundSecondary}"
-                                  Foreground="{StaticResource TextPrimary}"
-                                  BorderBrush="{StaticResource BackgroundCard}"
-                                  Padding="8"
-                                  Margin="0 0 0 15"/>
-                    </StackPanel>
+                    <!-- TIMING SECTION -->
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Duration -->
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal" Margin="0 0 0 4">
+                                <TextBlock Text="Duration (sec)" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="4 0 0 0"
+                                           ToolTip="How long the condition must stay true before triggering the action.&#10;Example: CPU > 80% for 5 seconds → then trigger action."/>
+                            </StackPanel>
+                            <TextBox Text="{Binding EditDurationSeconds}"
+                                     Background="{StaticResource BackgroundSecondary}"
+                                     Foreground="{StaticResource TextPrimary}"
+                                     BorderBrush="{StaticResource BackgroundCard}"
+                                     Padding="10 8"/>
+                        </StackPanel>
 
-                    <!-- Notification Mode -->
-                    <TextBlock Text="Notification Mode" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
-                    <ComboBox ItemsSource="{Binding NotificationModes}"
-                              SelectedItem="{Binding EditNotificationMode}"
-                              Background="{StaticResource BackgroundSecondary}"
-                              Foreground="{StaticResource TextPrimary}"
-                              BorderBrush="{StaticResource BackgroundCard}"
-                              Padding="8"
-                              Margin="0 0 0 15">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Converter={StaticResource EnumToDescriptionConverter}}"/>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
+                        <!-- Cooldown -->
+                        <StackPanel Grid.Column="2">
+                            <StackPanel Orientation="Horizontal" Margin="0 0 0 4">
+                                <TextBlock Text="Cooldown (sec)" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="4 0 0 0"
+                                           ToolTip="How long to wait after triggering before the rule can trigger again.&#10;Prevents spam notifications. Example: After trigger, wait 60s before checking again."/>
+                            </StackPanel>
+                            <TextBox Text="{Binding EditCooldownSeconds}"
+                                     Background="{StaticResource BackgroundSecondary}"
+                                     Foreground="{StaticResource TextPrimary}"
+                                     BorderBrush="{StaticResource BackgroundCard}"
+                                     Padding="10 8"/>
+                        </StackPanel>
 
-                    <!-- Cooldown -->
-                    <TextBlock Text="Cooldown (seconds)" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
-                    <TextBox Text="{Binding EditCooldownSeconds}"
-                             Background="{StaticResource BackgroundSecondary}"
-                             Foreground="{StaticResource TextPrimary}"
-                             BorderBrush="{StaticResource BackgroundCard}"
-                             Padding="8"
-                             Margin="0 0 0 20"/>
+                        <!-- Notification Mode -->
+                        <StackPanel Grid.Column="4">
+                            <StackPanel Orientation="Horizontal" Margin="0 0 0 4">
+                                <TextBlock Text="Notify Mode" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="4 0 0 0"
+                                           ToolTip="How you want to be notified when the rule triggers:&#10;• Silent - No notification&#10;• Toast Only - Windows toast popup only&#10;• Sound Only - Alert sound only&#10;• Toast + Sound - Both toast and sound"/>
+                            </StackPanel>
+                            <ComboBox ItemsSource="{Binding NotificationModes}"
+                                      SelectedItem="{Binding EditNotificationMode}"
+                                      Background="{StaticResource BackgroundSecondary}"
+                                      Foreground="{StaticResource TextPrimary}"
+                                      BorderBrush="{StaticResource BackgroundCard}"
+                                      Padding="8">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource EnumToDescriptionConverter}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
 
                     <!-- Buttons -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 10 0 0">
                         <Button Content="Cancel"
                                 Command="{Binding CancelEditCommand}"
                                 Style="{StaticResource SecondaryButton}"
+                                Padding="15 10"
                                 Margin="0 0 10 0"/>
                         <Button Content="Save Rule"
                                 Command="{Binding SaveRuleCommand}"
-                                Style="{StaticResource ActionButton}"/>
+                                Style="{StaticResource ActionButton}"
+                                Padding="20 10"
+                                FontWeight="SemiBold"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
