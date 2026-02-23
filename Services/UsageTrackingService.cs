@@ -38,7 +38,7 @@ namespace TaskCore.Services
         }
 
         
-        public static List<Dictionary<string, object>> GetDailySessions(DateOnly date)
+        public static List<SessionRecord> GetDailySessions(DateOnly date)
         {
             return UsageStorage.GetDailySessions(date);
         }
@@ -524,12 +524,26 @@ namespace TaskCore.Services
 
         private readonly Dictionary<int, (DateTime time, TimeSpan cpu)> _cpuSnapshots = new();
 
+        // Session record for proper deserialization
+        public class SessionRecord
+        {
+            public string app { get; set; } = string.Empty;
+            public int processId { get; set; }
+            public string processPath { get; set; } = string.Empty;
+            public DateTime startTimeUtc { get; set; }
+            public DateTime endTimeUtc { get; set; }
+            public int durationSeconds { get; set; }
+            public double peakCpuPercent { get; set; }
+            public double averageCpuPercent { get; set; }
+            public double peakMemoryMB { get; set; }
+            public double averageMemoryMB { get; set; }
+        }
+
         private double GetCpuUsage(Process process)
         {
             try
             {
-                process.Refresh();
-                var currentTime = DateTime.UtcNow;
+                var currentTime = DateTime.Now;
                 var currentCpu = process.TotalProcessorTime;
                 var pid = process.Id;
 
@@ -557,6 +571,19 @@ namespace TaskCore.Services
 
         private static class UsageStorage
         {
+            private sealed class AppSummaryData
+            {
+                public int launchCount { get; set; }
+                public int totalRuntimeSeconds { get; set; }
+                public List<SessionRecord> sessions { get; set; } = new();
+            }
+
+            private sealed class DailySummary
+            {
+                public string date { get; set; } = string.Empty;
+                public Dictionary<string, AppSummaryData> apps { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+            }
+
             public static string BaseDirectory => Path.Combine(
                 AppSettingsService.BaseDirectory,
                 "SessionLogs");
@@ -605,11 +632,11 @@ namespace TaskCore.Services
             }
 
             // Get all sessions for a specific date
-            public static List<Dictionary<string, object>> GetDailySessions(DateOnly date)
+            public static List<SessionRecord> GetDailySessions(DateOnly date)
             {
                 var file = Path.Combine(BaseDirectory, $"sessions-{date:yyyy-MM-dd}.jsonl");
                 var legacyFile = Path.Combine(BaseDirectory, $"sessions_{date:yyyy-MM-dd}.json");
-                var sessions = new List<Dictionary<string, object>>();
+                var sessions = new List<SessionRecord>();
 
                 if (!File.Exists(file) && !File.Exists(legacyFile)) return sessions;
 
@@ -622,7 +649,7 @@ namespace TaskCore.Services
                         {
                             if (!string.IsNullOrWhiteSpace(line))
                             {
-                                var session = JsonSerializer.Deserialize<Dictionary<string, object>>(line);
+                                var session = JsonSerializer.Deserialize<SessionRecord>(line);
                                 if (session != null)
                                     sessions.Add(session);
                             }
@@ -640,35 +667,24 @@ namespace TaskCore.Services
                             {
                                 try
                                 {
-                                    var appName = rec.TryGetProperty("AppName", out var appEl) ? (appEl.GetString() ?? string.Empty) : string.Empty;
-                                    var pid = rec.TryGetProperty("ProcessId", out var pidEl) ? pidEl.GetInt32() : 0;
-                                    var processPath = rec.TryGetProperty("ProcessPath", out var pathEl) ? (pathEl.GetString() ?? string.Empty) : string.Empty;
-
-                                    // Legacy timestamps are local times; UI expects utc keys but converts to local anyway.
                                     var startLocal = rec.TryGetProperty("StartTimeLocal", out var startEl) ? startEl.GetDateTime() : DateTime.MinValue;
                                     var endLocal = rec.TryGetProperty("EndTimeLocal", out var endEl) ? endEl.GetDateTime() : DateTime.MinValue;
 
-                                    var durationSeconds = rec.TryGetProperty("DurationSeconds", out var durEl) ? (int)Math.Round(durEl.GetDouble()) : 0;
-                                    var peakCpu = rec.TryGetProperty("PeakCpuPercent", out var peakCpuEl) ? peakCpuEl.GetDouble() : 0.0;
-                                    var avgCpu = rec.TryGetProperty("AverageCpuPercent", out var avgCpuEl) ? avgCpuEl.GetDouble() : 0.0;
-                                    var peakMem = rec.TryGetProperty("PeakMemoryMb", out var peakMemEl) ? peakMemEl.GetDouble() : 0.0;
-                                    var avgMem = rec.TryGetProperty("AverageMemoryMb", out var avgMemEl) ? avgMemEl.GetDouble() : 0.0;
-
-                                    var dict = new Dictionary<string, object>
+                                    var session = new SessionRecord
                                     {
-                                        ["app"] = appName,
-                                        ["processId"] = pid,
-                                        ["processPath"] = processPath,
-                                        ["startTimeUtc"] = startLocal.Kind == DateTimeKind.Utc ? startLocal : startLocal.ToUniversalTime(),
-                                        ["endTimeUtc"] = endLocal.Kind == DateTimeKind.Utc ? endLocal : endLocal.ToUniversalTime(),
-                                        ["durationSeconds"] = durationSeconds,
-                                        ["peakCpuPercent"] = peakCpu,
-                                        ["averageCpuPercent"] = avgCpu,
-                                        ["peakMemoryMB"] = peakMem,
-                                        ["averageMemoryMB"] = avgMem
+                                        app = rec.TryGetProperty("AppName", out var appEl) ? (appEl.GetString() ?? string.Empty) : string.Empty,
+                                        processId = rec.TryGetProperty("ProcessId", out var pidEl) ? pidEl.GetInt32() : 0,
+                                        processPath = rec.TryGetProperty("ProcessPath", out var pathEl) ? (pathEl.GetString() ?? string.Empty) : string.Empty,
+                                        startTimeUtc = startLocal.Kind == DateTimeKind.Utc ? startLocal : startLocal.ToUniversalTime(),
+                                        endTimeUtc = endLocal.Kind == DateTimeKind.Utc ? endLocal : endLocal.ToUniversalTime(),
+                                        durationSeconds = rec.TryGetProperty("DurationSeconds", out var durEl) ? (int)Math.Round(durEl.GetDouble()) : 0,
+                                        peakCpuPercent = rec.TryGetProperty("PeakCpuPercent", out var peakCpuEl) ? peakCpuEl.GetDouble() : 0.0,
+                                        averageCpuPercent = rec.TryGetProperty("AverageCpuPercent", out var avgCpuEl) ? avgCpuEl.GetDouble() : 0.0,
+                                        peakMemoryMB = rec.TryGetProperty("PeakMemoryMb", out var peakMemEl) ? peakMemEl.GetDouble() : 0.0,
+                                        averageMemoryMB = rec.TryGetProperty("AverageMemoryMb", out var avgMemEl) ? avgMemEl.GetDouble() : 0.0
                                     };
 
-                                    sessions.Add(dict);
+                                    sessions.Add(session);
                                 }
                                 catch
                                 {
@@ -691,35 +707,28 @@ namespace TaskCore.Services
             }
 
             // Get summary grouped by app for a date
-            public static Dictionary<string, object> GetDailySummary(DateOnly date)
+            private static DailySummary GetDailySummary(DateOnly date)
             {
                 var sessions = GetDailySessions(date);
-                var apps = new Dictionary<string, object>();
+                var apps = new Dictionary<string, AppSummaryData>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var session in sessions)
                 {
-                    var appName = session["app"].ToString();
-                    
-                    if (!apps.ContainsKey(appName))
+                    if (!apps.TryGetValue(session.app, out var appData))
                     {
-                        apps[appName] = new
-                        {
-                            launchCount = 0,
-                            totalRuntimeSeconds = 0,
-                            sessions = new List<Dictionary<string, object>>()
-                        };
+                        appData = new AppSummaryData();
+                        apps[session.app] = appData;
                     }
 
-                    var appData = (dynamic)apps[appName];
                     appData.launchCount++;
-                    appData.totalRuntimeSeconds += Convert.ToInt32(session["durationSeconds"]);
-                    ((List<Dictionary<string, object>>)appData.sessions).Add(session);
+                    appData.totalRuntimeSeconds += session.durationSeconds;
+                    appData.sessions.Add(session);
                 }
 
-                return new Dictionary<string, object>
+                return new DailySummary
                 {
-                    ["date"] = date.ToString("yyyy-MM-dd"),
-                    ["apps"] = apps
+                    date = date.ToString("yyyy-MM-dd"),
+                    apps = apps
                 };
             }
 
@@ -781,15 +790,15 @@ namespace TaskCore.Services
                     foreach (var session in sessions)
                     {
                         csv.AppendLine($"{date:yyyy-MM-dd}," +
-                            $"\"{session["app"]}\"," +
-                            $"{session["processId"]}," +
-                            $"{Convert.ToDateTime(session["startTimeUtc"]).ToLocalTime():yyyy-MM-dd HH:mm:ss}," +
-                            $"{Convert.ToDateTime(session["endTimeUtc"]).ToLocalTime():yyyy-MM-dd HH:mm:ss}," +
-                            $"{session["durationSeconds"]}," +
-                            $"{session["peakCpuPercent"]}," +
-                            $"{session["averageCpuPercent"]}," +
-                            $"{session["peakMemoryMB"]}," +
-                            $"{session["averageMemoryMB"]}");
+                            $"\"{session.app}\"," +
+                            $"{session.processId}," +
+                            $"{session.startTimeUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}," +
+                            $"{session.endTimeUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}," +
+                            $"{session.durationSeconds}," +
+                            $"{session.peakCpuPercent}," +
+                            $"{session.averageCpuPercent}," +
+                            $"{session.peakMemoryMB}," +
+                            $"{session.averageMemoryMB}");
                     }
                 }
 
@@ -815,7 +824,7 @@ namespace TaskCore.Services
                 for (var date = startDate; date <= endDate; date = date.AddDays(1))
                 {
                     var summary = GetDailySummary(date);
-                    if (((Dictionary<string, object>)summary["apps"]).Any())
+                    if (summary.apps.Any())
                     {
                         dataDict[date.ToString("yyyy-MM-dd")] = summary;
                     }

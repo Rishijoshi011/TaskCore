@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using TaskCore.Services;
 using System.Text.Json;
 using System.IO;
@@ -521,8 +522,7 @@ namespace TaskCore.ViewModels
                     if (sessions.Count > 0)
                     {
                         var first = sessions.First();
-                        lines.Add("First session keys: " + string.Join(", ", first.Keys));
-                        lines.Add($"First session sample: app={first.GetValueOrDefault("app")}, pid={first.GetValueOrDefault("processId")}");
+                        lines.Add($"First session sample: app={first.app}, pid={first.processId}");
                     }
                     File.AppendAllLines(debugFile, lines);
                 }
@@ -533,11 +533,11 @@ namespace TaskCore.ViewModels
                 if (!string.IsNullOrWhiteSpace(q))
                 {
                     sessions = sessions.Where(s => 
-                        (s["app"]?.ToString() ?? string.Empty).Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+                        (s.app ?? string.Empty).Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
                 }
 
                 // Group sessions by app for summaries
-                var appGroups = sessions.GroupBy(s => s["app"]?.ToString() ?? "Unknown")
+                var appGroups = sessions.GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app)
                                        .ToDictionary(g => g.Key, g => g.ToList());
 
                 // Update app summaries
@@ -545,11 +545,11 @@ namespace TaskCore.ViewModels
                     {
                         AppName = kvp.Key,
                         SessionCount = kvp.Value.Count,
-                        LongestSessionSeconds = kvp.Value.Max(s => SafeGetInt(s, "durationSeconds")),
-                        PeakCpuPercent = kvp.Value.Average(s => SafeGetDouble(s, "peakCpuPercent")),
-                        AverageCpuPercent = kvp.Value.Average(s => SafeGetDouble(s, "averageCpuPercent")),
-                        PeakMemoryMb = kvp.Value.Average(s => SafeGetDouble(s, "peakMemoryMB")),
-                        AverageMemoryMb = kvp.Value.Average(s => SafeGetDouble(s, "averageMemoryMB"))
+                        LongestSessionSeconds = kvp.Value.Count > 0 ? kvp.Value.Max(s => s.durationSeconds) : 0,
+                        PeakCpuPercent = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.peakCpuPercent) : 0,
+                        AverageCpuPercent = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.averageCpuPercent) : 0,
+                        PeakMemoryMb = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.peakMemoryMB) : 0,
+                        AverageMemoryMb = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.averageMemoryMB) : 0
                     })
                     .OrderByDescending(s => s.LongestSessionSeconds)
                     .ToList();
@@ -558,18 +558,18 @@ namespace TaskCore.ViewModels
 
                 // Update sessions list (all sessions, ordered by start time)
                 _allSessions = sessions
-                        .OrderByDescending(s => SafeGetDateTime(s, "startTimeUtc"))
+                        .OrderByDescending(s => s.startTimeUtc)
                         .Select(s => new SessionRecordItem
                         {
-                            AppName = s["app"]?.ToString() ?? "Unknown",
-                            ProcessId = SafeGetInt(s, "processId"),
-                            StartTimeLocal = SafeGetDateTime(s, "startTimeUtc").ToLocalTime(),
-                            EndTimeLocal = SafeGetDateTime(s, "endTimeUtc").ToLocalTime(),
-                            DurationSeconds = SafeGetInt(s, "durationSeconds"),
-                            PeakCpuPercent = SafeGetDouble(s, "peakCpuPercent"),
-                            AverageCpuPercent = SafeGetDouble(s, "averageCpuPercent"),
-                            PeakMemoryMb = SafeGetDouble(s, "peakMemoryMB"),
-                            AverageMemoryMb = SafeGetDouble(s, "averageMemoryMB")
+                            AppName = string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app,
+                            ProcessId = s.processId,
+                            StartTimeLocal = s.startTimeUtc.ToLocalTime(),
+                            EndTimeLocal = s.endTimeUtc.ToLocalTime(),
+                            DurationSeconds = s.durationSeconds,
+                            PeakCpuPercent = s.peakCpuPercent,
+                            AverageCpuPercent = s.averageCpuPercent,
+                            PeakMemoryMb = s.peakMemoryMB,
+                            AverageMemoryMb = s.averageMemoryMB
                         })
                         .ToList();
 
@@ -594,7 +594,7 @@ namespace TaskCore.ViewModels
                 OnPropertyChanged(nameof(SessionsTotalPages));
                 OnPropertyChanged(nameof(SummaryPageText));
                 OnPropertyChanged(nameof(SessionsPageText));
-                UpdateSummaryStats(new Dictionary<string, List<Dictionary<string, object>>>());
+                UpdateSummaryStats(new Dictionary<string, List<UsageTrackingService.SessionRecord>>());
                 
                 // Log error
                 try
@@ -606,21 +606,21 @@ namespace TaskCore.ViewModels
             }
         }
 
-        private void UpdateSummaryStats(Dictionary<string, List<Dictionary<string, object>>> appGroups)
+        private void UpdateSummaryStats(Dictionary<string, List<UsageTrackingService.SessionRecord>> appGroups)
         {
             if (appGroups.Any())
             {
                 // Top app by total runtime
-                var topApp = appGroups.OrderByDescending(kvp => kvp.Value.Sum(s => SafeGetInt(s, "durationSeconds"))).First();
+                var topApp = appGroups.OrderByDescending(kvp => kvp.Value.Sum(s => s.durationSeconds)).First();
                 TopAppName = topApp.Key;
                 TopAppSessionsText = $"{topApp.Value.Count} sessions";
 
                 // Longest single session
                 var longestSession = appGroups.SelectMany(kvp => kvp.Value)
-                                             .OrderByDescending(s => SafeGetInt(s, "durationSeconds"))
+                                             .OrderByDescending(s => s.durationSeconds)
                                              .First();
-                var duration = SafeGetInt(longestSession, "durationSeconds");
-                LongestSessionText = $"{longestSession["app"]} ({TimeSpan.FromSeconds(duration):hh\\:mm\\:ss})";
+                var duration = longestSession.durationSeconds;
+                LongestSessionText = $"{longestSession.app} ({TimeSpan.FromSeconds(duration):hh\\:mm\\:ss})";
             }
             else
             {
@@ -656,10 +656,22 @@ namespace TaskCore.ViewModels
                 var csv = UsageTrackingService.ExportToCsv(start, end);
                 
                 var fileName = $"usage-export-{start:yyyy-MM-dd}-to-{end:yyyy-MM-dd}.csv";
-                var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), fileName);
-                File.WriteAllText(filePath, csv);
-                
-                ShowCopyStatus($"Exported to {fileName}");
+                var dialog = new SaveFileDialog
+                {
+                    Title = "Export Usage (CSV)",
+                    FileName = fileName,
+                    DefaultExt = ".csv",
+                    Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                    AddExtension = true,
+                    OverwritePrompt = true
+                };
+
+                if (dialog.ShowDialog() != true)
+                    return;
+
+                File.WriteAllText(dialog.FileName, csv);
+
+                ShowCopyStatus($"Exported to {Path.GetFileName(dialog.FileName)}");
             }
             catch (Exception ex)
             {
@@ -677,10 +689,22 @@ namespace TaskCore.ViewModels
                 var json = UsageTrackingService.ExportToJson(start, end);
                 
                 var fileName = $"usage-export-{start:yyyy-MM-dd}-to-{end:yyyy-MM-dd}.json";
-                var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), fileName);
-                File.WriteAllText(filePath, json);
-                
-                ShowCopyStatus($"Exported to {fileName}");
+                var dialog = new SaveFileDialog
+                {
+                    Title = "Export Usage (JSON)",
+                    FileName = fileName,
+                    DefaultExt = ".json",
+                    Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                    AddExtension = true,
+                    OverwritePrompt = true
+                };
+
+                if (dialog.ShowDialog() != true)
+                    return;
+
+                File.WriteAllText(dialog.FileName, json);
+
+                ShowCopyStatus($"Exported to {Path.GetFileName(dialog.FileName)}");
             }
             catch (Exception ex)
             {
