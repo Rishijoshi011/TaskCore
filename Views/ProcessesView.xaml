@@ -67,6 +67,8 @@
         <Grid Grid.Row="2" Margin="0 0 0 6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="24"/>
+                <!-- expand/indent -->
+                <ColumnDefinition Width="24"/>
                 <!-- icon -->
                 <ColumnDefinition Width="*"/>
                 <!-- name -->
@@ -78,10 +80,57 @@
                 <!-- PID -->
             </Grid.ColumnDefinitions>
 
-            <TextBlock Grid.Column="1" Text="Name" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="2" Text="CPU" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="3" Text="Memory" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="4" Text="PID" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
+            <Button Grid.Column="2"
+                    Command="{Binding SortByCommand}"
+                    CommandParameter="Name"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="0"
+                    HorizontalContentAlignment="Left">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Name" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
+                    <TextBlock Margin="4 0 0 0" Text="{Binding NameSortIndicator}" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Button>
+
+            <Button Grid.Column="3"
+                    Command="{Binding SortByCommand}"
+                    CommandParameter="Cpu"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="0"
+                    HorizontalContentAlignment="Right">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="CPU" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
+                    <TextBlock Margin="4 0 0 0" Text="{Binding CpuSortIndicator}" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Button>
+
+            <Button Grid.Column="4"
+                    Command="{Binding SortByCommand}"
+                    CommandParameter="Memory"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="0"
+                    HorizontalContentAlignment="Right">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="Memory" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
+                    <TextBlock Margin="4 0 0 0" Text="{Binding MemorySortIndicator}" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Button>
+
+            <Button Grid.Column="5"
+                    Command="{Binding SortByCommand}"
+                    CommandParameter="Pid"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="0"
+                    HorizontalContentAlignment="Right">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="PID" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
+                    <TextBlock Margin="4 0 0 0" Text="{Binding PidSortIndicator}" Foreground="{StaticResource TextSecondary}" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Button>
         </Grid>
 
         <!-- PROCESS LIST -->
@@ -153,15 +202,18 @@
 
                                         <TextBlock Grid.Column="3" Text="{Binding TotalCpu, StringFormat={}{0}%}"
                                                    Foreground="{StaticResource TextSecondary}"
-                                                   VerticalAlignment="Center"/>
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Right"/>
 
                                         <TextBlock Grid.Column="4" Text="{Binding TotalMemory, StringFormat={}{0} MB}"
                                                    Foreground="{StaticResource TextSecondary}"
-                                                   VerticalAlignment="Center"/>
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Right"/>
 
                                         <TextBlock Grid.Column="5" Text="{Binding Items[0].PID}"
                                                    Foreground="{StaticResource TextSecondary}"
-                                                   VerticalAlignment="Center"/>
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Right"/>
                                     </Grid>
                                 </Button>
 
@@ -211,13 +263,20 @@
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="24"/>
+                                                        <!-- indent to align with group expand arrow -->
+                                                        <ColumnDefinition Width="24"/>
+                                                        <!-- icon -->
                                                         <ColumnDefinition Width="*"/>
+                                                        <!-- name -->
                                                         <ColumnDefinition Width="90"/>
+                                                        <!-- CPU -->
                                                         <ColumnDefinition Width="110"/>
+                                                        <!-- Memory -->
                                                         <ColumnDefinition Width="120"/>
+                                                        <!-- PID -->
                                                     </Grid.ColumnDefinitions>
 
-                                                    <Image Grid.Column="0" 
+                                                    <Image Grid.Column="1" 
                                                            Source="{Binding Icon}" 
                                                            Width="16" 
                                                            Height="16"
@@ -225,18 +284,21 @@
                                                            VerticalAlignment="Center"
                                                            HorizontalAlignment="Center"/>
 
-                                                    <TextBlock Grid.Column="1" Text="{Binding Name}"
+                                                    <TextBlock Grid.Column="2" Text="{Binding Name}"
                                                                Foreground="{StaticResource TextPrimary}"
                                                                VerticalAlignment="Center"/>
 
-                                                    <TextBlock Grid.Column="2" Text="{Binding CpuUsage, StringFormat={}{0}%}"
-                                                               Foreground="{StaticResource TextSecondary}"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding CpuUsage, StringFormat={}{0}%}"
+                                                               Foreground="{StaticResource TextSecondary}"
+                                                               TextAlignment="Right"/>
 
-                                                    <TextBlock Grid.Column="3" Text="{Binding MemoryMB, StringFormat={}{0} MB}"
-                                                               Foreground="{StaticResource TextSecondary}"/>
+                                                    <TextBlock Grid.Column="4" Text="{Binding MemoryMB, StringFormat={}{0} MB}"
+                                                               Foreground="{StaticResource TextSecondary}"
+                                                               TextAlignment="Right"/>
 
-                                                    <TextBlock Grid.Column="4" Text="{Binding PID}"
-                                                               Foreground="{StaticResource TextSecondary}"/>
+                                                    <TextBlock Grid.Column="5" Text="{Binding PID}"
+                                                               Foreground="{StaticResource TextSecondary}"
+                                                               TextAlignment="Right"/>
                                                 </Grid>
                                             </Button>
 

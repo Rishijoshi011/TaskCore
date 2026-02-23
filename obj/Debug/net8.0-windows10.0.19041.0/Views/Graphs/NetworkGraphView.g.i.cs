@@ -54,7 +54,7 @@ namespace TaskCore.Views.Graphs {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/TaskCore;V3.0.0.0;component/views/graphs/networkgraphview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/TaskCore;V3.2.0.0;component/views/graphs/networkgraphview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\Views\Graphs\NetworkGraphView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

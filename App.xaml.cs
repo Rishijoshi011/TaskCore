@@ -16,7 +16,7 @@ namespace TaskCore
                 config.AddSkiaSharp()
             );
 
-            _ = WatchdogService.Instance;
+            // WatchdogService removed - merged into RulesService
             // _ = AppSessionTrackerService.Instance; // DISABLED - using UsageTrackingService instead
             _ = UsageTrackingService.Instance;
         }

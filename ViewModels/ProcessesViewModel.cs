@@ -16,6 +16,16 @@ namespace TaskCore.ViewModels
         private readonly ProcessService _service = new();
         private readonly DispatcherTimer _timer;
 
+        private readonly AppSettings _settings = new();
+
+        private enum SortField
+        {
+            Name,
+            Cpu,
+            Memory,
+            Pid
+        }
+
         // RAW UNFILTERED LIST
         private List<ProcessGroup> _allGroups = new();
 
@@ -32,6 +42,14 @@ namespace TaskCore.ViewModels
 
         [ObservableProperty]
         private double memoryFilter = 0;
+
+        private SortField _sortField = SortField.Cpu;
+        private bool _sortDescending = true;
+
+        public string NameSortIndicator => _sortField == SortField.Name ? (_sortDescending ? "▼" : "▲") : string.Empty;
+        public string CpuSortIndicator => _sortField == SortField.Cpu ? (_sortDescending ? "▼" : "▲") : string.Empty;
+        public string MemorySortIndicator => _sortField == SortField.Memory ? (_sortDescending ? "▼" : "▲") : string.Empty;
+        public string PidSortIndicator => _sortField == SortField.Pid ? (_sortDescending ? "▼" : "▲") : string.Empty;
 
         [ObservableProperty]
         private ProcessItem? selectedProcess;
@@ -54,6 +72,40 @@ namespace TaskCore.ViewModels
             SelectedGroup = group;
             SelectedProcess = null; // Clear individual selection
             group.IsExpanded = !group.IsExpanded; // Toggle expand/collapse
+        }
+
+        [RelayCommand]
+        private void SortBy(string? column)
+        {
+            if (string.IsNullOrWhiteSpace(column)) return;
+
+            if (!Enum.TryParse<SortField>(column, ignoreCase: true, out var requested))
+                return;
+
+            if (_sortField == requested)
+                _sortDescending = !_sortDescending;
+            else
+            {
+                _sortField = requested;
+                _sortDescending = true;
+            }
+
+            OnPropertyChanged(nameof(NameSortIndicator));
+            OnPropertyChanged(nameof(CpuSortIndicator));
+            OnPropertyChanged(nameof(MemorySortIndicator));
+            OnPropertyChanged(nameof(PidSortIndicator));
+
+            try
+            {
+                _settings.ProcessesSortField = _sortField.ToString();
+                _settings.ProcessesSortDescending = _sortDescending;
+                AppSettingsService.Save(_settings);
+            }
+            catch
+            {
+            }
+
+            ApplyFilters();
         }
 
         partial void OnSelectedProcessChanged(ProcessItem? value)
@@ -82,6 +134,39 @@ namespace TaskCore.ViewModels
             if (IsInDesignMode())
                 return;
 
+            var loadedSettings = AppSettingsService.Load();
+            _settings.AutoStartWithWindows = loadedSettings.AutoStartWithWindows;
+            _settings.PreferAdminForProtectedActions = loadedSettings.PreferAdminForProtectedActions;
+            _settings.RefreshIntervalMs = loadedSettings.RefreshIntervalMs;
+            _settings.MinimizeToTray = loadedSettings.MinimizeToTray;
+            _settings.ProcessesSortField = loadedSettings.ProcessesSortField;
+            _settings.ProcessesSortDescending = loadedSettings.ProcessesSortDescending;
+
+            _settings.CustomAlertSoundPath = loadedSettings.CustomAlertSoundPath;
+            _settings.SessionTrackerSummaryColumns = loadedSettings.SessionTrackerSummaryColumns;
+            _settings.SessionTrackerSessionColumns = loadedSettings.SessionTrackerSessionColumns;
+            _settings.ProcessFilterMode = loadedSettings.ProcessFilterMode;
+            _settings.SelectedProcesses = loadedSettings.SelectedProcesses;
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(_settings.ProcessesSortField) &&
+                    Enum.TryParse<SortField>(_settings.ProcessesSortField, ignoreCase: true, out var sf))
+                {
+                    _sortField = sf;
+                }
+
+                _sortDescending = _settings.ProcessesSortDescending;
+
+                OnPropertyChanged(nameof(NameSortIndicator));
+                OnPropertyChanged(nameof(CpuSortIndicator));
+                OnPropertyChanged(nameof(MemorySortIndicator));
+                OnPropertyChanged(nameof(PidSortIndicator));
+            }
+            catch
+            {
+            }
+
             // Load instantly without freezing
             _ = LoadProcessListAsync();
 
@@ -109,6 +194,59 @@ namespace TaskCore.ViewModels
             }
             catch
             {
+            }
+        }
+
+        private System.Collections.Generic.IEnumerable<ProcessGroup> ApplySorting(System.Collections.Generic.IEnumerable<ProcessGroup> groups)
+        {
+            System.Collections.Generic.IEnumerable<ProcessGroup> orderedGroups = _sortField switch
+            {
+                SortField.Name => _sortDescending
+                    ? groups.OrderByDescending(g => g.GroupName)
+                    : groups.OrderBy(g => g.GroupName),
+                SortField.Cpu => _sortDescending
+                    ? groups.OrderByDescending(g => g.TotalCpu)
+                    : groups.OrderBy(g => g.TotalCpu),
+                SortField.Memory => _sortDescending
+                    ? groups.OrderByDescending(g => g.TotalMemory)
+                    : groups.OrderBy(g => g.TotalMemory),
+                SortField.Pid => _sortDescending
+                    ? groups.OrderByDescending(g => g.Items.Count > 0 ? g.Items[0].PID : 0)
+                    : groups.OrderBy(g => g.Items.Count > 0 ? g.Items[0].PID : 0),
+                _ => groups
+            };
+
+            foreach (var g in orderedGroups)
+            {
+                try
+                {
+                    System.Collections.Generic.IEnumerable<ProcessItem> orderedItems = _sortField switch
+                    {
+                        SortField.Name => _sortDescending
+                            ? g.Items.OrderByDescending(p => p.Name)
+                            : g.Items.OrderBy(p => p.Name),
+                        SortField.Cpu => _sortDescending
+                            ? g.Items.OrderByDescending(p => p.CpuUsage)
+                            : g.Items.OrderBy(p => p.CpuUsage),
+                        SortField.Memory => _sortDescending
+                            ? g.Items.OrderByDescending(p => p.MemoryMB)
+                            : g.Items.OrderBy(p => p.MemoryMB),
+                        SortField.Pid => _sortDescending
+                            ? g.Items.OrderByDescending(p => p.PID)
+                            : g.Items.OrderBy(p => p.PID),
+                        _ => g.Items.AsEnumerable()
+                    };
+
+                    var snapshot = orderedItems.ToList();
+                    g.Items.Clear();
+                    foreach (var it in snapshot)
+                        g.Items.Add(it);
+                }
+                catch
+                {
+                }
+
+                yield return g;
             }
         }
 
@@ -174,6 +312,17 @@ namespace TaskCore.ViewModels
             // preserve old selection BEFORE filtering
             var oldSelected = SelectedProcess;
 
+            // preserve expand state BEFORE refresh/filter
+            var expandState = new System.Collections.Generic.Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var g in ProcessGroups)
+                    expandState[g.GroupName] = g.IsExpanded;
+            }
+            catch
+            {
+            }
+
             var filtered = _allGroups.AsEnumerable();
 
             // 🔍 Search
@@ -189,12 +338,20 @@ namespace TaskCore.ViewModels
                 filtered = filtered.Where(g => g.TotalMemory >= MemoryFilter);
             }
 
+            // ↕ Sorting (groups + items)
+            filtered = ApplySorting(filtered);
+
             // Update UI list safely
             Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
                 ProcessGroups.Clear();
                 foreach (var grp in filtered)
+                {
+                    if (expandState.TryGetValue(grp.GroupName, out var isExpanded))
+                        grp.IsExpanded = isExpanded;
+
                     ProcessGroups.Add(grp);
+                }
             }));
 
             // 🔄 Restore selected process if it still exists

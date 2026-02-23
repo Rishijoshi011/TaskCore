@@ -1,0 +1,476 @@
+<UserControl x:Class="TaskCore.Views.RulesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <Style x:Key="ActionButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="12 8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource BackgroundSecondary}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Padding" Value="12 8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="DangerButton" TargetType="Button">
+            <Setter Property="Background" Value="#E74C3C"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="8 4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Title -->
+            <RowDefinition Height="Auto"/>
+            <!-- Enable toggle -->
+            <RowDefinition Height="Auto"/>
+            <!-- Add button -->
+            <RowDefinition Height="*"/>
+            <!-- Rules list -->
+            <RowDefinition Height="Auto"/>
+            <!-- Events header -->
+            <RowDefinition Height="200"/>
+            <!-- Events list -->
+        </Grid.RowDefinitions>
+
+        <!-- TITLE -->
+        <TextBlock Text="Rules Engine"
+                   Grid.Row="0"
+                   FontSize="28"
+                   FontWeight="Bold"
+                   Foreground="{StaticResource AccentBrush}"
+                   Margin="0 0 0 20"/>
+
+        <!-- ENABLE TOGGLE & SOUND OPTIONS -->
+        <Grid Grid.Row="1" Margin="0 0 0 15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <CheckBox IsChecked="{Binding RulesEngineEnabled}"
+                          Content="Enable Rules Engine"
+                          Foreground="{StaticResource TextPrimary}"
+                          FontSize="14"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Sound Alert" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0" VerticalAlignment="Center"/>
+                <ToggleButton IsChecked="{Binding SoundAlertEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="0 0 15 0"/>
+                <ComboBox ItemsSource="{Binding SoundModes}" 
+                          SelectedItem="{Binding SelectedSoundMode}" 
+                          IsEnabled="{Binding SoundAlertEnabled}"
+                          Width="120"
+                          Background="{StaticResource BackgroundSecondary}"
+                          Foreground="{StaticResource TextPrimary}"
+                          BorderBrush="{StaticResource BackgroundCard}"
+                          Margin="0 0 10 0"
+                          VerticalAlignment="Center"/>
+                <Button Content="Browse" 
+                        Command="{Binding BrowseCustomSoundCommand}" 
+                        Style="{StaticResource SmallActionButton}" 
+                        Height="28"
+                        IsEnabled="{Binding CanBrowseCustomSound}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- ADD BUTTON -->
+        <Button Grid.Row="2"
+                Content="+ Add New Rule"
+                Command="{Binding AddRuleCommand}"
+                Style="{StaticResource ActionButton}"
+                Padding="12 8"
+                FontWeight="SemiBold"
+                HorizontalAlignment="Left"
+                Margin="0 0 0 15"/>
+
+        <!-- RULES LIST -->
+        <Border Grid.Row="3"
+                Background="{StaticResource BackgroundSecondary}"
+                CornerRadius="8"
+                Padding="0"
+                BorderBrush="{StaticResource BackgroundCard}"
+                BorderThickness="1">
+
+            <Grid>
+                <!-- Empty state -->
+                <TextBlock Text="No rules configured. Click 'Add New Rule' to create one."
+                           Foreground="{StaticResource TextSecondary}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding Rules.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+
+                <!-- Rules List -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Rules}" Padding="8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource BackgroundPrimary}"
+                                        CornerRadius="4"
+                                        Margin="0 2"
+                                        Padding="8 6"
+                                        BorderBrush="{StaticResource BackgroundCard}"
+                                        BorderThickness="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Rule Info -->
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontWeight="Bold"
+                                                       FontSize="13"
+                                                       Foreground="{StaticResource TextPrimary}"/>
+                                            <TextBlock FontSize="10"
+                                                       Foreground="{StaticResource TextSecondary}"
+                                                       Margin="0 2 0 0">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{}{0} → {1}">
+                                                        <Binding Path="ConditionType" Converter="{StaticResource EnumToDescriptionConverter}"/>
+                                                        <Binding Path="ActionType" Converter="{StaticResource EnumToDescriptionConverter}"/>
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding GetConditionDescription}"
+                                                       FontSize="9"
+                                                       Foreground="{StaticResource AccentBrush}"
+                                                       Margin="0 1 0 0"/>
+                                            <TextBlock Text="{Binding GetActionDescription}"
+                                                       FontSize="9"
+                                                       Foreground="{StaticResource TextSecondary}"
+                                                       Margin="0 1 0 0"/>
+                                            <TextBlock Text="{Binding GetNotificationModeDescription}"
+                                                       FontSize="9"
+                                                       Foreground="{StaticResource AccentBrush}"
+                                                       Margin="0 1 0 0"
+                                                       FontStyle="Italic"/>
+                                        </StackPanel>
+
+                                        <!-- Status (Clickable to toggle) - BIGGER -->
+                                        <Button Grid.Column="1"
+                                                Content="{Binding IsEnabled, Converter={StaticResource BoolToStatusConverter}}"
+                                                Command="{Binding DataContext.ToggleRuleEnabledCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Background="{Binding IsEnabled, Converter={StaticResource BoolToBrushConverter}}"
+                                                Foreground="White"
+                                                FontSize="13"
+                                                FontWeight="Bold"
+                                                Padding="12 8"
+                                                Margin="10 0"
+                                                MinWidth="50"
+                                                VerticalAlignment="Center"
+                                                BorderThickness="0"
+                                                Cursor="Hand"
+                                                BorderBrush="Transparent">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" 
+                                                            CornerRadius="4"
+                                                            Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+
+                                        <!-- Edit -->
+                                        <Button Grid.Column="2"
+                                                Content="Edit"
+                                                Command="{Binding DataContext.EditRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource SmallActionButton}"
+                                                Height="28"
+                                                Margin="5 0"/>
+
+                                        <!-- Delete -->
+                                        <Button Grid.Column="3"
+                                                Content="Delete"
+                                                Command="{Binding DataContext.DeleteRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource SmallActionButton}"
+                                                Height="28"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- EVENTS HEADER -->
+        <Grid Grid.Row="4" Margin="0 20 0 10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                       Text="Recent Triggers"
+                       FontSize="18"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource TextPrimary}"/>
+
+            <Button Grid.Column="1"
+                    Content="Refresh"
+                    Command="{Binding RefreshEventsCommand}"
+                    Style="{StaticResource SmallActionButton}"
+                    Height="28"
+                    Margin="0 0 5 0"/>
+
+            <Button Grid.Column="2"
+                    Content="Clear"
+                    Command="{Binding ClearEventsCommand}"
+                    Style="{StaticResource SmallActionButton}"
+                    Height="28"/>
+        </Grid>
+
+        <!-- EVENTS LIST -->
+        <Border Grid.Row="5"
+                Background="{StaticResource BackgroundSecondary}"
+                CornerRadius="8"
+                Padding="0"
+                BorderBrush="{StaticResource BackgroundCard}"
+                BorderThickness="1">
+
+            <Grid>
+                <!-- Empty state -->
+                <TextBlock Text="No rule triggers yet."
+                           Foreground="{StaticResource TextSecondary}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding RecentEvents.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+
+                <!-- Events List -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding RecentEvents}" Padding="10">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource BackgroundPrimary}"
+                                        CornerRadius="4"
+                                        Margin="0 3"
+                                        Padding="10"
+                                        BorderBrush="{StaticResource BackgroundCard}"
+                                        BorderThickness="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding TriggeredAt, StringFormat='{}{0:HH:mm:ss}'}"
+                                                   FontSize="11"
+                                                   Foreground="{StaticResource TextSecondary}"
+                                                   Width="60"/>
+
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Description}"
+                                                   FontSize="12"
+                                                   Foreground="{StaticResource TextPrimary}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Margin="10 0"/>
+
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding ActionResult}"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource AccentBrush}"
+                                                   FontStyle="Italic"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- EDIT RULE MODAL -->
+        <Border Grid.Row="0" Grid.RowSpan="6"
+                Background="#80000000"
+                Visibility="{Binding IsEditingRule, Converter={StaticResource BoolToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Border Background="{StaticResource BackgroundPrimary}"
+                    CornerRadius="8"
+                    Padding="25"
+                    Width="500"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    BorderBrush="{StaticResource BackgroundCard}"
+                    BorderThickness="1">
+                <StackPanel>
+                    <Grid Margin="0 0 0 20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding SelectedRule, Converter={StaticResource NullToTextConverter}, ConverterParameter='Edit Rule|New Rule'}"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource AccentBrush}"
+                                   VerticalAlignment="Center"/>
+                        
+                        <Button Grid.Column="1"
+                                Content="✕"
+                                Command="{Binding CancelEditCommand}"
+                                Background="Transparent"
+                                Foreground="{StaticResource TextSecondary}"
+                                BorderThickness="0"
+                                FontSize="18"
+                                Padding="5 0"
+                                Cursor="Hand"/>
+                    </Grid>
+
+                    <!-- Rule Name -->
+                    <TextBlock Text="Rule Name" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
+                    <TextBox Text="{Binding EditRuleName}"
+                             Background="{StaticResource BackgroundSecondary}"
+                             Foreground="{StaticResource TextPrimary}"
+                             BorderBrush="{StaticResource BackgroundCard}"
+                             Padding="8"
+                             Margin="0 0 0 15"/>
+
+                    <!-- Condition Type -->
+                    <TextBlock Text="Condition" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
+                    <ComboBox ItemsSource="{Binding ConditionTypes}"
+                              SelectedItem="{Binding EditConditionType}"
+                              Background="{StaticResource BackgroundSecondary}"
+                              Foreground="{StaticResource TextPrimary}"
+                              BorderBrush="{StaticResource BackgroundCard}"
+                              Padding="8"
+                              Margin="0 0 0 15">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource EnumToDescriptionConverter}}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <!-- Threshold (for CPU/Memory) -->
+                    <StackPanel Visibility="{Binding EditConditionType, Converter={StaticResource ConditionToVisibilityConverter}}">
+                        <TextBlock Text="Threshold" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBox Text="{Binding EditThresholdValue}"
+                                     Background="{StaticResource BackgroundSecondary}"
+                                     Foreground="{StaticResource TextPrimary}"
+                                     BorderBrush="{StaticResource BackgroundCard}"
+                                     Padding="8"
+                                     Width="100"/>
+                            <TextBlock Text="% (CPU) or MB (Memory)"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       VerticalAlignment="Center"
+                                       Margin="10 0 0 0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Target Process -->
+                    <TextBlock Text="Target Process (optional)" Foreground="{StaticResource TextSecondary}" Margin="0 15 0 5"/>
+                    <TextBox Text="{Binding EditTargetProcessName}"
+                             Background="{StaticResource BackgroundSecondary}"
+                             Foreground="{StaticResource TextPrimary}"
+                             BorderBrush="{StaticResource BackgroundCard}"
+                             Padding="8"
+                             Margin="0 0 0 15"/>
+
+                    <!-- Duration -->
+                    <TextBlock Text="Duration (seconds)" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
+                    <TextBox Text="{Binding EditDurationSeconds}"
+                             Background="{StaticResource BackgroundSecondary}"
+                             Foreground="{StaticResource TextPrimary}"
+                             BorderBrush="{StaticResource BackgroundCard}"
+                             Padding="8"
+                             Margin="0 0 0 15"/>
+
+                    <!-- Action Type -->
+                    <TextBlock Text="Action" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
+                    <ComboBox ItemsSource="{Binding ActionTypes}"
+                              SelectedItem="{Binding EditActionType}"
+                              Background="{StaticResource BackgroundSecondary}"
+                              Foreground="{StaticResource TextPrimary}"
+                              BorderBrush="{StaticResource BackgroundCard}"
+                              Padding="8"
+                              Margin="0 0 0 15">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource EnumToDescriptionConverter}}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <!-- Action Parameter (for SetPriority) -->
+                    <StackPanel Visibility="{Binding EditActionType, Converter={StaticResource ActionToVisibilityConverter}}">
+                        <TextBlock Text="Priority Level" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
+                        <ComboBox ItemsSource="{Binding PriorityOptions}"
+                                  SelectedItem="{Binding EditActionParameter}"
+                                  Background="{StaticResource BackgroundSecondary}"
+                                  Foreground="{StaticResource TextPrimary}"
+                                  BorderBrush="{StaticResource BackgroundCard}"
+                                  Padding="8"
+                                  Margin="0 0 0 15"/>
+                    </StackPanel>
+
+                    <!-- Notification Mode -->
+                    <TextBlock Text="Notification Mode" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
+                    <ComboBox ItemsSource="{Binding NotificationModes}"
+                              SelectedItem="{Binding EditNotificationMode}"
+                              Background="{StaticResource BackgroundSecondary}"
+                              Foreground="{StaticResource TextPrimary}"
+                              BorderBrush="{StaticResource BackgroundCard}"
+                              Padding="8"
+                              Margin="0 0 0 15">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource EnumToDescriptionConverter}}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <!-- Cooldown -->
+                    <TextBlock Text="Cooldown (seconds)" Foreground="{StaticResource TextSecondary}" Margin="0 0 0 5"/>
+                    <TextBox Text="{Binding EditCooldownSeconds}"
+                             Background="{StaticResource BackgroundSecondary}"
+                             Foreground="{StaticResource TextPrimary}"
+                             BorderBrush="{StaticResource BackgroundCard}"
+                             Padding="8"
+                             Margin="0 0 0 20"/>
+
+                    <!-- Buttons -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Cancel"
+                                Command="{Binding CancelEditCommand}"
+                                Style="{StaticResource SecondaryButton}"
+                                Margin="0 0 10 0"/>
+                        <Button Content="Save Rule"
+                                Command="{Binding SaveRuleCommand}"
+                                Style="{StaticResource ActionButton}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

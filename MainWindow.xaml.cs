@@ -14,6 +14,7 @@ namespace TaskCore
         private readonly ProcessesView _processesView = new ProcessesView();
         private readonly GraphsView _graphsView = new GraphsView();
         private readonly DetailsView _detailsView = new DetailsView();
+        private readonly RulesView _rulesView = new RulesView();
         private readonly SettingsView _settingsView = new SettingsView();
 
         public MainWindow()
@@ -33,7 +34,8 @@ namespace TaskCore
                 0 => "Processes",
                 1 => "Graphs",
                 2 => "Details",
-                3 => "Settings",
+                3 => "Rules",
+                4 => "Settings",
                 _ => "Unknown"
             };
 
@@ -42,6 +44,7 @@ namespace TaskCore
                 case "Processes": ContentArea.Content = _processesView; break;
                 case "Graphs": ContentArea.Content = _graphsView; break;
                 case "Details": ContentArea.Content = _detailsView; break;
+                case "Rules": ContentArea.Content = _rulesView; break;
                 case "Settings": ContentArea.Content = _settingsView; break;
             }
 

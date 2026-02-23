@@ -1,6 +1,7 @@
 ﻿<Application x:Class="TaskCore.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:TaskCore.Converters"
              StartupUri="MainWindow.xaml">
 
     <Application.Resources>
@@ -8,6 +9,16 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/TaskCore;component/Resources/Theme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Converters for Rules View -->
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+            <converters:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
+            <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
+            <converters:NullToTextConverter x:Key="NullToTextConverter"/>
+            <converters:EnumToDescriptionConverter x:Key="EnumToDescriptionConverter"/>
+            <converters:ConditionToVisibilityConverter x:Key="ConditionToVisibilityConverter"/>
+            <converters:ActionToVisibilityConverter x:Key="ActionToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using TaskCore.Models;
 
 namespace TaskCore.Services
 {
@@ -60,14 +62,13 @@ namespace TaskCore.Services
         public int RefreshIntervalMs { get; set; } = 1000;
         public bool MinimizeToTray { get; set; } = true;
 
-        public string WatchdogMode { get; set; } = "Alert Only";
-        public bool WatchdogEnabled { get; set; } = false;
-        public bool WatchdogSoundAlertEnabled { get; set; } = true;
-        public bool WatchdogLoggingEnabled { get; set; } = true;
+        public string ProcessesSortField { get; set; } = "Cpu";
+        public bool ProcessesSortDescending { get; set; } = true;
 
+        // Sound alert path (used by Rules Engine)
         public string CustomAlertSoundPath { get; set; } = string.Empty;
-
-        public System.Collections.Generic.List<string>? WatchdogTargets { get; set; } = new();
+        public bool SoundAlertEnabled { get; set; } = true;
+        public string SoundMode { get; set; } = "Default";
 
         public System.Collections.Generic.Dictionary<string, bool>? SessionTrackerSummaryColumns { get; set; } = new();
         public System.Collections.Generic.Dictionary<string, bool>? SessionTrackerSessionColumns { get; set; } = new();
@@ -77,6 +78,10 @@ namespace TaskCore.Services
 
         // List of user-selected process names to show when ProcessFilterMode=2
         public System.Collections.Generic.List<string>? SelectedProcesses { get; set; } = new();
+
+        // Rules engine settings
+        public List<Rule>? Rules { get; set; } = new();
+        public bool RulesEngineEnabled { get; set; } = true;
     }
 
     public enum ProcessFilterMode

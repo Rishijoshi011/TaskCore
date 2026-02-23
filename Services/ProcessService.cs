@@ -45,6 +45,14 @@ namespace TaskCore.Services
                     // Name
                     string name = proc.ProcessName + ".exe";
 
+                    var groupKey = name;
+                    var groupDisplayName = name;
+                    if (string.Equals(name, "msedgewebview2.exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        groupKey = $"{name}:{proc.Id}";
+                        groupDisplayName = $"{name} ({proc.Id})";
+                    }
+
                     // CPU + Memory
                     double cpu = GetCpuUsage(proc);
                     double memMb = proc.WorkingSet64 / (1024.0 * 1024.0);
@@ -64,15 +72,15 @@ namespace TaskCore.Services
                     };
 
                     // Add or get group
-                    if (!groups.TryGetValue(name, out var group))
+                    if (!groups.TryGetValue(groupKey, out var group))
                     {
                         group = new ProcessGroup
                         {
-                            GroupName = name,
+                            GroupName = groupDisplayName,
                             Items = new ObservableCollection<ProcessItem>(),
                             Icon = item.Icon
                         };
-                        groups[name] = group;
+                        groups[groupKey] = group;
                     }
 
                     group.Items.Add(item);
