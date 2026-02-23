@@ -30,28 +30,6 @@ namespace TaskCore.Services
             Directory.CreateDirectory(BaseDirectory);
         }
 
-        public static void AppendDebugTick(string message)
-        {
-            try
-            {
-                File.AppendAllText(Path.Combine(BaseDirectory, "debug-tick.txt"), message);
-            }
-            catch
-            {
-            }
-        }
-
-        public static void AppendDebugTrack(string message)
-        {
-            try
-            {
-                File.AppendAllText(Path.Combine(BaseDirectory, "debug-track.txt"), message);
-            }
-            catch
-            {
-            }
-        }
-
         public static void AppendSession(string name, int pid, string? path, DateTime start, DateTime end, double peakCpu = 0, double avgCpu = 0, double peakMem = 0, double avgMem = 0)
         {
             var date = DateOnly.FromDateTime(start);

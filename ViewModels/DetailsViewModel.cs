@@ -77,6 +77,9 @@ namespace TaskCore.ViewModels
         private string longestSessionText = "-";
 
         [ObservableProperty]
+        private string filterModeText = "Exclude Windows";
+
+        [ObservableProperty]
         private string copyStatusText = string.Empty;
 
         private CancellationTokenSource? _copyCts;
@@ -536,6 +539,32 @@ namespace TaskCore.ViewModels
                         (s.app ?? string.Empty).Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
                 }
 
+                // Apply ProcessFilterMode to App Summary (same logic as Currently Running)
+                var settings = AppSettingsService.Load();
+                var filterMode = settings.ProcessFilterMode;
+                var selectedProcesses = settings.SelectedProcesses ?? new List<string>();
+
+                // Update FilterModeText for UI display
+                FilterModeText = filterMode switch
+                {
+                    0 => "All Processes",
+                    1 => "Exclude Windows",
+                    2 => $"Selected Only ({selectedProcesses.Count} apps)",
+                    _ => "Exclude Windows"
+                };
+
+                if (filterMode == 2) // SelectedOnly
+                {
+                    sessions = sessions.Where(s => 
+                        selectedProcesses.Contains(s.app ?? string.Empty, StringComparer.OrdinalIgnoreCase)).ToList();
+                }
+                else if (filterMode == 1) // ExcludeWindows (default)
+                {
+                    sessions = sessions.Where(s => 
+                        !ProcessFilter.IsSystemAppName(s.app ?? string.Empty)).ToList();
+                }
+                // mode 0 (All) - no filtering
+
                 // Group sessions by app for summaries
                 var appGroups = sessions.GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app)
                                        .ToDictionary(g => g.Key, g => g.ToList());
@@ -544,6 +573,7 @@ namespace TaskCore.ViewModels
                 _allAppSummaries = appGroups.Select(kvp => new SessionSummaryItem
                     {
                         AppName = kvp.Key,
+                        ProcessPath = kvp.Value.FirstOrDefault()?.processPath,
                         SessionCount = kvp.Value.Count,
                         LongestSessionSeconds = kvp.Value.Count > 0 ? kvp.Value.Max(s => s.durationSeconds) : 0,
                         PeakCpuPercent = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.peakCpuPercent) : 0,
@@ -563,6 +593,7 @@ namespace TaskCore.ViewModels
                         {
                             AppName = string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app,
                             ProcessId = s.processId,
+                            ProcessPath = s.processPath,
                             StartTimeLocal = s.startTimeUtc.ToLocalTime(),
                             EndTimeLocal = s.endTimeUtc.ToLocalTime(),
                             DurationSeconds = s.durationSeconds,
@@ -710,6 +741,12 @@ namespace TaskCore.ViewModels
             {
                 ShowCopyStatus($"Export failed: {ex.Message}");
             }
+        }
+
+        [RelayCommand]
+        private void OpenSettings()
+        {
+            AppViewStateService.SetView("Settings");
         }
 
         [RelayCommand]

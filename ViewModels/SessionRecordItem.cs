@@ -1,4 +1,6 @@
 using System;
+using System.Windows.Media.Imaging;
+using TaskCore.Services;
 
 namespace TaskCore.ViewModels
 {
@@ -20,5 +22,6 @@ namespace TaskCore.ViewModels
         public string DurationDisplay => TimeSpan.FromSeconds(Math.Max(0, DurationSeconds)).ToString(@"hh\:mm\:ss");
         public string StartDisplay => StartTimeLocal.ToString("HH:mm:ss");
         public string EndDisplay => EndTimeLocal.ToString("HH:mm:ss");
+        public BitmapSource? Icon => IconService.GetIconForPath(ProcessPath);
     }
 }

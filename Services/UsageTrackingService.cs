@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -76,12 +73,7 @@ namespace TaskCore.Services
             var selectedProcesses = settings.SelectedProcesses ?? new List<string>();
 
             // DEBUG
-            try
-            {
-                File.AppendAllText(Path.Combine(UsageTrackingStorage.BaseDirectory, "debug-filter.txt"),
-                    $"[{DateTime.Now:HH:mm:ss}] GetCurrentlyRunning called - FilterMode={filterMode}, Selected={string.Join(",", selectedProcesses)}, Tracked={string.Join(",", _trackedApps.Keys)}\n");
-            }
-            catch { }
+            UsageDebugLogger.LogFilter($"GetCurrentlyRunning called - FilterMode={filterMode}, Selected={string.Join(",", selectedProcesses)}, Tracked={string.Join(",", _trackedApps.Keys)}");
 
             lock (_lock)
             {
@@ -97,12 +89,7 @@ namespace TaskCore.Services
                         if (!selectedProcesses.Contains(appName, StringComparer.OrdinalIgnoreCase))
                         {
                             // DEBUG
-                            try
-                            {
-                                File.AppendAllText(Path.Combine(UsageTrackingStorage.BaseDirectory, "debug-filter.txt"),
-                                    $"[{DateTime.Now:HH:mm:ss}] SKIPPED {appName} - not in selected list\n");
-                            }
-                            catch { }
+                            UsageDebugLogger.LogFilter($"SKIPPED {appName} - not in selected list");
                             continue;
                         }
                     }
@@ -112,24 +99,14 @@ namespace TaskCore.Services
                         if (ProcessFilter.IsSystemAppName(appName))
                         {
                             // DEBUG
-                            try
-                            {
-                                File.AppendAllText(Path.Combine(UsageTrackingStorage.BaseDirectory, "debug-filter.txt"),
-                                    $"[{DateTime.Now:HH:mm:ss}] SKIPPED {appName} - is system app\n");
-                            }
-                            catch { }
+                            UsageDebugLogger.LogFilter($"SKIPPED {appName} - is system app");
                             continue;
                         }
                     }
                     // mode 0 (All) - no filtering
                     
                     // DEBUG
-                    try
-                    {
-                        File.AppendAllText(Path.Combine(UsageTrackingStorage.BaseDirectory, "debug-filter.txt"),
-                            $"[{DateTime.Now:HH:mm:ss}] ADDED {appName} to result\n");
-                    }
-                    catch { }
+                    UsageDebugLogger.LogFilter($"ADDED {appName} to result");
 
                     var (start, path, pids) = kvp.Value;
                     var firstPid = pids.FirstOrDefault();
@@ -175,23 +152,16 @@ namespace TaskCore.Services
                     ProcessFilter.IsSystemProcess);
 
                 // DEBUG: Log what processes are being tracked vs filtered
-                try
-                {
-                    var debugLines = new List<string>();
-                    debugLines.Add($"[{DateTime.Now:HH:mm:ss}] === TICK ===");
-                    debugLines.Add($"Total processes: {allProcesses.Length}");
-                    debugLines.Add($"Non-system processes: {current.Count}");
-                    debugLines.Add($"Currently tracked apps: {string.Join(", ", _trackedApps.Keys)}");
-                    
-                    var userApps = current.Values.Distinct().Where(n => 
-                        !n.StartsWith("svchost", StringComparison.OrdinalIgnoreCase) &&
-                        !n.StartsWith("csrss", StringComparison.OrdinalIgnoreCase) &&
-                        !n.StartsWith("dwm", StringComparison.OrdinalIgnoreCase));
-                    debugLines.Add($"User apps detected: {string.Join(", ", userApps.Take(10))}");
-                    
-                    File.AppendAllLines(Path.Combine(UsageTrackingStorage.BaseDirectory, "debug-tick.txt"), debugLines);
-                }
-                catch { }
+                UsageDebugLogger.LogTick("=== TICK ===");
+                UsageDebugLogger.LogTick($"Total processes: {allProcesses.Length}");
+                UsageDebugLogger.LogTick($"Non-system processes: {current.Count}");
+                UsageDebugLogger.LogTick($"Currently tracked apps: {string.Join(", ", _trackedApps.Keys)}");
+                
+                var userApps = current.Values.Distinct().Where(n => 
+                    !n.StartsWith("svchost", StringComparison.OrdinalIgnoreCase) &&
+                    !n.StartsWith("csrss", StringComparison.OrdinalIgnoreCase) &&
+                    !n.StartsWith("dwm", StringComparison.OrdinalIgnoreCase));
+                UsageDebugLogger.LogTick($"User apps detected: {string.Join(", ", userApps.Take(10))}");
 
                 // Group current processes by app name
                 var currentApps = current.Values.Distinct().ToHashSet();
@@ -215,13 +185,7 @@ namespace TaskCore.Services
                             session.AvgMem);
 
                         // Debug log
-                        try
-                        {
-                            UsageTrackingStorage.AppendDebugTrack(
-                                $"[{DateTime.Now:HH:mm:ss}] END {session.AppName} (App session) after {session.MissCount} misses, " +
-                                $"duration {(session.End - session.Start).TotalSeconds:F0}s, PIDs seen: {session.PidsSeen}\n");
-                        }
-                        catch { }
+                        UsageDebugLogger.LogTrack($"END {session.AppName} (App session) after {session.MissCount} misses, duration {(session.End - session.Start).TotalSeconds:F0}s, PIDs seen: {session.PidsSeen}");
                     }
                 }
             }

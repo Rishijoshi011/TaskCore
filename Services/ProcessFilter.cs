@@ -1,189 +1,199 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace TaskCore.Services
 {
+    /// <summary>
+    /// Filters for identifying Windows system processes and background services.
+    /// Uses HashSet-based lookups for O(1) performance instead of repeated string scanning.
+    /// </summary>
     internal static class ProcessFilter
     {
+        #region Static Pattern Sets (initialized once for performance)
+
+        // Core Windows system processes - critical OS components
+        private static readonly HashSet<string> CoreWindowsProcesses = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "system", "idle", "registry",
+            "svchost", "csrss", "wininit", "smss", "dwm",
+            "lsass", "lsm", "services", "winlogon",
+            "conhost", "sihost", "taskhost", "runtimebroker",
+            "searchindexer", "fontdrvhost", "spoolsv",
+            "wmi", "wmiprvse", "ctfmon",
+            "audiodg", "smsvchost"
+        };
+
+        // Windows core services - background infrastructure
+        private static readonly string[] WindowsServicePatterns =
+        {
+            "core", "clr", "mscorsvw", "ngen",
+            "crypto", "vault", "keyiso", "samss", "ntlm", "kerberos",
+            "usocore", "uso", "trustedinstaller", "tiworker"
+        };
+
+        // Network-related services
+        private static readonly string[] NetworkPatterns =
+        {
+            "network", "dhcp", "dns", "proxy", "tunnel"
+        };
+
+        // Development tools and IDE-related processes
+        private static readonly HashSet<string> DevTools = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "devenv", "copilot", "language_server", "servicehub",
+            "msbuild", "vbcsccompiler", "perfwatson", "vbcscompiler",
+            "openconsole", "livepreviewsurface", "sapiservice",
+            "snippingtool", "sqlceip", "sqlwriter", "sqlservr",
+            "dotnet", "omnisharp", "browserlink", "windsurf", "taskcore"
+        };
+
+        // Browser/WebView helper processes
+        private static readonly string[] BrowserHelpers =
+        {
+            "webview2", "crashpad", "crashhandler", "bravecrash", "renderer"
+        };
+
+        // Microsoft background services
+        private static readonly string[] MsBackgroundServices =
+        {
+            "onlinent", "oninit", "widget", "experience", "lsalso"
+        };
+
+        // Antivirus/Security products (specific names)
+        private static readonly HashSet<string> SecurityProducts = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "mcafee", "norton", "kaspersky", "avast", "avg",
+            "bitdefender", "eset", "fsecure", "sophos", "trend",
+            "symantec", "malwarebytes", "quickheal", "qh", "defender"
+        };
+
+        // Database services
+        private static readonly string[] DatabasePatterns =
+        {
+            "redis", "mongo", "postgres", "mysql", "mssql"
+        };
+
+        // Background utilities (aggressive filtering)
+        private static readonly string[] BackgroundPatterns =
+        {
+            "roslyn", "datawarehouse", "warehouse", "anydesk", "onedrive", "sync"
+        };
+
+        #endregion
+
+        /// <summary>
+        /// Determines if an app name represents a system/background process
+        /// that should be filtered from user-facing displays.
+        /// </summary>
         public static bool IsSystemAppName(string appName)
         {
             if (string.IsNullOrWhiteSpace(appName)) return false;
 
             var name = appName.ToLowerInvariant();
 
-            // Core Windows system processes
-            if (name == "system" ||
-                name == "idle" ||
-                name == "registry" ||
-                name.StartsWith("svchost") ||
-                name.StartsWith("csrss") ||
-                name.StartsWith("wininit") ||
-                name.StartsWith("smss") ||
-                name.StartsWith("dwm") ||
-                name.StartsWith("lsass") ||
-                name.StartsWith("lsm") ||
-                name.StartsWith("services") ||
-                name.StartsWith("winlogon") ||
-                name.StartsWith("conhost") ||
-                name.StartsWith("sihost") ||
-                name.StartsWith("taskhost") ||
-                name.StartsWith("runtimebroker") ||
-                name.StartsWith("searchindexer") ||
-                name.StartsWith("fontdrvhost") ||
-                name.StartsWith("spoolsv") ||
-                name.StartsWith("wmi") ||
-                name.StartsWith("wmiprvse") ||
-                name.StartsWith("ctfmon") ||
-                name.StartsWith("secure system") ||
-                name.StartsWith("memory compression") ||
-                name.StartsWith("audiodg"))
+            // 1. Direct exact matches (O(1) HashSet lookup)
+            if (CoreWindowsProcesses.Contains(name))
                 return true;
 
-            // Services ending with svc (case insensitive)
-            if (name.EndsWith("svc") || name.EndsWith("service") || name.EndsWith("serv") ||
-                name.Contains("svc") || name.Contains("SVC"))
+            // 2. Check for services (by suffix or embedded)
+            if (name.EndsWith("svc") || name.EndsWith("service") ||
+                name.EndsWith("serv") || name.EndsWith("nt") ||
+                name.Contains("svc") || name.Contains("service"))
                 return true;
 
-            // Windows Update and core worker processes
-            if (name.Contains("usocore") || name.Contains("uso") || name.Contains("worker") ||
-                name.Contains("trustedinstaller") || name.Contains("tiworker"))
+            // 3. Check common Windows prefixes
+            foreach (var prefix in new[] { "svchost", "csrss", "wininit", "smsvchost", "dwm", "lsass", "lsm" })
+            {
+                if (name.StartsWith(prefix))
+                    return true;
+            }
+
+            // 4. Windows infrastructure patterns
+            foreach (var pattern in WindowsServicePatterns)
+            {
+                if (name.Contains(pattern))
+                    return true;
+            }
+
+            // 5. Network services
+            foreach (var pattern in NetworkPatterns)
+            {
+                if (name.Contains(pattern))
+                    return true;
+            }
+
+            // 6. WMI and instrumentation
+            if (name.Contains("wmi") || name.Contains("wbem") || 
+                name.Contains("termsrv") || name.Contains("rdp"))
                 return true;
 
-            // More Windows core services
-            if (name.StartsWith("core") || name.StartsWith("smsvchost") ||
-                name.Contains("clr") || name.Contains("mscorsvw") || name.Contains("ngen"))
+            // 7. Graphics/display drivers
+            if (name.StartsWith("igfx") || name.Contains("gpu"))
                 return true;
 
-            // Security/Auth services
-            if (name.Contains("crypto") || name.Contains("vault") || name.Contains("keyiso") ||
-                name.Contains("samss") || name.Contains("ntlm") || name.Contains("kerberos"))
-                return true;
-
-            // Network related services
-            if (name.Contains("network") || name.Contains("net") || name.Contains("tcp") ||
-                name.Contains("ip") || name.Contains("dhcp") || name.Contains("dns") ||
-                name.Contains("proxy") || name.Contains("tunnel"))
-                return true;
-
-            // More host processes
-            if (name.Contains("svchost") || name.Contains("taskhost") || name.Contains("rdp") ||
-                name.Contains("termsrv") || name.Contains("winlogon"))
-                return true;
-
-            // WMI and instrumentation
-            if (name.Contains("wmi") || name.Contains("wmiprvse") || name.Contains("wbem"))
-                return true;
-
-            // Graphics/display drivers
-            if (name.StartsWith("igfx") || name.Contains("display") || name.Contains("gpu"))
-                return true;
-
-            // Root/embedded processes
+            // 8. Root/embedded
             if (name.Contains("root") || name.Contains("embedded"))
                 return true;
 
-            // Development tools and IDE-related
-            if (name.Contains("devenv") ||
-                name.Contains("copilot") ||
-                name.Contains("language_server") ||
-                name.Contains("servicehub") ||
-                name.StartsWith("msbuild") ||
-                name.Contains("vbcsccompiler") ||
-                name.Contains("perfwatson") ||
-                name.Contains("vbcscompiler") ||
-                name.Contains("openconsole") ||
-                name.Contains("livepreviewsurface") ||
-                name.Contains("sapiservice") ||
-                name.Contains("snippingtool") ||
-                name.Contains("sqlceip") ||
-                name.Contains("sqlwriter") ||
-                name.Contains("sqlservr") ||
-                name.StartsWith("dotnet") ||
-                name.Contains("omnisharp") ||
-                name.Contains("browserlink") ||
-                name.StartsWith("windsurf") ||
-                name.Contains("taskcore"))
+            // 9. Development tools (HashSet lookup)
+            if (DevTools.Contains(name))
                 return true;
 
-            // Edge/Chrome helpers and WebView
-            if (name.Contains("webview2") ||
-                name.Contains("crashpad") ||
-                name.Contains("crashhandler") ||
-                name.Contains("bravecrash") ||
-                name.EndsWith("helper") ||
-                name.Contains("renderer"))
+            // 10. Browser helpers
+            foreach (var pattern in BrowserHelpers)
+            {
+                if (name.Contains(pattern))
+                    return true;
+            }
+
+            // 11. Microsoft background services
+            foreach (var pattern in MsBackgroundServices)
+            {
+                if (name.Contains(pattern))
+                    return true;
+            }
+
+            // 12. Security products (HashSet for exact matches, Contains for patterns)
+            if (SecurityProducts.Contains(name) ||
+                name.Contains("av") || name.Contains("sec") ||
+                name.Contains("protect") || name.Contains("guard") ||
+                name.Contains("shield") || name.Contains("scan") ||
+                name.Contains("firewall"))
                 return true;
 
-            // Microsoft background services (expanded)
-            if (name.Contains("onlinent") ||
-                name.Contains("oninit") ||
-                name.Contains("update") ||
-                name.Contains("install") ||
-                name.Contains("agent") ||
-                name.Contains("broker") ||
-                name.Contains("daemon") ||
-                name.Contains("host") ||
-                name.Contains("widget") ||
-                name.Contains("experience") ||
-                name.Contains("lsalso") ||
-                name.Contains("sihost"))
-                return true;
+            // 13. SQL Server / databases
+            if (name.StartsWith("sql") || name == "sqlservr")
+            {
+                foreach (var db in DatabasePatterns)
+                {
+                    if (name.Contains(db))
+                        return true;
+                }
+            }
 
-            // Antivirus/Security services
-            if (name.Contains("av") ||
-                name.Contains("sec") ||
-                name.Contains("protect") ||
-                name.Contains("guard") ||
-                name.Contains("shield") ||
-                name.Contains("scan") ||
-                name.Contains("defender") ||
-                name.Contains("firewall") ||
-                name.Contains("qh") ||
-                name.Contains("mcafee") ||
-                name.Contains("norton") ||
-                name.Contains("kaspersky") ||
-                name.Contains("avast") ||
-                name.Contains("avg") ||
-                name.Contains("bitdefender") ||
-                name.Contains("eset") ||
-                name.Contains("fsecure") ||
-                name.Contains("sophos") ||
-                name.Contains("trend") ||
-                name.Contains("symantec") ||
-                name.Contains("malwarebytes"))
-                return true;
+            // 14. Background utilities
+            foreach (var pattern in BackgroundPatterns)
+            {
+                if (name.Contains(pattern))
+                    return true;
+            }
 
-            // Database and cache services
-            if (name.Contains("sql") ||
-                name.Contains("redis") ||
-                name.Contains("mongo") ||
-                name.Contains("postgres") ||
-                name.Contains("mysql") ||
-                name.Contains("mssql"))
-                return true;
-
-            // Background services and utilities (aggressive filtering)
-            if (name.EndsWith("nt") ||
-                name.Contains("serv") ||
-                name.Contains("hub") ||
-                name.Contains("control") ||
-                name.Contains("wait") ||
-                name.Contains("dialog") ||
-                name.Contains("detour") ||
-                name.Contains("identity") ||
-                name.Contains("intelli") ||
-                name.Contains("roslyn") ||
-                name.Contains("index") ||
-                name.Contains("datawarehouse") ||
-                name.Contains("warehouse") ||
-                name.Contains("anydesk") ||
-                name.Contains("onedrive") ||
-                name.Contains("update") ||
-                name.Contains("sync"))
+            // 15. Common background service indicators
+            if (name.Contains("hub") || name.Contains("control") ||
+                name.Contains("wait") || name.Contains("dialog") ||
+                name.Contains("detour") || name.Contains("identity") ||
+                name.Contains("intelli") || name.Contains("index"))
                 return true;
 
             return false;
         }
 
+        /// <summary>
+        /// Determines if a Process object represents a core Windows system process.
+        /// This is more conservative than IsSystemAppName and checks actual process properties.
+        /// </summary>
         public static bool IsSystemProcess(Process p)
         {
             try
@@ -205,7 +215,10 @@ namespace TaskCore.Services
                 // Skip processes from Windows directory
                 try
                 {
-                    if (p.MainModule?.FileName?.StartsWith(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Windows), StringComparison.OrdinalIgnoreCase) == true)
+                    var windowsPath = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                    var exePath = p.MainModule?.FileName;
+                    if (!string.IsNullOrEmpty(exePath) &&
+                        exePath.StartsWith(windowsPath, StringComparison.OrdinalIgnoreCase))
                         return true;
                 }
                 catch
@@ -219,6 +232,27 @@ namespace TaskCore.Services
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Check if a process is a development tool (IDE, compiler, etc.)
+        /// </summary>
+        public static bool IsDevTool(string appName)
+        {
+            if (string.IsNullOrWhiteSpace(appName)) return false;
+            return DevTools.Contains(appName.ToLowerInvariant());
+        }
+
+        /// <summary>
+        /// Check if a process is a security/antivirus product
+        /// </summary>
+        public static bool IsSecurityProduct(string appName)
+        {
+            if (string.IsNullOrWhiteSpace(appName)) return false;
+            var name = appName.ToLowerInvariant();
+            return SecurityProducts.Contains(name) ||
+                   name.Contains("av") || name.Contains("shield") ||
+                   name.Contains("protect") || name.Contains("defender");
         }
     }
 }

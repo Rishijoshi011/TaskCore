@@ -1,4 +1,6 @@
 using System;
+using System.Windows.Media.Imaging;
+using TaskCore.Services;
 
 namespace TaskCore.ViewModels
 {
@@ -11,5 +13,6 @@ namespace TaskCore.ViewModels
         public double CurrentCpuPercent { get; set; }
         public double CurrentMemoryMb { get; set; }
         public string ProcessPath { get; set; } = string.Empty;
+        public BitmapSource? Icon => IconService.GetIconForPath(ProcessPath);
     }
 }

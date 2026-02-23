@@ -69,6 +69,16 @@
                         </TextBlock>
                         <TextBlock Text="{Binding CopyStatusText}" Foreground="#22C55E" FontSize="11" Margin="0 2 0 0"/>
                     </StackPanel>
+                    <!-- Filter Mode Display -->
+                    <StackPanel Orientation="Horizontal" Margin="0 8 0 0">
+                        <TextBlock Text="Filter: " Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        <TextBlock Text="{Binding FilterModeText}" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="SemiBold" Margin="4 0 8 0"/>
+                        <TextBlock Text="[Check Out Settings For More]" Foreground="{StaticResource TextSecondary}" FontSize="11" Cursor="Hand" ToolTip="Click to open Settings">
+                            <TextBlock.InputBindings>
+                                <MouseBinding MouseAction="LeftClick" Command="{Binding OpenSettingsCommand}"/>
+                            </TextBlock.InputBindings>
+                        </TextBlock>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -167,6 +177,13 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="" Width="40" MinWidth="40">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Image Source="{Binding Icon}" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="2*" MinWidth="120" Visibility="{Binding Data.ShowSummaryApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
@@ -267,6 +284,13 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="" Width="40" MinWidth="40">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Image Source="{Binding Icon}" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="2*" MinWidth="120" Visibility="{Binding Data.ShowRunningApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
@@ -363,6 +387,13 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="" Width="40" MinWidth="40">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Image Source="{Binding Icon}" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Application" Binding="{Binding AppName}" Width="2*" MinWidth="120" Visibility="{Binding Data.ShowSessionApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
