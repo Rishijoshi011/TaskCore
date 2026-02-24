@@ -265,20 +265,18 @@
                                      ToolTip="Total tracked runtime per hour (today). Darker blocks = more activity."/>
                         </StackPanel>
 
-                        <UniformGrid Columns="24">
-                            <ItemsControl ItemsSource="{Binding HourlyHeatmap}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Columns="24"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{Binding Brush}" Height="22" Margin="1" CornerRadius="4" ToolTip="{Binding ToolTip}"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </UniformGrid>
+                        <ItemsControl ItemsSource="{Binding HourlyHeatmap}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="24"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{Binding Brush}" Height="22" Margin="1" CornerRadius="4" ToolTip="{Binding ToolTip}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </Border>
 
