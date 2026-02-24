@@ -11,6 +11,7 @@ namespace TaskCore
     {
         private bool _isSidebarCollapsed = false;
 
+        private readonly DashboardView _dashboardView = new DashboardView();
         private readonly ProcessesView _processesView = new ProcessesView();
         private readonly GraphsView _graphsView = new GraphsView();
         private readonly DetailsView _detailsView = new DetailsView();
@@ -23,24 +24,26 @@ namespace TaskCore
 
             // Default page
             Sidebar.SelectedIndex = 0;
-            ContentArea.Content = _processesView;
-            AppViewStateService.SetView("Processes");
+            ContentArea.Content = _dashboardView;
+            AppViewStateService.SetView("Dashboard");
         }
 
         private void Sidebar_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             string viewName = Sidebar.SelectedIndex switch
             {
-                0 => "Processes",
-                1 => "Graphs",
-                2 => "Details",
-                3 => "Rules",
-                4 => "Settings",
+                0 => "Dashboard",
+                1 => "Processes",
+                2 => "Graphs",
+                3 => "Details",
+                4 => "Rules",
+                5 => "Settings",
                 _ => "Unknown"
             };
 
             switch (viewName)
             {
+                case "Dashboard": ContentArea.Content = _dashboardView; break;
                 case "Processes": ContentArea.Content = _processesView; break;
                 case "Graphs": ContentArea.Content = _graphsView; break;
                 case "Details": ContentArea.Content = _detailsView; break;

@@ -3516,7 +3516,7 @@
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
-    "version": "3.2.1",
+    "version": "4.0.0",
     "restore": {
       "projectUniqueName": "C:\\Users\\rishi.joshi\\temp_pro\\TaskCore\\TaskCore.csproj",
       "projectName": "TaskCore",

@@ -1,0 +1,408 @@
+<UserControl x:Class="TaskCore.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:TaskCore.ViewModels"
+             Background="{StaticResource BackgroundPrimary}"
+             Padding="20">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </UserControl.Resources>
+
+    <UserControl.DataContext>
+        <vm:DashboardViewModel/>
+    </UserControl.DataContext>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+
+            <!-- Header with Last Updated -->
+            <Grid Margin="0 0 0 0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="Dashboard"
+                               FontSize="26"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource AccentBrush}"/>
+                    <Control Style="{StaticResource InfoIcon}" Margin="10 0 0 0" VerticalAlignment="Center"
+                             ToolTip="At-a-glance overview of daily usage, peaks, alerts, and trends."/>
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding LastUpdatedText}" Foreground="{StaticResource TextSecondary}" FontSize="10" VerticalAlignment="Bottom" Margin="0 0 0 4" Opacity="0.7"/>
+            </Grid>
+
+            <!-- Empty State -->
+            <Border Background="{StaticResource BackgroundCard}"
+                    BorderBrush="{StaticResource AccentBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="40"
+                    Margin="0 14 0 14"
+                    Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="📌" FontSize="48" HorizontalAlignment="Center" Margin="0 0 0 16"/>
+                    <TextBlock Text="No data yet"
+                               Foreground="{StaticResource TextPrimary}"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               Margin="0 0 0 8"/>
+                    <TextBlock Text="Start using applications and the dashboard will populate automatically."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="13"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Top Summary Row -->
+            <Grid Margin="0 0 0 14" Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVisibility}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="14" MinHeight="88">
+                    <StackPanel>
+                        <TextBlock Text="Today" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        <TextBlock Text="{Binding TodayDateText}" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0 6 0 0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource CardPanel}" Padding="14" MinHeight="88">
+                    <StackPanel>
+                        <TextBlock Text="Total Usage" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        <TextBlock Text="{Binding TotalUsageText}" Foreground="{StaticResource TextPrimary}" FontSize="20" FontWeight="Bold" Margin="0 6 0 0"/>
+                        <TextBlock Text="{Binding TotalUsageVsYesterdayText}" Foreground="{StaticResource TextSecondary}" FontSize="10" Margin="0 4 0 0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="4" Style="{StaticResource CardPanel}" Padding="14" MinHeight="88" Cursor="Hand">
+                    <StackPanel>
+                        <TextBlock Text="Top Offender" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        <TextBlock Text="{Binding TopOffenderName}" Foreground="{StaticResource AccentBrush}" FontSize="16" FontWeight="SemiBold" Margin="0 6 0 0" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding TopOffenderDetail}" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                    </StackPanel>
+                    <Border.InputBindings>
+                        <MouseBinding Gesture="LeftClick" Command="{Binding ViewTopOffenderDetailsCommand}"/>
+                    </Border.InputBindings>
+                </Border>
+
+                <Border Grid.Column="6" Style="{StaticResource CardPanel}" Padding="14" MinHeight="88">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                            <TextBlock Text="Stability" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
+                            <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                                     ToolTip="Overall system health based on recent rule triggers."/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding StabilityText}" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding StabilityDetail}" Foreground="{StaticResource TextSecondary}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0 4 0 0"/>
+                        <TextBlock Text="{Binding SessionCountText}" Foreground="{StaticResource TextSecondary}" FontSize="10" Margin="0 8 0 0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Middle Row: Peaks + Alerts -->
+            <Grid Margin="0 0 0 14" Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVisibility}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Resource Peaks -->
+                <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="14" MinHeight="170">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                            <TextBlock Text="Resource Peaks" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
+                            <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                                     ToolTip="CPU/RAM peaks are based on the Top Offender app (from today’s session logs).&#10;GPU Peak and Disk Read/Write peaks are live system-wide peaks from Windows performance counters."/>
+                        </StackPanel>
+
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="CPU Peak" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding PeakCpuText}" Foreground="{StaticResource TextPrimary}" FontSize="12" FontWeight="SemiBold"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="RAM Peak" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0 6 0 0"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PeakRamText}" Foreground="{StaticResource TextPrimary}" FontSize="12" FontWeight="SemiBold" Margin="0 6 0 0"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="GPU Temp" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0 6 0 0"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding GpuTempText}" Foreground="{StaticResource TextPrimary}" FontSize="12" FontWeight="SemiBold" Margin="0 6 0 0"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="CPU Temp" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0 6 0 0"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding CpuTempText}" Foreground="{StaticResource TextPrimary}" FontSize="12" FontWeight="SemiBold" Margin="0 6 0 0"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="GPU Peak" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0 6 0 0"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding PeakGpuUsageText}" Foreground="{StaticResource TextPrimary}" FontSize="12" FontWeight="SemiBold" Margin="0 6 0 0"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Disk Read Peak" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0 6 0 0"/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding PeakDiskReadText}" Foreground="{StaticResource TextPrimary}" FontSize="12" FontWeight="SemiBold" Margin="0 6 0 0"/>
+
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Disk Write Peak" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0 6 0 0"/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding PeakDiskWriteText}" Foreground="{StaticResource TextPrimary}" FontSize="12" FontWeight="SemiBold" Margin="0 6 0 0"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Alerts Panel -->
+                <Border Grid.Column="2" Style="{StaticResource CardPanel}" Padding="14" MinHeight="170">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                            <TextBlock Text="Alerts" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
+                            <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                                     ToolTip="Recent rule triggers and notable events (from today’s RulesLogs)."/>
+                        </StackPanel>
+
+                        <ItemsControl ItemsSource="{Binding RecentAlerts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Foreground="{StaticResource TextSecondary}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0 0 0 6"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="No alerts yet" Foreground="{StaticResource TextSecondary}" FontSize="11" Visibility="{Binding HasNoAlerts, Converter={StaticResource BoolToVisibility}}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid Margin="0 0 0 14" Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVisibility}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="14" MinHeight="170">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                            <TextBlock Text="Top Offenders" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
+                            <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                                     ToolTip="Apps with the highest total runtime today."/>
+                        </StackPanel>
+
+                        <ItemsControl ItemsSource="{Binding TopOffenders}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0 0 0 6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" Foreground="{StaticResource TextPrimary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Detail}" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="12 0 0 0"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="No offenders yet" Foreground="{StaticResource TextSecondary}" FontSize="11" Visibility="{Binding HasNoTopOffenders, Converter={StaticResource BoolToVisibility}}"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource CardPanel}" Padding="14" MinHeight="170">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                            <TextBlock Text="Process Insights" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
+                            <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                                     ToolTip="Heuristics based on today's session logs (runtime + peaks)."/>
+                        </StackPanel>
+
+                        <ItemsControl ItemsSource="{Binding Insights}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource BackgroundSecondary}" CornerRadius="8" Padding="10 8" Margin="0 0 0 8">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Title}" Foreground="{StaticResource TextPrimary}" FontSize="12" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Detail}" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="0 4 0 0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="No insights yet" Foreground="{StaticResource TextSecondary}" FontSize="11" Visibility="{Binding HasNoInsights, Converter={StaticResource BoolToVisibility}}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Heatmap + Weekly + Quick Actions -->
+            <Grid Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVisibility}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="10"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Hourly Heatmap -->
+                <Border Grid.Row="0" Style="{StaticResource CardPanel}" Padding="14">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                            <TextBlock Text="Hourly Heatmap" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
+                            <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                                     ToolTip="Total tracked runtime per hour (today). Darker blocks = more activity."/>
+                        </StackPanel>
+
+                        <UniformGrid Columns="24">
+                            <ItemsControl ItemsSource="{Binding HourlyHeatmap}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="24"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{Binding Brush}" Height="22" Margin="1" CornerRadius="4" ToolTip="{Binding ToolTip}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Weekly Overview -->
+                    <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="14">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                                <TextBlock Text="Weekly Overview" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                                         ToolTip="Total usage per day for the last 7 days."/>
+                            </StackPanel>
+
+                            <ItemsControl ItemsSource="{Binding WeeklyOverview}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0 0 0 6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="10"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" Text="{Binding DayLabel}" Foreground="{StaticResource TextSecondary}" FontSize="11" Width="38"/>
+                                            <Border Grid.Column="2" Background="{StaticResource BackgroundSecondary}" Height="10" CornerRadius="5">
+                                                <Border Width="{Binding BarWidth}" Background="{StaticResource AccentBrush}" CornerRadius="5" HorizontalAlignment="Left"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="3" Text="{Binding UsageText}" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="10 0 0 0"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Quick Actions -->
+                    <Border Grid.Column="2" Style="{StaticResource CardPanel}" Padding="14">
+                        <StackPanel>
+                            <Grid Margin="0 0 0 10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="Quick Actions" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
+                                    <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                                             ToolTip="Fast troubleshooting actions for common issues."/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="Export" Command="{Binding ExportDashboardCommand}" Height="22" Padding="10 0" FontSize="10" Style="{StaticResource ActionButton}" VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <!-- System Section -->
+                            <TextBlock Text="System" Foreground="{StaticResource TextSecondary}" FontSize="10" Margin="0 0 0 6" FontWeight="SemiBold"/>
+                            <Grid Margin="0 0 0 12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="Restart Explorer" Command="{Binding RestartExplorerCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
+                                <Button Grid.Column="2" Content="Clear Temp" Command="{Binding ClearTempCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
+                            </Grid>
+
+                            <!-- Network Section -->
+                            <TextBlock Text="Network" Foreground="{StaticResource TextSecondary}" FontSize="10" Margin="0 0 0 6" FontWeight="SemiBold"/>
+                            <Grid Margin="0 0 0 12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Row="0" Grid.Column="0" Content="Flush DNS" Command="{Binding FlushDnsCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
+                                <Button Grid.Row="0" Grid.Column="2" Content="Renew IP" Command="{Binding RenewIpCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
+                                <Button Grid.Row="1" Grid.Column="0" Content="Reset Network" Command="{Binding ResetNetworkStackCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"/>
+                                <Button Grid.Row="1" Grid.Column="2" Content="Restart Audio" Command="{Binding RestartAudioServiceCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"/>
+                            </Grid>
+
+                            <!-- Services Section -->
+                            <TextBlock Text="Services" Foreground="{StaticResource TextSecondary}" FontSize="10" Margin="0 0 0 6" FontWeight="SemiBold"/>
+                            <Grid Margin="0 0 0 12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Row="0" Grid.Column="0" Content="Print Spooler" Command="{Binding RestartPrintSpoolerCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
+                                <Button Grid.Row="0" Grid.Column="2" Content="Win Search" Command="{Binding RestartWindowsSearchCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
+                                <Button Grid.Row="1" Grid.Column="0" Content="GPU Driver" Command="{Binding RestartGpuDriverCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"/>
+                                <Button Grid.Row="1" Grid.Column="2" Content="Icon Cache" Command="{Binding ClearIconCacheCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"/>
+                            </Grid>
+
+                            <!-- Repair Section -->
+                            <TextBlock Text="System Repair" Foreground="{StaticResource TextSecondary}" FontSize="10" Margin="0 0 0 6" FontWeight="SemiBold"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="SFC Scan" Command="{Binding SfcScanCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"/>
+                                <Button Grid.Column="2" Content="DISM Repair" Command="{Binding DismRepairCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"/>
+                            </Grid>
+
+                            <TextBlock Text="{Binding ActionStatusText}" Foreground="#22C55E" FontSize="11" Margin="0 12 0 0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Grid>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

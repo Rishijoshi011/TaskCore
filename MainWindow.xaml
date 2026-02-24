@@ -261,6 +261,14 @@
                             <!-- SIDEBAR ITEMS -->
                             <ListBoxItem>
                                 <StackPanel Orientation="Horizontal">
+                                    <Image Source="pack://application:,,,/TaskCore;component/Resources/Icons/Dashboard.png"
+                                           Width="20" Height="20" Margin="0 0 14 0"/>
+                                    <TextBlock Text="Dashboard" FontWeight="Medium" FontSize="15"/>
+                                </StackPanel>
+                            </ListBoxItem>
+
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
                                     <Image Source="pack://application:,,,/TaskCore;component/Resources/Icons/Processes.png"
                                            Width="20" Height="20" Margin="0 0 14 0"/>
                                     <TextBlock Text="Processes" FontWeight="Medium" FontSize="15"/>
