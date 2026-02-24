@@ -17,7 +17,7 @@
         <StackPanel>
 
             <!-- Header with Last Updated -->
-            <Grid Margin="0 0 0 0">
+            <Grid Margin="0 0 12 0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -293,26 +293,71 @@
                             <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
                                 <TextBlock Text="Weekly Overview" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
                                 <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
-                                         ToolTip="Total usage per day for the last 7 days."/>
+                                         ToolTip="Total usage per day for the last 7 days. Colors: Green (&lt;2h), Yellow (2-5h), Red (&gt;5h). Purple = Today. Arrow = trend vs yesterday."/>
+                            </StackPanel>
+
+                            <!-- Legend -->
+                            <StackPanel Orientation="Horizontal" Margin="0 0 0 8" Opacity="0.7">
+                                <Ellipse Width="8" Height="8" Fill="#4ADE80" Margin="0 0 4 0"/>
+                                <TextBlock Text="Light" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0"/>
+                                <Ellipse Width="8" Height="8" Fill="#FACC15" Margin="0 0 4 0"/>
+                                <TextBlock Text="Med" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0"/>
+                                <Ellipse Width="8" Height="8" Fill="#F87171" Margin="0 0 4 0"/>
+                                <TextBlock Text="Heavy" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0"/>
+                                <Ellipse Width="8" Height="8" Fill="{StaticResource AccentBrush}" Margin="0 0 4 0"/>
+                                <TextBlock Text="Today" FontSize="9" Foreground="{StaticResource TextSecondary}"/>
                             </StackPanel>
 
                             <ItemsControl ItemsSource="{Binding WeeklyOverview}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid Margin="0 0 0 6">
+                                        <Grid Margin="0 0 0 6" ToolTip="{Binding PeakAppName, StringFormat='Top app: {0}'}">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="10"/>
+                                                <ColumnDefinition Width="50"/>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
 
-                                            <TextBlock Grid.Column="0" Text="{Binding DayLabel}" Foreground="{StaticResource TextSecondary}" FontSize="11" Width="38"/>
-                                            <Border Grid.Column="2" Background="{StaticResource BackgroundSecondary}" Height="10" CornerRadius="5">
-                                                <Border Width="{Binding BarWidth}" Background="{StaticResource AccentBrush}" CornerRadius="5" HorizontalAlignment="Left"/>
-                                            </Border>
-                                            <TextBlock Grid.Column="3" Text="{Binding UsageText}" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="10 0 0 0"/>
+                                            <!-- Day label with trend -->
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock x:Name="DayText" Text="{Binding DayLabel}" FontSize="11"/>
+                                                <TextBlock Text="{Binding TrendArrow}" Foreground="{StaticResource AccentBrush}" FontSize="10" Margin="2 0 0 0"/>
+                                            </StackPanel>
+
+                                            <!-- Bar with average line -->
+                                            <Grid Grid.Column="1" Height="14" Margin="0 0 10 0" VerticalAlignment="Center">
+                                                <Border Background="{StaticResource BackgroundSecondary}" CornerRadius="7">
+                                                    <Border x:Name="UsageBar" Width="{Binding BarWidth}" CornerRadius="7" HorizontalAlignment="Left"/>
+                                                </Border>
+                                                <!-- Average line marker -->
+                                                <Canvas HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                                    <Border x:Name="AvgLine" Width="2" Height="16" Background="White" Opacity="0.8" Canvas.Top="-1">
+                                                        <Border.RenderTransform>
+                                                            <TranslateTransform X="{Binding AverageLinePosition}"/>
+                                                        </Border.RenderTransform>
+                                                    </Border>
+                                                </Canvas>
+                                            </Grid>
+
+                                            <!-- Time -->
+                                            <TextBlock Grid.Column="2" Text="{Binding UsageText}" 
+                                                       Foreground="{StaticResource TextPrimary}" FontSize="11" FontWeight="SemiBold"
+                                                       HorizontalAlignment="Right"/>
                                         </Grid>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                <Setter TargetName="DayText" Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                                <Setter TargetName="DayText" Property="FontWeight" Value="Bold"/>
+                                                <Setter TargetName="UsageBar" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsToday}" Value="False">
+                                                <Setter TargetName="DayText" Property="Foreground" Value="{StaticResource TextSecondary}"/>
+                                                <Setter TargetName="UsageBar" Property="Background" Value="{Binding BarColor}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ShowAverageLine}" Value="False">
+                                                <Setter TargetName="AvgLine" Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

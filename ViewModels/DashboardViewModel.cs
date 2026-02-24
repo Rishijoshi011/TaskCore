@@ -35,6 +35,12 @@ namespace TaskCore.ViewModels
         [ObservableProperty] private string dayLabel = string.Empty;
         [ObservableProperty] private double barWidth;
         [ObservableProperty] private string usageText = string.Empty;
+        [ObservableProperty] private bool isToday;
+        [ObservableProperty] private string trendArrow = string.Empty;
+        [ObservableProperty] private string peakAppName = string.Empty;
+        [ObservableProperty] private string barColor = "#9A4DFF";
+        [ObservableProperty] private bool showAverageLine;
+        [ObservableProperty] private double averageLinePosition;
     }
 
     public partial class DashboardViewModel : ObservableObject
@@ -812,7 +818,7 @@ namespace TaskCore.ViewModels
 
                 CpuTempText = ReadTempText(() => HardwareMonitorService.Instance.GetCpuPackageTemp());
                 GpuTempText = ReadTempText(() => HardwareMonitorService.Instance.GetGpuTempByName(""));
-                LastUpdatedText = $"Updated: {DateTime.Now:HH:mm:ss}";
+                LastUpdatedText = $"Updated: {DateTime.Now:HH:mm}";
 
                 OnPropertyChanged(nameof(HasNoAlerts));
             }
@@ -911,24 +917,75 @@ namespace TaskCore.ViewModels
                 .Select(offset => DateOnly.FromDateTime(DateTime.Today.AddDays(-6 + offset)))
                 .ToList();
 
-            var totals = days
-                .Select(d => UsageTrackingService.GetDailySessions(d).Sum(s => Math.Max(0, s.durationSeconds)))
-                .ToList();
-
-            var max = totals.Count == 0 ? 0 : totals.Max();
-            const double maxWidth = 180;
-
-            for (int idx = 0; idx < days.Count; idx++)
+            var dayData = days.Select(d =>
             {
-                var d = days[idx];
-                var sec = totals[idx];
-                var ratio = max <= 0 ? 0 : (sec / (double)max);
+                var sessions = UsageTrackingService.GetDailySessions(d);
+                var totalSec = sessions.Sum(s => Math.Max(0, s.durationSeconds));
+
+                // Find peak app
+                var peakApp = sessions
+                    .GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app)
+                    .Select(g => new { App = g.Key, Seconds = g.Sum(s => s.durationSeconds) })
+                    .OrderByDescending(x => x.Seconds)
+                    .FirstOrDefault();
+
+                return new
+                {
+                    Date = d,
+                    TotalSeconds = totalSec,
+                    PeakApp = peakApp?.App ?? "-",
+                    PeakSeconds = peakApp?.Seconds ?? 0
+                };
+            }).ToList();
+
+            var max = dayData.Count == 0 ? 0 : dayData.Max(d => d.TotalSeconds);
+            var avg = dayData.Count == 0 ? 0 : dayData.Average(d => d.TotalSeconds);
+            const double maxWidth = 180;
+            var today = DateOnly.FromDateTime(DateTime.Today);
+
+            for (int idx = 0; idx < dayData.Count; idx++)
+            {
+                var data = dayData[idx];
+                var prevData = idx > 0 ? dayData[idx - 1] : null;
+                var ratio = max <= 0 ? 0 : (data.TotalSeconds / (double)max);
+                var barWidth = Math.Max(2, maxWidth * ratio);
+
+                // Trend arrow vs previous day
+                string trend = "";
+                if (prevData != null && prevData.TotalSeconds > 0)
+                {
+                    var change = data.TotalSeconds - prevData.TotalSeconds;
+                    var pctChange = Math.Abs(change) / prevData.TotalSeconds;
+                    if (pctChange > 0.1)
+                        trend = change > 0 ? "↑" : "↓";
+                }
+
+                // Color coding based on usage intensity
+                string color;
+                var hours = data.TotalSeconds / 3600.0;
+                if (hours < 2) color = "#4ADE80";      // Green - light
+                else if (hours < 5) color = "#FACC15"; // Yellow - medium
+                else color = "#F87171";                 // Red - heavy
+
+                // Is today
+                bool isToday = data.Date == today;
+
+                // Average line position (relative to bar width)
+                double avgRatio = max <= 0 ? 0 : (avg / max);
+                double avgPosition = Math.Max(2, maxWidth * avgRatio);
+                bool showAvg = idx > 0 && Math.Abs(barWidth - avgPosition) > 5;
 
                 WeeklyOverview.Add(new WeeklyOverviewItem
                 {
-                    DayLabel = d.ToDateTime(TimeOnly.MinValue).ToString("ddd"),
-                    BarWidth = Math.Max(2, maxWidth * ratio),
-                    UsageText = TimeSpan.FromSeconds(sec).ToString(@"hh\:mm")
+                    DayLabel = $"{data.Date.ToDateTime(TimeOnly.MinValue):ddd dd}",
+                    BarWidth = barWidth,
+                    UsageText = TimeSpan.FromSeconds(data.TotalSeconds).ToString(@"h\:mm"),
+                    IsToday = isToday,
+                    TrendArrow = trend,
+                    PeakAppName = data.PeakApp,
+                    BarColor = isToday ? "#9A4DFF" : color,
+                    ShowAverageLine = showAvg,
+                    AverageLinePosition = avgPosition
                 });
             }
         }
