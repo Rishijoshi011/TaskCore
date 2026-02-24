@@ -16,8 +16,9 @@ using TaskCore.Services;
 
 namespace TaskCore.ViewModels.Graphs
 {
-    public partial class NetworkAdapterViewModel : ObservableObject
+    public partial class NetworkAdapterViewModel : ObservableObject, IDisposable
     {
+        private bool _disposed;
         [ObservableProperty]
         private ObservableCollection<ISeries> downloadSeries;
 
@@ -341,6 +342,34 @@ namespace TaskCore.ViewModels.Graphs
             catch
             {
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            try
+            {
+                RefreshIntervalService.RefreshIntervalChanged -= OnRefreshIntervalChanged;
+            }
+            catch { }
+
+            try
+            {
+                AppViewStateService.ViewChanged -= OnViewChanged;
+            }
+            catch { }
+
+            try
+            {
+                if (_timer != null)
+                {
+                    _timer.Stop();
+                    _timer.Tick -= (_, __) => Tick();
+                }
+            }
+            catch { }
         }
     }
 }

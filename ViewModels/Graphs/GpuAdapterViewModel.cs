@@ -16,8 +16,9 @@ using TaskCore.Services;
 
 namespace TaskCore.ViewModels.Graphs
 {
-    public partial class GpuAdapterViewModel : ObservableObject
+    public partial class GpuAdapterViewModel : ObservableObject, IDisposable
     {
+        private bool _disposed;
         private static readonly object _wmiLock = new();
         private static int _nextWmiIndex;
 
@@ -844,6 +845,41 @@ namespace TaskCore.ViewModels.Graphs
             if (end < 0) return instance[idx..];
 
             return instance[idx..end];
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            try
+            {
+                RefreshIntervalService.RefreshIntervalChanged -= OnRefreshIntervalChanged;
+            }
+            catch { }
+
+            try
+            {
+                AppViewStateService.ViewChanged -= OnViewChanged;
+            }
+            catch { }
+
+            try
+            {
+                if (_timer != null)
+                {
+                    _timer.Stop();
+                    _timer.Tick -= (_, __) => Tick();
+                }
+            }
+            catch { }
+
+            foreach (var c in _gpu3dCounters) try { c.Dispose(); } catch { }
+            foreach (var c in _gpuAnyCounters) try { c.Dispose(); } catch { }
+            try { _dedicatedUsage?.Dispose(); } catch { }
+            try { _dedicatedLimit?.Dispose(); } catch { }
+            try { _sharedUsage?.Dispose(); } catch { }
+            try { _sharedLimit?.Dispose(); } catch { }
         }
     }
 }

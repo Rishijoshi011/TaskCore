@@ -15,8 +15,9 @@ using TaskCore.Services;
 
 namespace TaskCore.ViewModels.Graphs
 {
-    public partial class DiskAdapterViewModel : ObservableObject
+    public partial class DiskAdapterViewModel : ObservableObject, IDisposable
     {
+        private bool _disposed;
         [ObservableProperty]
         private ObservableCollection<ISeries> readSeries;
 
@@ -502,6 +503,39 @@ namespace TaskCore.ViewModels.Graphs
                 18 => "Power Mode",
                 _ => v.ToString()
             };
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            try
+            {
+                RefreshIntervalService.RefreshIntervalChanged -= OnRefreshIntervalChanged;
+            }
+            catch { }
+
+            try
+            {
+                AppViewStateService.ViewChanged -= OnViewChanged;
+            }
+            catch { }
+
+            try
+            {
+                if (_timer != null)
+                {
+                    _timer.Stop();
+                    _timer.Tick -= (_, __) => Tick();
+                }
+            }
+            catch { }
+
+            try { _readBytes?.Dispose(); } catch { }
+            try { _writeBytes?.Dispose(); } catch { }
+            try { _activeTime?.Dispose(); } catch { }
+            try { _queueLen?.Dispose(); } catch { }
         }
     }
 }

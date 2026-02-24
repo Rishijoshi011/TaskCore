@@ -14,8 +14,9 @@ using TaskCore.Services;
 
 namespace TaskCore.ViewModels.Graphs
 {
-    public partial class MemoryViewModel : ObservableObject
+    public partial class MemoryViewModel : ObservableObject, IDisposable
     {
+        private bool _disposed;
         [ObservableProperty]
         private ObservableCollection<ISeries> series;
 
@@ -419,6 +420,36 @@ namespace TaskCore.ViewModels.Graphs
             public static readonly SKColor Grid = new(51, 51, 51);        // #333333
             public static readonly SKColor Text = new(204, 204, 204);    // #CCCCCC
             public static readonly SKColor Accent = new(0, 255, 255);       // Cyan
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            try
+            {
+                RefreshIntervalService.RefreshIntervalChanged -= OnRefreshIntervalChanged;
+            }
+            catch { }
+
+            try
+            {
+                AppViewStateService.ViewChanged -= OnViewChanged;
+            }
+            catch { }
+
+            try
+            {
+                if (_timer != null)
+                {
+                    _timer.Stop();
+                    _timer.Tick -= Update;
+                }
+            }
+            catch { }
+
+            try { _memoryCounter?.Dispose(); } catch { }
         }
     }
 }
