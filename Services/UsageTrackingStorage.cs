@@ -8,6 +8,16 @@ namespace TaskCore.Services
 {
     internal static class UsageTrackingStorage
     {
+        private sealed class DailySessionsCacheEntry
+        {
+            public DateTime lastWriteUtc;
+            public long length;
+            public List<UsageTrackingService.SessionRecord> sessions = new();
+        }
+
+        private static readonly object _dailySessionsCacheLock = new();
+        private static readonly Dictionary<DateOnly, DailySessionsCacheEntry> _dailySessionsCache = new();
+
         private sealed class AppSummaryData
         {
             public int launchCount { get; set; }
@@ -69,16 +79,44 @@ namespace TaskCore.Services
         {
             var file = Path.Combine(BaseDirectory, $"sessions-{date:yyyy-MM-dd}.jsonl");
             var legacyFile = Path.Combine(BaseDirectory, $"sessions_{date:yyyy-MM-dd}.json");
-            var sessions = new List<UsageTrackingService.SessionRecord>();
+            string? chosenFile = null;
 
-            if (!File.Exists(file) && !File.Exists(legacyFile)) return sessions;
+            if (File.Exists(file))
+                chosenFile = file;
+            else if (File.Exists(legacyFile))
+                chosenFile = legacyFile;
+
+            if (chosenFile == null)
+                return new List<UsageTrackingService.SessionRecord>();
 
             try
             {
-                if (File.Exists(file))
+                var info = new FileInfo(chosenFile);
+                var lastWriteUtc = info.LastWriteTimeUtc;
+                var length = info.Exists ? info.Length : 0;
+
+                lock (_dailySessionsCacheLock)
                 {
-                    var lines = File.ReadAllLines(file);
-                    foreach (var line in lines)
+                    if (_dailySessionsCache.TryGetValue(date, out var cached)
+                        && cached.lastWriteUtc == lastWriteUtc
+                        && cached.length == length)
+                    {
+                        return cached.sessions;
+                    }
+                }
+            }
+            catch
+            {
+                // ignore cache failures and fall back to direct read
+            }
+
+            var sessions = new List<UsageTrackingService.SessionRecord>();
+
+            try
+            {
+                if (string.Equals(chosenFile, file, StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var line in File.ReadLines(file))
                     {
                         if (!string.IsNullOrWhiteSpace(line))
                         {
@@ -88,7 +126,7 @@ namespace TaskCore.Services
                         }
                     }
                 }
-                else if (File.Exists(legacyFile))
+                else if (string.Equals(chosenFile, legacyFile, StringComparison.OrdinalIgnoreCase))
                 {
                     var json = File.ReadAllText(legacyFile);
                     using var doc = JsonDocument.Parse(json);
@@ -133,6 +171,35 @@ namespace TaskCore.Services
                         $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Failed to read daily sessions: {ex.Message}\n");
                 }
                 catch { }
+            }
+
+            try
+            {
+                var info = new FileInfo(chosenFile);
+                var lastWriteUtc = info.LastWriteTimeUtc;
+                var length = info.Exists ? info.Length : 0;
+
+                lock (_dailySessionsCacheLock)
+                {
+                    _dailySessionsCache[date] = new DailySessionsCacheEntry
+                    {
+                        lastWriteUtc = lastWriteUtc,
+                        length = length,
+                        sessions = sessions
+                    };
+
+                    // keep cache bounded (avoid unbounded growth)
+                    if (_dailySessionsCache.Count > 31)
+                    {
+                        var cutoff = DateOnly.FromDateTime(DateTime.Today.AddDays(-31));
+                        var keysToRemove = _dailySessionsCache.Keys.Where(d => d < cutoff).ToList();
+                        foreach (var k in keysToRemove)
+                            _dailySessionsCache.Remove(k);
+                    }
+                }
+            }
+            catch
+            {
             }
 
             return sessions;

@@ -13,9 +13,10 @@ namespace TaskCore.ViewModels
 {
     public partial class GraphsViewModel : ObservableObject
     {
-        private readonly DispatcherTimer _timer;
-        private readonly PerformanceCounter _cpuCounter;
-        private readonly PerformanceCounter _ramCounter;
+        private DispatcherTimer? _timer;
+        private PerformanceCounter? _cpuCounter;
+        private PerformanceCounter? _ramCounter;
+        private bool _isInitialized;
 
         [ObservableProperty]
         private ObservableCollection<ISeries> cpuSeries;
@@ -28,12 +29,6 @@ namespace TaskCore.ViewModels
 
         public GraphsViewModel()
         {
-            // CPU Counter
-            _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-
-            // RAM Counter
-            _ramCounter = new PerformanceCounter("Memory", "Available MBytes");
-
             // Initialize graph series
             cpuSeries = new ObservableCollection<ISeries>
             {
@@ -61,10 +56,7 @@ namespace TaskCore.ViewModels
 
             xLabels = new ObservableCollection<string>();
 
-            // Timer Update
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.CurrentMs) };
-            _timer.Tick += UpdateGraphs;
-            _timer.Start();
+            EnsureInitialized();
 
             try
             {
@@ -85,14 +77,91 @@ namespace TaskCore.ViewModels
             }
         }
 
+        private void EnsureInitialized()
+        {
+            if (_isInitialized) return;
+
+            try
+            {
+                _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+            }
+            catch
+            {
+                _cpuCounter = null;
+            }
+
+            try
+            {
+                _ramCounter = new PerformanceCounter("Memory", "Available MBytes");
+            }
+            catch
+            {
+                _ramCounter = null;
+            }
+
+            try
+            {
+                _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.CurrentMs) };
+                _timer.Tick += UpdateGraphs;
+            }
+            catch
+            {
+                _timer = null;
+            }
+
+            _isInitialized = true;
+        }
+
+        private void TearDown()
+        {
+            if (!_isInitialized) return;
+
+            try
+            {
+                if (_timer != null)
+                {
+                    _timer.Stop();
+                    _timer.Tick -= UpdateGraphs;
+                    _timer = null;
+                }
+            }
+            catch
+            {
+            }
+
+            try { _cpuCounter?.Dispose(); } catch { }
+            try { _ramCounter?.Dispose(); } catch { }
+            _cpuCounter = null;
+            _ramCounter = null;
+
+            try
+            {
+                if (CpuSeries.Count > 0 && CpuSeries[0].Values is ObservableCollection<double> cpuList)
+                    cpuList.Clear();
+                if (RamSeries.Count > 0 && RamSeries[0].Values is ObservableCollection<double> ramList)
+                    ramList.Clear();
+                XLabels.Clear();
+            }
+            catch
+            {
+            }
+
+            _isInitialized = false;
+        }
+
         private void OnViewChanged(string viewName)
         {
             try
             {
                 if (viewName == "Graphs")
-                    _timer.Start();
+                {
+                    EnsureInitialized();
+                    _timer?.Start();
+                }
                 else
-                    _timer.Stop();
+                {
+                    TearDown();
+                }
             }
             catch
             {
@@ -101,6 +170,8 @@ namespace TaskCore.ViewModels
 
         private void UpdateGraphs(object? sender, EventArgs e)
         {
+            if (_cpuCounter == null || _ramCounter == null) return;
+
             double cpuVal = Math.Round(_cpuCounter.NextValue(), 1);
 
             double freeRam = _ramCounter.NextValue();

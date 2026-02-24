@@ -53,7 +53,7 @@ namespace TaskCore.Views.Graphs {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/TaskCore;V4.0.0.1;component/views/graphs/networkcardview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/TaskCore;V4.0.1.1;component/views/graphs/networkcardview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\Views\Graphs\NetworkCardView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

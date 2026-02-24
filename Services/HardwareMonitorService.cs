@@ -49,7 +49,38 @@ namespace TaskCore.Services
             {
             }
 
+            try
+            {
+                AppViewStateService.ViewChanged += OnViewChanged;
+                OnViewChanged(AppViewStateService.CurrentView);
+            }
+            catch
+            {
+            }
+
             Refresh();
+        }
+
+        private void OnViewChanged(string viewName)
+        {
+            try
+            {
+                // Only refresh temps when these views are visible.
+                if (string.Equals(viewName, "Dashboard", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(viewName, "Graphs", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!_timer.IsEnabled)
+                        _timer.Start();
+                }
+                else
+                {
+                    if (_timer.IsEnabled)
+                        _timer.Stop();
+                }
+            }
+            catch
+            {
+            }
         }
 
         private void Refresh()

@@ -17,6 +17,8 @@ namespace TaskCore.Services
         private static readonly string _dir = BaseDirectory;
 
         private static readonly string _path = Path.Combine(_dir, "settings.json");
+        private static readonly string _bakPath = Path.Combine(_dir, "settings.json.bak");
+        private static readonly string _tmpPath = Path.Combine(_dir, "settings.json.tmp");
 
         public static AppSettings Load()
         {
@@ -25,7 +27,34 @@ namespace TaskCore.Services
                 try
                 {
                     if (!File.Exists(_path))
+                    {
+                        if (File.Exists(_bakPath))
+                        {
+                            try
+                            {
+                                var bakJson = File.ReadAllText(_bakPath);
+                                var bakSettings = JsonSerializer.Deserialize<AppSettings>(bakJson);
+                                if (bakSettings != null)
+                                {
+                                    try
+                                    {
+                                        Directory.CreateDirectory(_dir);
+                                        File.WriteAllText(_path, bakJson);
+                                    }
+                                    catch
+                                    {
+                                    }
+
+                                    return bakSettings;
+                                }
+                            }
+                            catch
+                            {
+                            }
+                        }
+
                         return new AppSettings();
+                    }
 
                     var json = File.ReadAllText(_path);
                     var settings = JsonSerializer.Deserialize<AppSettings>(json);
@@ -33,6 +62,32 @@ namespace TaskCore.Services
                 }
                 catch
                 {
+                    // If settings.json is corrupted/partially written, try recovering from .bak.
+                    try
+                    {
+                        if (File.Exists(_bakPath))
+                        {
+                            var bakJson = File.ReadAllText(_bakPath);
+                            var bakSettings = JsonSerializer.Deserialize<AppSettings>(bakJson);
+                            if (bakSettings != null)
+                            {
+                                try
+                                {
+                                    Directory.CreateDirectory(_dir);
+                                    File.WriteAllText(_path, bakJson);
+                                }
+                                catch
+                                {
+                                }
+
+                                return bakSettings;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                    }
+
                     return new AppSettings();
                 }
             }
@@ -45,8 +100,34 @@ namespace TaskCore.Services
                 try
                 {
                     Directory.CreateDirectory(_dir);
+
                     var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(_path, json);
+
+                    // Write to tmp first to avoid corrupting settings.json if the process is killed mid-write.
+                    File.WriteAllText(_tmpPath, json);
+
+                    // Atomically swap tmp into place and keep a .bak.
+                    try
+                    {
+                        File.Replace(_tmpPath, _path, _bakPath, ignoreMetadataErrors: true);
+                    }
+                    catch
+                    {
+                        // Fall back if File.Replace fails (e.g. different volume).
+                        try
+                        {
+                            if (File.Exists(_path))
+                            {
+                                try { File.Copy(_path, _bakPath, overwrite: true); } catch { }
+                            }
+
+                            File.Copy(_tmpPath, _path, overwrite: true);
+                            try { File.Delete(_tmpPath); } catch { }
+                        }
+                        catch
+                        {
+                        }
+                    }
                 }
                 catch
                 {
