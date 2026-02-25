@@ -11,14 +11,25 @@ namespace TaskCore
         {
             base.OnStartup(e);
 
-            // REQUIRED for LiveChartsCore — loads Skia backend
-            LiveCharts.Configure(config =>
-                config.AddSkiaSharp()
-            );
+            // Check if watchdog mode is enabled
+            var settings = AppSettingsService.Load();
+            var watchdogMode = settings.WatchdogMode;
 
-            // WatchdogService removed - merged into RulesService
-            // _ = AppSessionTrackerService.Instance; // DISABLED - using UsageTrackingService instead
+            // LiveCharts/SkiaSharp initialization - skip in watchdog mode (no graphs shown)
+            // This saves ~30-50MB memory in minimal mode
+            if (!watchdogMode)
+            {
+                LiveCharts.Configure(config =>
+                    config.AddSkiaSharp()
+                );
+            }
+
+            // UsageTrackingService runs in ALL modes - records session data for dashboard
+            // even when in watchdog mode, so data is available when viewing dashboard later
             _ = UsageTrackingService.Instance;
+
+            // RulesService initializes itself via lazy singleton when needed
+            // No need to force init - it only runs when rules exist
         }
 
         protected override void OnActivated(EventArgs e)

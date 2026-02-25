@@ -17,6 +17,7 @@ namespace TaskCore.Services
             public double averageCpuPercent { get; set; }
             public double peakMemoryMB { get; set; }
             public double averageMemoryMB { get; set; }
+            public bool isIdle { get; set; }  // True if session occurred during idle/locked time
         }
     }
 }

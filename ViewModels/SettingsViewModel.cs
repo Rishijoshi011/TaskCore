@@ -34,6 +34,11 @@ namespace TaskCore.ViewModels
         private bool minimizeToTray;
 
         [ObservableProperty]
+        private bool watchdogMode;
+
+        private bool _watchdogModeChanging = false;
+
+        [ObservableProperty]
         private string customAlertSoundPath = string.Empty;
 
         [ObservableProperty]
@@ -93,6 +98,7 @@ namespace TaskCore.ViewModels
             PreferAdminForProtectedActions = _settings.PreferAdminForProtectedActions;
             RefreshIntervalMs = _settings.RefreshIntervalMs;
             MinimizeToTray = _settings.MinimizeToTray;
+            WatchdogMode = _settings.WatchdogMode;
             CustomAlertSoundPath = _settings.CustomAlertSoundPath ?? string.Empty;
 
             try
@@ -123,8 +129,12 @@ namespace TaskCore.ViewModels
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(s => s));
 
-            RefreshAvailableForSelection();
-            StartRefreshTimer();
+            // Only start process monitoring timer in normal mode
+            if (!_settings.WatchdogMode)
+            {
+                RefreshAvailableForSelection();
+                StartRefreshTimer();
+            }
         }
 
         private void StartRefreshTimer()
@@ -209,6 +219,48 @@ namespace TaskCore.ViewModels
         {
             _settings.MinimizeToTray = value;
             AppSettingsService.Save(_settings);
+        }
+
+        partial void OnWatchdogModeChanging(bool value)
+        {
+            // Prevent re-entrancy
+            if (_watchdogModeChanging) return;
+            _watchdogModeChanging = true;
+
+            try
+            {
+                // Only prompt if value actually changed from saved setting
+                if (_settings.WatchdogMode == value)
+                {
+                    _watchdogModeChanging = false;
+                    return;
+                }
+
+                _settings.WatchdogMode = value;
+                AppSettingsService.Save(_settings);
+
+                // Prompt user to restart
+                var result = MessageBox.Show(
+                    "Watchdog Mode setting has been changed.\n\n" +
+                    (value
+                        ? "The application will now run with only Rules and Settings tabs to reduce memory usage (~100MB)."
+                        : "The application will now run with all tabs enabled.") +
+                    "\n\nRestart now to apply changes?",
+                    "Restart Required",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    var exePath = Process.GetCurrentProcess().MainModule?.FileName ?? Assembly.GetExecutingAssembly().Location;
+                    Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
+                    Application.Current.Shutdown();
+                }
+            }
+            finally
+            {
+                _watchdogModeChanging = false;
+            }
         }
 
         partial void OnCustomAlertSoundPathChanged(string value)

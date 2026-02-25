@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using Microsoft.Win32;
 
 namespace TaskCore.Services
 {
@@ -19,19 +20,84 @@ namespace TaskCore.Services
         private Dictionary<string, (DateTime start, string path, HashSet<int> pids)> _trackedApps => _sessionTracker.TrackedApps as Dictionary<string, (DateTime start, string path, HashSet<int> pids)>;
         private readonly object _lock = new();
         private int _tickRunning;
+        private bool _isSessionLocked = false;
+        private DateTime _lastInputTime = DateTime.Now;
+        private readonly TimeSpan _idleThreshold = TimeSpan.FromMinutes(5);
 
         private UsageTrackingService()
         {
             try
             {
                 UsageTrackingStorage.EnsureDirectory();
-                UsageTrackingStorage.CleanupOldFiles(); // Clean up old files on startup
+                UsageTrackingStorage.CleanupOldFiles();
             }
             catch { }
+
+            // Subscribe to session switch events to detect lock/unlock
+            SystemEvents.SessionSwitch += OnSessionSwitch;
 
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += (_, __) => KickTick();
             _timer.Start();
+        }
+
+        private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+        {
+            switch (e.Reason)
+            {
+                case SessionSwitchReason.SessionLock:
+                case SessionSwitchReason.SessionLogoff:
+                case SessionSwitchReason.RemoteDisconnect:
+                    _isSessionLocked = true;
+                    break;
+                case SessionSwitchReason.SessionUnlock:
+                case SessionSwitchReason.SessionLogon:
+                case SessionSwitchReason.RemoteConnect:
+                    _isSessionLocked = false;
+                    _lastInputTime = DateTime.Now;
+                    break;
+            }
+        }
+
+        private bool IsSystemIdle()
+        {
+            if (_isSessionLocked)
+                return true;
+
+            // Check for user input inactivity using GetLastInputInfo
+            var idleTime = GetIdleTime();
+            return idleTime > _idleThreshold;
+        }
+
+        private TimeSpan GetIdleTime()
+        {
+            try
+            {
+                var lastInputInfo = new NativeMethods.LastInputInfo();
+                lastInputInfo.cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf(lastInputInfo);
+                
+                if (NativeMethods.GetLastInputInfo(ref lastInputInfo))
+                {
+                    var idleTicks = Environment.TickCount - lastInputInfo.dwTime;
+                    return TimeSpan.FromMilliseconds(idleTicks);
+                }
+            }
+            catch { }
+            
+            return TimeSpan.Zero;
+        }
+
+        private static class NativeMethods
+        {
+            [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+            public struct LastInputInfo
+            {
+                public uint cbSize;
+                public uint dwTime;
+            }
+
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            public static extern bool GetLastInputInfo(ref LastInputInfo plii);
         }
 
         
@@ -166,9 +232,12 @@ namespace TaskCore.Services
                 // Group current processes by app name
                 var currentApps = current.Values.Distinct().ToHashSet();
 
+                // Check if system is idle/locked
+                var isSystemIdle = IsSystemIdle();
+
                 lock (_lock)
                 {
-                    var endedSessions = _sessionTracker.ProcessTick(currentApps, current, _metricsSampler);
+                    var endedSessions = _sessionTracker.ProcessTick(currentApps, current, _metricsSampler, isSystemIdle);
 
                     // Write ended sessions to storage
                     foreach (var session in endedSessions)
@@ -182,7 +251,8 @@ namespace TaskCore.Services
                             session.PeakCpu,
                             session.AvgCpu,
                             session.PeakMem,
-                            session.AvgMem);
+                            session.AvgMem,
+                            session.IsIdle);
 
                         // Debug log
                         UsageDebugLogger.LogTrack($"END {session.AppName} (App session) after {session.MissCount} misses, duration {(session.End - session.Start).TotalSeconds:F0}s, PIDs seen: {session.PidsSeen}");

@@ -10,48 +10,138 @@ namespace TaskCore
     public partial class MainWindow : Window
     {
         private bool _isSidebarCollapsed = false;
+        private readonly bool _watchdogMode;
 
-        private readonly DashboardView _dashboardView = new DashboardView();
-        private readonly ProcessesView _processesView = new ProcessesView();
-        private readonly GraphsView _graphsView = new GraphsView();
-        private readonly DetailsView _detailsView = new DetailsView();
-        private readonly RulesView _rulesView = new RulesView();
-        private readonly SettingsView _settingsView = new SettingsView();
+        // Heavy views - only initialized in normal mode
+        private readonly DashboardView? _dashboardView;
+        private readonly ProcessesView? _processesView;
+        private readonly GraphsView? _graphsView;
+        private readonly DetailsView? _detailsView;
+
+        // Light views - always available
+        private readonly RulesView _rulesView;
+        private readonly SettingsView _settingsView;
 
         public MainWindow()
         {
             InitializeComponent();
 
-            // Default page
-            Sidebar.SelectedIndex = 0;
-            ContentArea.Content = _dashboardView;
-            AppViewStateService.SetView("Dashboard");
+            // Load settings to determine mode
+            var settings = AppSettingsService.Load();
+            _watchdogMode = settings.WatchdogMode;
+
+            // Initialize views based on mode
+            if (!_watchdogMode)
+            {
+                _dashboardView = new DashboardView();
+                _processesView = new ProcessesView();
+                _graphsView = new GraphsView();
+                _detailsView = new DetailsView();
+            }
+
+            _rulesView = new RulesView();
+            _settingsView = new SettingsView();
+
+            // Configure sidebar based on mode
+            ConfigureSidebarForMode();
+
+            // Set default page
+            if (_watchdogMode)
+            {
+                // In watchdog mode, default to Rules (index 0 in reduced sidebar)
+                Sidebar.SelectedIndex = 0;
+                ContentArea.Content = _rulesView;
+                AppViewStateService.SetView("Rules");
+            }
+            else
+            {
+                Sidebar.SelectedIndex = 0;
+                ContentArea.Content = _dashboardView;
+                AppViewStateService.SetView("Dashboard");
+            }
+        }
+
+        private void ConfigureSidebarForMode()
+        {
+            // Clear existing items
+            Sidebar.Items.Clear();
+
+            if (_watchdogMode)
+            {
+                // Watchdog Mode: Only Rules and Settings
+                AddSidebarItem("Rules", "pack://application:,,,/TaskCore;component/Resources/Icons/Rules.png");
+                AddSidebarItem("Settings", "pack://application:,,,/TaskCore;component/Resources/Icons/Settings.png");
+            }
+            else
+            {
+                // Normal Mode: All tabs
+                AddSidebarItem("Dashboard", "pack://application:,,,/TaskCore;component/Resources/Icons/Dashboard.png");
+                AddSidebarItem("Processes", "pack://application:,,,/TaskCore;component/Resources/Icons/Processes.png");
+                AddSidebarItem("Graphs", "pack://application:,,,/TaskCore;component/Resources/Icons/Graphs.png");
+                AddSidebarItem("Session Tracker", "pack://application:,,,/TaskCore;component/Resources/Icons/Details.png");
+                AddSidebarItem("Rules", "pack://application:,,,/TaskCore;component/Resources/Icons/Rules.png");
+                AddSidebarItem("Settings", "pack://application:,,,/TaskCore;component/Resources/Icons/Settings.png");
+            }
+        }
+
+        private void AddSidebarItem(string text, string iconPath)
+        {
+            var item = new ListBoxItem();
+            var panel = new StackPanel { Orientation = Orientation.Horizontal };
+            panel.Children.Add(new Image { Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(iconPath)), Width = 20, Height = 20, Margin = new Thickness(0, 0, 14, 0) });
+            panel.Children.Add(new TextBlock { Text = text, FontWeight = FontWeights.Medium, FontSize = 15 });
+            item.Content = panel;
+            Sidebar.Items.Add(item);
         }
 
         private void Sidebar_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            string viewName = Sidebar.SelectedIndex switch
+            if (_watchdogMode)
             {
-                0 => "Dashboard",
-                1 => "Processes",
-                2 => "Graphs",
-                3 => "Details",
-                4 => "Rules",
-                5 => "Settings",
-                _ => "Unknown"
-            };
+                // Watchdog Mode: Only 2 tabs (Rules, Settings)
+                string viewName = Sidebar.SelectedIndex switch
+                {
+                    0 => "Rules",
+                    1 => "Settings",
+                    _ => "Rules"
+                };
 
-            switch (viewName)
-            {
-                case "Dashboard": ContentArea.Content = _dashboardView; break;
-                case "Processes": ContentArea.Content = _processesView; break;
-                case "Graphs": ContentArea.Content = _graphsView; break;
-                case "Details": ContentArea.Content = _detailsView; break;
-                case "Rules": ContentArea.Content = _rulesView; break;
-                case "Settings": ContentArea.Content = _settingsView; break;
+                ContentArea.Content = viewName switch
+                {
+                    "Rules" => _rulesView,
+                    "Settings" => _settingsView,
+                    _ => _rulesView
+                };
+
+                AppViewStateService.SetView(viewName);
             }
+            else
+            {
+                // Normal Mode: All 6 tabs
+                string viewName = Sidebar.SelectedIndex switch
+                {
+                    0 => "Dashboard",
+                    1 => "Processes",
+                    2 => "Graphs",
+                    3 => "Details",
+                    4 => "Rules",
+                    5 => "Settings",
+                    _ => "Dashboard"
+                };
 
-            AppViewStateService.SetView(viewName);
+                ContentArea.Content = viewName switch
+                {
+                    "Dashboard" => _dashboardView,
+                    "Processes" => _processesView,
+                    "Graphs" => _graphsView,
+                    "Details" => _detailsView,
+                    "Rules" => _rulesView,
+                    "Settings" => _settingsView,
+                    _ => _dashboardView
+                };
+
+                AppViewStateService.SetView(viewName);
+            }
         }
 
         private void ToggleSidebar(object sender, RoutedEventArgs e)

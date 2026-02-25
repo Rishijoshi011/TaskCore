@@ -750,24 +750,19 @@ namespace TaskCore.ViewModels
                 if (sessions.Count > 0)
                 {
                     var totalSeconds = sessions.Sum(s => Math.Max(0, s.durationSeconds));
+                    var activeSeconds = sessions.Where(s => !s.isIdle).Sum(s => Math.Max(0, s.durationSeconds));
+                    var idleSeconds = sessions.Where(s => s.isIdle).Sum(s => Math.Max(0, s.durationSeconds));
+                    
+                    // Show total, but include active/idle breakdown in the subtext
                     TotalUsageText = TimeSpan.FromSeconds(totalSeconds).ToString(@"hh\:mm\:ss");
                     SessionCountText = $"{sessions.Count} session{(sessions.Count == 1 ? "" : "s")}";
 
-                    // Calculate vs yesterday comparison
-                    var yesterday = date.AddDays(-1);
-                    var yesterdaySessions = UsageTrackingService.GetDailySessions(yesterday);
-                    var yesterdaySeconds = yesterdaySessions.Sum(s => Math.Max(0, s.durationSeconds));
-                    if (yesterdaySeconds > 0)
-                    {
-                        var diff = totalSeconds - yesterdaySeconds;
-                        var percent = (diff / (double)yesterdaySeconds) * 100;
-                        var sign = diff >= 0 ? "+" : "";
-                        TotalUsageVsYesterdayText = $"{sign}{percent:F0}% vs yesterday";
-                    }
-                    else
-                    {
-                        TotalUsageVsYesterdayText = "No data for yesterday";
-                    }
+                    // Show active vs idle time breakdown
+                    var activeTime = TimeSpan.FromSeconds(activeSeconds);
+                    var idleTime = TimeSpan.FromSeconds(idleSeconds);
+                    var activeText = $"{activeTime.Hours}h {activeTime.Minutes}m active";
+                    var idleText = idleSeconds > 0 ? $" | {idleTime.Hours}h {idleTime.Minutes}m idle/locked" : "";
+                    TotalUsageVsYesterdayText = activeText + idleText;
 
                     var top = sessions
                         .GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app)
@@ -963,9 +958,9 @@ namespace TaskCore.ViewModels
                 // Color coding based on usage intensity
                 string color;
                 var hours = data.TotalSeconds / 3600.0;
-                if (hours < 2) color = "#4ADE80";      // Green - light
-                else if (hours < 5) color = "#FACC15"; // Yellow - medium
-                else color = "#F87171";                 // Red - heavy
+                if (hours < 4) color = "#4ADE80";      // Green - light (< 4h)
+                else if (hours < 9) color = "#FACC15"; // Yellow - medium (4-8h)
+                else color = "#F87171";                 // Red - heavy (9h+)
 
                 // Is today
                 bool isToday = data.Date == today;

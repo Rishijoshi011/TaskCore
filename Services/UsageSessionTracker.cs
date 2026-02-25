@@ -11,12 +11,15 @@ namespace TaskCore.Services
         private readonly Dictionary<string, (double peakCpu, double totalCpu, double peakMem, double totalMem, int samples)> _appMetrics = new();
         private readonly Dictionary<int, int> _missCountByApp = new();
 
+        private readonly Dictionary<string, bool> _appIdleState = new();  // Track if app was started during idle
+
         public IReadOnlyDictionary<string, (DateTime start, string path, HashSet<int> pids)> TrackedApps => _trackedApps;
 
         public List<EndedSession> ProcessTick(
             HashSet<string> currentApps,
             Dictionary<int, string> current,
-            UsageMetricsSampler metricsSampler)
+            UsageMetricsSampler metricsSampler,
+            bool isSystemIdle)
         {
             var endedSessions = new List<EndedSession>();
 
@@ -52,6 +55,8 @@ namespace TaskCore.Services
                     avgMem = metric.samples > 0 ? metric.totalMem / metric.samples : 0;
                 }
 
+                var isIdleSession = _appIdleState.TryGetValue(appName, out var wasIdle) && wasIdle;
+
                 endedSessions.Add(new EndedSession
                 {
                     AppName = appName,
@@ -64,12 +69,14 @@ namespace TaskCore.Services
                     PeakMem = peakMem,
                     AvgMem = avgMem,
                     MissCount = miss,
-                    PidsSeen = pids.Count
+                    PidsSeen = pids.Count,
+                    IsIdle = isIdleSession
                 });
 
                 _trackedApps.Remove(appName);
                 _appMetrics.Remove(appName);
                 _missCountByApp.Remove(appKey);
+                _appIdleState.Remove(appName);
             }
 
             // Check for new apps (first time we see any process for this app)
@@ -94,6 +101,7 @@ namespace TaskCore.Services
 
                     _trackedApps[appName] = (DateTime.Now, path, new HashSet<int> { pid });
                     _missCountByApp.Remove(appName.GetHashCode());
+                    _appIdleState[appName] = isSystemIdle;  // Track if started during idle
                 }
                 else
                 {
@@ -159,5 +167,6 @@ namespace TaskCore.Services
         public double AvgMem { get; set; }
         public int MissCount { get; set; }
         public int PidsSeen { get; set; }
+        public bool IsIdle { get; set; }  // True if session occurred during idle/locked time
     }
 }

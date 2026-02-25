@@ -293,7 +293,7 @@
                             <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
                                 <TextBlock Text="Weekly Overview" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
                                 <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
-                                         ToolTip="Total usage per day for the last 7 days. Colors: Green (&lt;2h), Yellow (2-5h), Red (&gt;5h). Purple = Today. Arrow = trend vs yesterday."/>
+                                         ToolTip="Total usage per day for the last 7 days. Colors: Green (&lt;4h), Yellow (4-5h), Red (&gt;9h). Purple = Today"/>
                             </StackPanel>
 
                             <!-- Legend -->

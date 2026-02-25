@@ -78,7 +78,7 @@ namespace TaskCore.Views {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/TaskCore;V4.0.1.2;component/views/detailsview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/TaskCore;V4.0.1.3;component/views/detailsview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\Views\DetailsView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

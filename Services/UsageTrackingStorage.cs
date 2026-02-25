@@ -40,7 +40,7 @@ namespace TaskCore.Services
             Directory.CreateDirectory(BaseDirectory);
         }
 
-        public static void AppendSession(string name, int pid, string? path, DateTime start, DateTime end, double peakCpu = 0, double avgCpu = 0, double peakMem = 0, double avgMem = 0)
+        public static void AppendSession(string name, int pid, string? path, DateTime start, DateTime end, double peakCpu = 0, double avgCpu = 0, double peakMem = 0, double avgMem = 0, bool isIdle = false)
         {
             var date = DateOnly.FromDateTime(start);
             var file = Path.Combine(BaseDirectory, $"sessions-{date:yyyy-MM-dd}.jsonl");
@@ -58,7 +58,8 @@ namespace TaskCore.Services
                     peakCpuPercent = Math.Round(peakCpu, 2),
                     averageCpuPercent = Math.Round(avgCpu, 2),
                     peakMemoryMB = Math.Round(peakMem, 2),
-                    averageMemoryMB = Math.Round(avgMem, 2)
+                    averageMemoryMB = Math.Round(avgMem, 2),
+                    isIdle = isIdle  // Track if session was during idle/locked time
                 };
 
                 var jsonLine = JsonSerializer.Serialize(session) + Environment.NewLine;

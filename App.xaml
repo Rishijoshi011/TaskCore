@@ -12,6 +12,7 @@
 
             <!-- Converters for Rules View -->
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
             <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
             <converters:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
             <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>

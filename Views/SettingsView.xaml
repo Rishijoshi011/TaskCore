@@ -128,12 +128,35 @@
                         </StackPanel>
                     </Grid>
 
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Minimal Watchdog Mode" Foreground="{StaticResource AccentBrush}" FontSize="13" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="Reduces memory usage to ~100MB by disabling Dashboard, Processes, Graphs, and Session Tracker.&#10;Only Rules and Settings tabs remain available.&#10;Use this mode if you only need the Rules Engine functionality."/>
+                            </StackPanel>
+                            <TextBlock Text="Disable heavy monitoring features to use only Rules Engine (~100MB RAM)" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding WatchdogMode}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
                     <Separator Margin="0 0 0 15"/>
 
-                    <TextBlock Text="Session Tracker - Process Filter" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0 0 0 15"/>
-                    <TextBlock Text="Choose which processes appear in the 'Currently Running' table" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0 -10 0 15"/>
+                    <TextBlock Text="Session Tracker - Process Filter" 
+                               FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0 0 0 15"
+                               Visibility="{Binding WatchdogMode, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                    <TextBlock Text="Choose which processes appear in the 'Currently Running' table" 
+                               Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0 -10 0 15"
+                               Visibility="{Binding WatchdogMode, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
 
-                    <StackPanel Margin="0 0 0 15">
+                    <StackPanel Margin="0 0 0 15"
+                                Visibility="{Binding WatchdogMode, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                         <RadioButton Content="Show all processes" 
                                      IsChecked="{Binding ProcessFilterMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=0}"
                                      Foreground="{StaticResource TextPrimary}" Margin="0 0 0 8"/>
@@ -150,8 +173,10 @@
                         <TextBlock Text="Show only apps you explicitly select below" Foreground="{StaticResource TextSecondary}" FontSize="10" Margin="20 -8 0 0"/>
                     </StackPanel>
 
-                    <!-- Selected Processes Management (visible when mode=2) -->
-                    <Grid Margin="0 0 0 15" IsEnabled="{Binding ProcessFilterMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=2}">
+                    <!-- Selected Processes Management (visible when mode=2 and not in watchdog mode) -->
+                    <Grid Margin="0 0 0 15" 
+                          IsEnabled="{Binding ProcessFilterMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=2}"
+                          Visibility="{Binding WatchdogMode, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>

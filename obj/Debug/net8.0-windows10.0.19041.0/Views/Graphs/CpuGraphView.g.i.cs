@@ -54,7 +54,7 @@ namespace TaskCore.Views.Graphs {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/TaskCore;V4.0.1.2;component/views/graphs/cpugraphview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/TaskCore;V4.0.2.0;component/views/graphs/cpugraphview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\Views\Graphs\CpuGraphView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

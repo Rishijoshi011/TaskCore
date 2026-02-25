@@ -163,6 +163,9 @@ namespace TaskCore.Services
         // Rules engine settings
         public List<Rule>? Rules { get; set; } = new();
         public bool RulesEngineEnabled { get; set; } = true;
+
+        // Minimal Watchdog Mode - only Rules and Settings tabs for low memory usage
+        public bool WatchdogMode { get; set; } = false;
     }
 
     public enum ProcessFilterMode
