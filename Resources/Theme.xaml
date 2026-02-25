@@ -246,9 +246,9 @@
 
 
 
-    <!-- Default Font -->
+    <!-- Default Font (Montserrat bundled with app) -->
 
-    <FontFamily x:Key="DefaultFont">Segoe UI</FontFamily>
+    <FontFamily x:Key="DefaultFont">pack://application:,,,/TaskCore;component/Resources/Fonts/Montserrat-Regular.ttf#Montserrat</FontFamily>
 
 
 

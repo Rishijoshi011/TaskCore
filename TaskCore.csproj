@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>4.4.0</Version>
-    <AssemblyVersion>4.0.4.0</AssemblyVersion>
-    <FileVersion>4.0.4.0</FileVersion>
+    <Version>4.4.1</Version>
+    <AssemblyVersion>4.0.4.1</AssemblyVersion>
+    <FileVersion>4.0.4.1</FileVersion>
     <ApplicationIcon>Resources\AppIcon\TaskCore_icon.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -18,6 +18,10 @@
 
   <ItemGroup>
     <None Remove="Resources\AppIcon\TaskCore_icon.ico" />
+    <None Remove="Resources\Fonts\Montserrat-Regular.ttf" />
+    <None Remove="Resources\Fonts\Montserrat-Medium.ttf" />
+    <None Remove="Resources\Fonts\Montserrat-SemiBold.ttf" />
+    <None Remove="Resources\Fonts\Montserrat-Bold.ttf" />
     <None Remove="Resources\Icons\Dashboard.png" />
     <None Remove="Resources\Icons\Dashboard_main.png" />
     <None Remove="Resources\Icons\Details.png" />
@@ -40,6 +44,10 @@
 
   <ItemGroup>
     <Resource Include="Resources\AppIcon\TaskCore_icon.ico" />
+    <Resource Include="Resources\Fonts\Montserrat-Regular.ttf" />
+    <Resource Include="Resources\Fonts\Montserrat-Medium.ttf" />
+    <Resource Include="Resources\Fonts\Montserrat-SemiBold.ttf" />
+    <Resource Include="Resources\Fonts\Montserrat-Bold.ttf" />
     <Resource Include="Resources\Icons\Dashboard.png" />
     <Resource Include="Resources\Icons\Dashboard_main.png" />
     <Resource Include="Resources\Icons\Details.png" />
