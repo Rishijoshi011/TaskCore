@@ -28,6 +28,17 @@ namespace TaskCore
             // even when in watchdog mode, so data is available when viewing dashboard later
             _ = UsageTrackingService.Instance;
 
+            if (settings.AutomationWatchdogEnabled)
+            {
+                try
+                {
+                    _ = AutomationWatchdogService.Instance;
+                }
+                catch
+                {
+                }
+            }
+
             // RulesService initializes itself via lazy singleton when needed
             // No need to force init - it only runs when rules exist
         }

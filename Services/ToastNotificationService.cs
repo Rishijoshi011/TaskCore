@@ -38,6 +38,7 @@ namespace TaskCore.Services
                 var titleText = $"{emoji} {title}: {ruleName}";
                 toastXml.LoadXml($"""
                     <toast>
+                        <audio silent="true"/>
                         <visual>
                             <binding template="ToastText02">
                                 <text id="1">{EscapeXml(titleText)}</text>

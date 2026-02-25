@@ -517,7 +517,7 @@ namespace TaskCore.Services
                     var player = new System.Media.SoundPlayer(path);
                     player.Play();
                 }
-                else
+                else if (settings.SoundMode != "Custom")
                 {
                     System.Media.SystemSounds.Beep.Play();
                 }

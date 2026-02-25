@@ -40,6 +40,8 @@
             <!-- Title -->
             <RowDefinition Height="Auto"/>
             <!-- Enable toggle & Add button + Sound controls -->
+            <RowDefinition Height="Auto"/>
+            <!-- Search & Filters -->
             <RowDefinition Height="*"/>
             <!-- Rules list -->
             <RowDefinition Height="Auto"/>
@@ -117,8 +119,80 @@
             </StackPanel>
         </Grid>
 
+        <!-- SEARCH & FILTERS -->
+        <Grid Grid.Row="2" Margin="0 0 0 10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Search Box -->
+            <Border Grid.Column="0" 
+                    Background="{StaticResource BackgroundSecondary}"
+                    CornerRadius="4"
+                    BorderBrush="{StaticResource BackgroundCard}"
+                    BorderThickness="1"
+                    Padding="8 4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" 
+                               Text="🔍" 
+                               FontSize="14" 
+                               Foreground="{StaticResource TextSecondary}"
+                               VerticalAlignment="Center"
+                               Margin="0 0 8 0"/>
+                    <TextBox Grid.Column="1"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Foreground="{StaticResource TextPrimary}"
+                             VerticalAlignment="Center"
+                             FontSize="13"
+                             Padding="0"
+                             ToolTip="Search rules by name, process, condition, or action"/>
+                    <Button Grid.Column="2"
+                            Content="✕"
+                            Command="{Binding ClearSearchCommand}"
+                            Visibility="{Binding SearchText, Converter={StaticResource StringToVisibilityConverter}}"
+                            Background="Transparent"
+                            Foreground="{StaticResource TextSecondary}"
+                            BorderThickness="0"
+                            FontSize="12"
+                            Padding="4 0"
+                            Cursor="Hand"/>
+                </Grid>
+            </Border>
+
+            <!-- Active Only Toggle -->
+            <CheckBox Grid.Column="1"
+                      Content="Active only"
+                      IsChecked="{Binding ShowActiveOnly, Mode=TwoWay}"
+                      Foreground="{StaticResource TextSecondary}"
+                      FontSize="12"
+                      VerticalAlignment="Center"
+                      Margin="15 0"/>
+
+            <!-- Rules Count -->
+            <TextBlock Grid.Column="2"
+                       VerticalAlignment="Center"
+                       FontSize="12"
+                       Foreground="{StaticResource TextSecondary}">
+                <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0} / {1} rules">
+                        <Binding Path="FilteredRulesCount"/>
+                        <Binding Path="RulesCount"/>
+                    </MultiBinding>
+                </TextBlock.Text>
+            </TextBlock>
+        </Grid>
+
         <!-- RULES LIST -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 Background="{StaticResource BackgroundSecondary}"
                 CornerRadius="8"
                 Padding="0"
@@ -126,16 +200,21 @@
                 BorderThickness="1">
 
             <Grid>
-                <!-- Empty state -->
+                <!-- Empty state - no rules at all -->
                 <TextBlock Text="No rules configured. Click 'Add New Rule' to create one."
                            Foreground="{StaticResource TextSecondary}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
-                           Visibility="{Binding Rules.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+                           Visibility="{Binding HasRules, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
 
-                <!-- Rules List -->
+                <!-- No search results state -->
+                <TextBlock Text="No rules match your search."
+                           Foreground="{StaticResource TextSecondary}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding NoRulesFound, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Rules}" Padding="8">
+                    <ItemsControl ItemsSource="{Binding FilteredRules}" Padding="8">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="{StaticResource BackgroundPrimary}"
@@ -236,7 +315,7 @@
         </Border>
 
         <!-- EVENTS HEADER -->
-        <Grid Grid.Row="3" Margin="0 20 0 10">
+        <Grid Grid.Row="4" Margin="0 20 0 10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -264,7 +343,7 @@
         </Grid>
 
         <!-- EVENTS LIST -->
-        <Border Grid.Row="4"
+        <Border Grid.Row="5"
                 Background="{StaticResource BackgroundSecondary}"
                 CornerRadius="8"
                 Padding="0"
@@ -325,7 +404,7 @@
         </Border>
 
         <!-- EDIT RULE MODAL -->
-        <Border Grid.Row="0" Grid.RowSpan="5"
+        <Border Grid.Row="0" Grid.RowSpan="6"
                 Background="#80000000"
                 Visibility="{Binding IsEditingRule, Converter={StaticResource BoolToVisibilityConverter}, FallbackValue=Collapsed}">
             <Border Background="{StaticResource BackgroundPrimary}"

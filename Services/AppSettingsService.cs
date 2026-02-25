@@ -166,6 +166,27 @@ namespace TaskCore.Services
 
         // Minimal Watchdog Mode - only Rules and Settings tabs for low memory usage
         public bool WatchdogMode { get; set; } = false;
+
+        public bool AutomationWatchdogEnabled { get; set; } = false;
+
+        public bool AutomationRestartExplorerEnabled { get; set; } = false;
+        public int AutomationExplorerNotRespondingSeconds { get; set; } = 10;
+        public int AutomationExplorerRestartCooldownSeconds { get; set; } = 120;
+
+        public bool AutomationCpuMitigationEnabled { get; set; } = false;
+        public int AutomationCpuOffenderThresholdPercent { get; set; } = 95;
+        public int AutomationCpuOffenderSustainSeconds { get; set; } = 10;
+        public int AutomationCpuKillAfterSeconds { get; set; } = 10;
+        public int AutomationCpuActionCooldownSeconds { get; set; } = 60;
+
+        public bool AutomationEdgeWebViewCleanupEnabled { get; set; } = false;
+        public int AutomationEdgeWebViewMaxInstances { get; set; } = 80;
+        public int AutomationEdgeWebViewSoftLimitInstances { get; set; } = 40;
+        public int AutomationEdgeWebViewHardLimitInstances { get; set; } = 60;
+        public int AutomationEdgeWebViewPanicLimitInstances { get; set; } = 70;
+        public int AutomationEdgeWebViewIdleSeconds { get; set; } = 60;
+        public int AutomationEdgeWebViewCleanupCooldownSeconds { get; set; } = 30;
+        public int AutomationEdgeWebViewMaxKillsPerRun { get; set; } = 3;
     }
 
     public enum ProcessFilterMode

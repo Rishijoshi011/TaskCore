@@ -39,6 +39,18 @@ namespace TaskCore.ViewModels
         private bool _watchdogModeChanging = false;
 
         [ObservableProperty]
+        private bool automationWatchdogEnabled;
+
+        [ObservableProperty]
+        private bool automationRestartExplorerEnabled;
+
+        [ObservableProperty]
+        private bool automationCpuMitigationEnabled;
+
+        [ObservableProperty]
+        private bool automationEdgeWebViewCleanupEnabled;
+
+        [ObservableProperty]
         private string customAlertSoundPath = string.Empty;
 
         [ObservableProperty]
@@ -99,6 +111,10 @@ namespace TaskCore.ViewModels
             RefreshIntervalMs = _settings.RefreshIntervalMs;
             MinimizeToTray = _settings.MinimizeToTray;
             WatchdogMode = _settings.WatchdogMode;
+            AutomationWatchdogEnabled = _settings.AutomationWatchdogEnabled;
+            AutomationRestartExplorerEnabled = _settings.AutomationRestartExplorerEnabled;
+            AutomationCpuMitigationEnabled = _settings.AutomationCpuMitigationEnabled;
+            AutomationEdgeWebViewCleanupEnabled = _settings.AutomationEdgeWebViewCleanupEnabled;
             CustomAlertSoundPath = _settings.CustomAlertSoundPath ?? string.Empty;
 
             try
@@ -221,6 +237,38 @@ namespace TaskCore.ViewModels
             AppSettingsService.Save(_settings);
         }
 
+        partial void OnAutomationWatchdogEnabledChanged(bool value)
+        {
+            _settings.AutomationWatchdogEnabled = value;
+            AppSettingsService.Save(_settings);
+
+            try
+            {
+                AutomationWatchdogService.Instance.StartOrStop();
+            }
+            catch
+            {
+            }
+        }
+
+        partial void OnAutomationRestartExplorerEnabledChanged(bool value)
+        {
+            _settings.AutomationRestartExplorerEnabled = value;
+            AppSettingsService.Save(_settings);
+        }
+
+        partial void OnAutomationCpuMitigationEnabledChanged(bool value)
+        {
+            _settings.AutomationCpuMitigationEnabled = value;
+            AppSettingsService.Save(_settings);
+        }
+
+        partial void OnAutomationEdgeWebViewCleanupEnabledChanged(bool value)
+        {
+            _settings.AutomationEdgeWebViewCleanupEnabled = value;
+            AppSettingsService.Save(_settings);
+        }
+
         partial void OnWatchdogModeChanging(bool value)
         {
             // Prevent re-entrancy
@@ -339,17 +387,12 @@ namespace TaskCore.ViewModels
                 try
                 {
                     var sourcePath = dialog.FileName;
-                    if (!string.Equals(Path.GetExtension(sourcePath), ".wav", StringComparison.OrdinalIgnoreCase))
-                    {
-                        CustomAlertSoundPath = sourcePath;
-                        return;
-                    }
-
-                    var appDir = AppDomain.CurrentDomain.BaseDirectory;
-                    var soundsDir = Path.Combine(appDir, "Sounds");
+                    var soundsDir = Path.Combine(AppSettingsService.BaseDirectory, "Sounds");
                     Directory.CreateDirectory(soundsDir);
 
-                    var destPath = Path.Combine(soundsDir, "alert_sound.wav");
+                    var ext = Path.GetExtension(sourcePath);
+                    if (string.IsNullOrWhiteSpace(ext)) ext = ".wav";
+                    var destPath = Path.Combine(soundsDir, $"alert_sound{ext}");
                     File.Copy(sourcePath, destPath, overwrite: true);
 
                     CustomAlertSoundPath = destPath;

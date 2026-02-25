@@ -138,15 +138,90 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Minimal Watchdog Mode" Foreground="{StaticResource AccentBrush}" FontSize="13" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                 <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
-                                           ToolTip="Reduces memory usage to ~100MB by disabling Dashboard, Processes, Graphs, and Session Tracker.&#10;Only Rules and Settings tabs remain available.&#10;Use this mode if you only need the Rules Engine functionality."/>
+                                           ToolTip="Reduces memory usage by disabling Dashboard, Processes, Graphs, and Session Tracker.&#10;Only Rules and Settings tabs remain available.&#10;Use this mode if you only need the Rules Engine functionality."/>
                             </StackPanel>
-                            <TextBlock Text="Disable heavy monitoring features to use only Rules Engine (~100MB RAM)" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                            <TextBlock Text="Disable heavy monitoring features to use only Rules Engine" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                         </StackPanel>
 
                         <ToggleButton Grid.Column="1" IsChecked="{Binding WatchdogMode}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
                     </Grid>
 
                     <Separator Margin="0 0 0 15"/>
+
+                    <TextBlock Text="Automation Watchdog"
+                               FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0 0 0 15"/>
+
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Enable Automation Watchdog" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="Runs background automation to recover from freezes/high CPU and reduce runaway processes. All actions are logged."/>
+                            </StackPanel>
+                            <TextBlock Text="Auto-recovery actions (always logged)" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutomationWatchdogEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 10" IsEnabled="{Binding AutomationWatchdogEnabled}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Explorer freeze → restart" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="If explorer.exe is not responding, TaskCore will restart it. All actions are logged."/>
+                            </StackPanel>
+                            <TextBlock Text="Restarts explorer.exe when it stops responding" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutomationRestartExplorerEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 10" IsEnabled="{Binding AutomationWatchdogEnabled}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="CPU stuck at 100% → lower priority then kill" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="If a single process stays near 100% CPU for ~10s, TaskCore lowers its priority. If it stays stuck, TaskCore kills it. All actions are logged."/>
+                            </StackPanel>
+                            <TextBlock Text="Auto-mitigates CPU offenders" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutomationCpuMitigationEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 15" IsEnabled="{Binding AutomationWatchdogEnabled}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Edge WebView2 extras → kill" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="If msedgewebview2.exe spawns too many instances, TaskCore kills extras. All actions are logged."/>
+                            </StackPanel>
+                            <TextBlock Text="Kills extra msedgewebview2.exe instances when count is too high" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutomationEdgeWebViewCleanupEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
 
                     <TextBlock Text="Session Tracker - Process Filter" 
                                FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0 0 0 15"

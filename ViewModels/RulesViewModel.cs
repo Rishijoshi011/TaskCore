@@ -16,7 +16,21 @@ namespace TaskCore.ViewModels
         private ObservableCollection<Rule> rules = new();
 
         [ObservableProperty]
-        private ObservableCollection<RuleTriggerEvent> recentEvents = new();
+        private ObservableCollection<Rule> filteredRules = new();
+
+        [ObservableProperty]
+        private string searchText = string.Empty;
+
+        public bool HasRules => Rules?.Count > 0;
+
+        public bool NoRulesFound => !string.IsNullOrWhiteSpace(SearchText) && FilteredRules?.Count == 0;
+
+        public int RulesCount => Rules?.Count ?? 0;
+
+        public int FilteredRulesCount => FilteredRules?.Count ?? 0;
+
+        [ObservableProperty]
+        private bool showActiveOnly;
 
         [ObservableProperty]
         private bool rulesEngineEnabled;
@@ -39,6 +53,9 @@ namespace TaskCore.ViewModels
         [ObservableProperty]
         private bool isEditingRule;
 
+        [ObservableProperty]
+        private ObservableCollection<RuleTriggerEvent> recentEvents = new();
+
         // Commands
         public ICommand AddRuleCommand { get; }
         public ICommand SaveRuleCommand { get; }
@@ -50,6 +67,7 @@ namespace TaskCore.ViewModels
         public ICommand ClearEventsCommand { get; }
         public ICommand BrowseCustomSoundCommand { get; }
         public ICommand CopyLogsPathCommand { get; }
+        public ICommand ClearSearchCommand { get; }
 
         // Editing properties
         [ObservableProperty]
@@ -104,6 +122,7 @@ namespace TaskCore.ViewModels
             ClearEventsCommand = new RelayCommand(ClearEvents);
             BrowseCustomSoundCommand = new RelayCommand(BrowseCustomSound);
             CopyLogsPathCommand = new RelayCommand(CopyLogsPathToClipboard);
+            ClearSearchCommand = new RelayCommand(ClearSearch);
 
             LoadRules();
             LoadRecentEvents();
@@ -136,7 +155,13 @@ namespace TaskCore.ViewModels
                             System.Windows.MessageBoxImage.Warning);
                         return;
                     }
-                    _settings.CustomAlertSoundPath = sourcePath;
+
+                    var soundsDir = System.IO.Path.Combine(AppSettingsService.BaseDirectory, "Sounds");
+                    System.IO.Directory.CreateDirectory(soundsDir);
+                    var destPath = System.IO.Path.Combine(soundsDir, "alert_sound.wav");
+                    System.IO.File.Copy(sourcePath, destPath, overwrite: true);
+
+                    _settings.CustomAlertSoundPath = destPath;
                     AppSettingsService.Save(_settings);
                 }
                 catch
@@ -145,10 +170,53 @@ namespace TaskCore.ViewModels
             }
         }
 
+        partial void OnSearchTextChanged(string value)
+        {
+            UpdateFilteredRules();
+        }
+
+        partial void OnShowActiveOnlyChanged(bool value)
+        {
+            UpdateFilteredRules();
+        }
+
+        partial void OnRulesChanged(ObservableCollection<Rule> value)
+        {
+            UpdateFilteredRules();
+            OnPropertyChanged(nameof(HasRules));
+            OnPropertyChanged(nameof(RulesCount));
+        }
+
+        private void UpdateFilteredRules()
+        {
+            FilteredRules.Clear();
+            foreach (var rule in Rules)
+            {
+                if (ShowActiveOnly && !rule.IsEnabled)
+                    continue;
+
+                if (!string.IsNullOrWhiteSpace(SearchText))
+                {
+                    var search = SearchText.Trim().ToLowerInvariant();
+                    var matches = rule.Name.ToLowerInvariant().Contains(search) ||
+                           rule.TargetProcessName?.ToLowerInvariant().Contains(search) == true ||
+                           rule.ConditionType.ToString().ToLowerInvariant().Contains(search) ||
+                           rule.ActionType.ToString().ToLowerInvariant().Contains(search);
+                    if (!matches)
+                        continue;
+                }
+
+                FilteredRules.Add(rule);
+            }
+            OnPropertyChanged(nameof(NoRulesFound));
+            OnPropertyChanged(nameof(FilteredRulesCount));
+        }
+
         private void LoadRules()
         {
             var rulesList = _settings.Rules ?? new System.Collections.Generic.List<Rule>();
             Rules = new ObservableCollection<Rule>(rulesList);
+            UpdateFilteredRules();
         }
 
         private void LoadRecentEvents()
@@ -259,6 +327,11 @@ namespace TaskCore.ViewModels
 
             IsEditingRule = false;
             SelectedRule = null;
+
+            // Refresh filtered view
+            UpdateFilteredRules();
+            OnPropertyChanged(nameof(HasRules));
+            OnPropertyChanged(nameof(RulesCount));
         }
 
         private void CancelEdit()
@@ -289,6 +362,12 @@ namespace TaskCore.ViewModels
 
             // Reset rule states
             RulesService.Instance.ResetStates();
+
+            // Refresh filtered view
+            UpdateFilteredRules();
+            OnPropertyChanged(nameof(HasRules));
+            OnPropertyChanged(nameof(RulesCount));
+            OnPropertyChanged(nameof(NoRulesFound));
         }
 
         private void ToggleRuleEnabled(Rule? rule)
@@ -305,6 +384,10 @@ namespace TaskCore.ViewModels
 
             // Reset rule states
             RulesService.Instance.ResetStates();
+
+            // Refresh filtered view
+            UpdateFilteredRules();
+            OnPropertyChanged(nameof(NoRulesFound));
         }
 
         private void RefreshEvents()
@@ -315,6 +398,11 @@ namespace TaskCore.ViewModels
         private void ClearEvents()
         {
             RecentEvents.Clear();
+        }
+
+        private void ClearSearch()
+        {
+            SearchText = string.Empty;
         }
 
         private void CopyLogsPathToClipboard()

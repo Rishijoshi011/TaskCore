@@ -1,5 +1,5 @@
 ﻿TaskCore
-4.0.2.0
+4.0.3.0
 
 winexe
 C#
@@ -12,7 +12,7 @@ TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS10_0_19041_0;NET5_0_OR_GREATER;
 C:\Users\rishi.joshi\temp_pro\TaskCore\App.xaml
 16-1616778328
 
-761072874239
+78-1552706122
 233594489305
 MainWindow.xaml;Resources\Theme.xaml;Views\DashboardView.xaml;Views\DetailsView.xaml;Views\GraphsView.xaml;Views\Graphs\CpuGraphView.xaml;Views\Graphs\DiskCardView.xaml;Views\Graphs\DiskGraphView.xaml;Views\Graphs\GpuCardView.xaml;Views\Graphs\GpuGraphView.xaml;Views\Graphs\MemoryGraphView.xaml;Views\Graphs\NetworkCardView.xaml;Views\Graphs\NetworkGraphView.xaml;Views\ProcessesView.xaml;Views\RulesView.xaml;Views\SettingsView.xaml;
 

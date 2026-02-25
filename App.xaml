@@ -20,6 +20,7 @@
             <converters:EnumToDescriptionConverter x:Key="EnumToDescriptionConverter"/>
             <converters:ConditionToVisibilityConverter x:Key="ConditionToVisibilityConverter"/>
             <converters:ActionToVisibilityConverter x:Key="ActionToVisibilityConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 
