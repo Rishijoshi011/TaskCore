@@ -8,7 +8,7 @@
 
     <UserControl.Resources>
         <Style x:Key="ActionButton" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Padding" Value="12 8"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -55,7 +55,7 @@
                    Grid.Row="0"
                    FontSize="28"
                    FontWeight="Bold"
-                   Foreground="{StaticResource AccentBrush}"
+                   Foreground="{DynamicResource AccentBrush}"
                    Margin="0 0 0 20"/>
 
         <!-- ENABLE TOGGLE & SOUND OPTIONS -->
@@ -249,7 +249,7 @@
                                             </TextBlock>
                                             <TextBlock Text="{Binding GetConditionDescription}"
                                                        FontSize="9"
-                                                       Foreground="{StaticResource AccentBrush}"
+                                                       Foreground="{DynamicResource AccentBrush}"
                                                        Margin="0 1 0 0"/>
                                             <TextBlock Text="{Binding GetActionDescription}"
                                                        FontSize="9"
@@ -257,7 +257,7 @@
                                                        Margin="0 1 0 0"/>
                                             <TextBlock Text="{Binding GetNotificationModeDescription}"
                                                        FontSize="9"
-                                                       Foreground="{StaticResource AccentBrush}"
+                                                       Foreground="{DynamicResource AccentBrush}"
                                                        Margin="0 1 0 0"
                                                        FontStyle="Italic"/>
                                         </StackPanel>
@@ -392,7 +392,7 @@
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding ActionResult}"
                                                    FontSize="10"
-                                                   Foreground="{StaticResource AccentBrush}"
+                                                   Foreground="{DynamicResource AccentBrush}"
                                                    FontStyle="Italic"/>
                                     </Grid>
                                 </Border>
@@ -426,7 +426,7 @@
                                    Text="{Binding SelectedRule, Converter={StaticResource NullToTextConverter}, ConverterParameter='Edit Rule|New Rule'}"
                                    FontSize="20"
                                    FontWeight="Bold"
-                                   Foreground="{StaticResource AccentBrush}"
+                                   Foreground="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Center"/>
                         
                         <Button Grid.Column="1"

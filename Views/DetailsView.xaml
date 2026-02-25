@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="TaskCore.Views.DetailsView"
+<UserControl x:Class="TaskCore.Views.DetailsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:TaskCore.ViewModels"
@@ -23,7 +23,7 @@
                 <TextBlock Text="Session Tracker"
                            FontSize="26"
                            FontWeight="Bold"
-                           Foreground="{StaticResource AccentBrush}"/>
+                           Foreground="{DynamicResource AccentBrush}"/>
                 <Control Style="{StaticResource InfoIcon}" Margin="10 0 0 0" VerticalAlignment="Center"
                          ToolTip="Track application usage over time.&#10;View session history, export data, and analyze app activity."/>
             </StackPanel>
@@ -75,7 +75,7 @@
                     <!-- Filter Mode Display -->
                     <StackPanel Orientation="Horizontal" Margin="0 8 0 0">
                         <TextBlock Text="Filter: " Foreground="{StaticResource TextSecondary}" FontSize="11"/>
-                        <TextBlock Text="{Binding FilterModeText}" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="SemiBold" Margin="4 0 8 0"/>
+                        <TextBlock Text="{Binding FilterModeText}" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="SemiBold" Margin="4 0 8 0"/>
                         <TextBlock Text="[Check Out Settings For More]" Foreground="{StaticResource TextSecondary}" FontSize="11" Cursor="Hand" ToolTip="Click to open Settings">
                             <TextBlock.InputBindings>
                                 <MouseBinding MouseAction="LeftClick" Command="{Binding OpenSettingsCommand}"/>
@@ -143,14 +143,14 @@
 
             <!-- Empty State -->
             <Border Background="{StaticResource BackgroundCard}"
-                    BorderBrush="{StaticResource AccentBrush}"
+                    BorderBrush="{DynamicResource AccentBrush}"
                     BorderThickness="1"
                     CornerRadius="10"
                     Padding="40"
                     Margin="0 0 0 14"
                     Visibility="{Binding AppSummaries.Count, Converter={StaticResource BoolToVisibility}, ConverterParameter=Inverted}">
                 <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Margin="0 0 0 16"/>
+                    <TextBlock Text="??" FontSize="48" HorizontalAlignment="Center" Margin="0 0 0 16"/>
                     <TextBlock Text="No Session Data Yet" 
                                Foreground="{StaticResource TextPrimary}" 
                                FontSize="18" 
@@ -173,7 +173,6 @@
             </StackPanel>
 
             <Border Background="{StaticResource BackgroundCard}"
-                    BorderBrush="#339A4DFF"
                     BorderThickness="4"
                     CornerRadius="10"
                     SnapsToDevicePixels="True"
@@ -282,7 +281,6 @@
             </StackPanel>
 
             <Border Background="{StaticResource BackgroundCard}"
-                    BorderBrush="#339A4DFF"
                     BorderThickness="4"
                     CornerRadius="10"
                     SnapsToDevicePixels="True"
@@ -383,7 +381,6 @@
             </StackPanel>
 
             <Border Background="{StaticResource BackgroundCard}"
-                    BorderBrush="#339A4DFF"
                     BorderThickness="4"
                     CornerRadius="10"
                     SnapsToDevicePixels="True"

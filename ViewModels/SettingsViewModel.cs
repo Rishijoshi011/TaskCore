@@ -54,6 +54,9 @@ namespace TaskCore.ViewModels
         private string customAlertSoundPath = string.Empty;
 
         [ObservableProperty]
+        private string accentColor = "#FF9A4DFF";
+
+        [ObservableProperty]
         private string copyStatusText = string.Empty;
 
         private CancellationTokenSource? _copyCts;
@@ -116,6 +119,7 @@ namespace TaskCore.ViewModels
             AutomationCpuMitigationEnabled = _settings.AutomationCpuMitigationEnabled;
             AutomationEdgeWebViewCleanupEnabled = _settings.AutomationEdgeWebViewCleanupEnabled;
             CustomAlertSoundPath = _settings.CustomAlertSoundPath ?? string.Empty;
+            AccentColor = _settings.AccentColor ?? "#FF9A4DFF";
 
             try
             {
@@ -317,10 +321,26 @@ namespace TaskCore.ViewModels
             AppSettingsService.Save(_settings);
         }
 
+        partial void OnAccentColorChanged(string value)
+        {
+            _settings.AccentColor = value;
+            AppSettingsService.Save(_settings);
+            ThemeService.ApplyAccentColor(value);
+        }
+
         [RelayCommand]
         private void RelaunchAsAdmin()
         {
             ElevationService.TryRelaunchAsAdminAndExit();
+        }
+
+        [RelayCommand]
+        private void SetPresetAccentColor(string? colorHex)
+        {
+            if (!string.IsNullOrWhiteSpace(colorHex))
+            {
+                AccentColor = colorHex;
+            }
         }
 
         [RelayCommand]

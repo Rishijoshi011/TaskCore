@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="TaskCore.Views.SettingsView"
+<UserControl x:Class="TaskCore.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -28,7 +28,7 @@
             <TextBlock Text="Settings"
                        FontSize="28"
                        FontWeight="Bold"
-                       Foreground="{StaticResource AccentBrush}"/>
+                       Foreground="{DynamicResource AccentBrush}"/>
 
             <TextBlock Text="{Binding AppVersion}"
                        FontSize="12"
@@ -136,7 +136,7 @@
 
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Minimal Watchdog Mode" Foreground="{StaticResource AccentBrush}" FontSize="13" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                <TextBlock Text="Minimal Watchdog Mode" Foreground="{DynamicResource AccentBrush}" FontSize="13" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                 <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
                                            ToolTip="Reduces memory usage by disabling Dashboard, Processes, Graphs, and Session Tracker.&#10;Only Rules and Settings tabs remain available.&#10;Use this mode if you only need the Rules Engine functionality."/>
                             </StackPanel>
@@ -145,6 +145,175 @@
 
                         <ToggleButton Grid.Column="1" IsChecked="{Binding WatchdogMode}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
                     </Grid>
+
+                    <Separator Margin="0 0 0 15"/>
+
+                    <TextBlock Text="Theme" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0 0 0 15"/>
+
+                    <StackPanel Margin="0 0 0 15">
+                        <TextBlock Text="Accent Color" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0 0 0 8"/>
+                        <TextBlock Text="Choose your preferred accent color for buttons, highlights, and active states" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0 -4 0 10"/>
+
+                        <!-- Color Swatches -->
+                        <WrapPanel Margin="0 0 0 10">
+                            <Button Width="32" Height="32" Margin="0 0 8 8"
+                                    Background="#FF9A4DFF" BorderBrush="{StaticResource TextSecondary}" BorderThickness="1"
+                                    ToolTip="Purple (Default)"
+                                    Command="{Binding SetPresetAccentColorCommand}" CommandParameter="#FF9A4DFF">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Width="32" Height="32" Margin="0 0 8 8"
+                                    Background="#FF00D4AA" BorderBrush="{StaticResource TextSecondary}" BorderThickness="1"
+                                    ToolTip="Cyan"
+                                    Command="{Binding SetPresetAccentColorCommand}" CommandParameter="#FF00D4AA">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Width="32" Height="32" Margin="0 0 8 8"
+                                    Background="#FFFF4D9A" BorderBrush="{StaticResource TextSecondary}" BorderThickness="1"
+                                    ToolTip="Pink"
+                                    Command="{Binding SetPresetAccentColorCommand}" CommandParameter="#FFFF4D9A">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Width="32" Height="32" Margin="0 0 8 8"
+                                    Background="#FFFF4D4D" BorderBrush="{StaticResource TextSecondary}" BorderThickness="1"
+                                    ToolTip="Red"
+                                    Command="{Binding SetPresetAccentColorCommand}" CommandParameter="#FFFF4D4D">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Width="32" Height="32" Margin="0 0 8 8"
+                                    Background="#FF4DFF4D" BorderBrush="{StaticResource TextSecondary}" BorderThickness="1"
+                                    ToolTip="Green"
+                                    Command="{Binding SetPresetAccentColorCommand}" CommandParameter="#FF4DFF4D">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Width="32" Height="32" Margin="0 0 8 8"
+                                    Background="#FFFFA500" BorderBrush="{StaticResource TextSecondary}" BorderThickness="1"
+                                    ToolTip="Orange"
+                                    Command="{Binding SetPresetAccentColorCommand}" CommandParameter="#FFFFA500">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Width="32" Height="32" Margin="0 0 8 8"
+                                    Background="#FF4D9AFF" BorderBrush="{StaticResource TextSecondary}" BorderThickness="1"
+                                    ToolTip="Blue"
+                                    Command="{Binding SetPresetAccentColorCommand}" CommandParameter="#FF4D9AFF">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Width="32" Height="32" Margin="0 0 8 8"
+                                    Background="#FFFFD700" BorderBrush="{StaticResource TextSecondary}" BorderThickness="1"
+                                    ToolTip="Gold"
+                                    Command="{Binding SetPresetAccentColorCommand}" CommandParameter="#FFFFD700">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </WrapPanel>
+
+                        <!-- Custom Color Input -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Custom Hex:" Foreground="{StaticResource TextSecondary}" FontSize="12" VerticalAlignment="Center" Margin="0 0 10 0"/>
+                            <TextBox Grid.Column="1" Text="{Binding AccentColor, UpdateSourceTrigger=PropertyChanged}" 
+                                     Background="{StaticResource BackgroundSecondary}" Foreground="{StaticResource TextPrimary}" 
+                                     BorderBrush="{StaticResource BackgroundCard}" Padding="8 4" FontSize="12"/>
+                        </Grid>
+                    </StackPanel>
 
                     <Separator Margin="0 0 0 15"/>
 
@@ -177,7 +346,7 @@
 
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Explorer freeze → restart" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text="Explorer freeze ? restart" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
                                 <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
                                            ToolTip="If explorer.exe is not responding, TaskCore will restart it. All actions are logged."/>
                             </StackPanel>
@@ -195,7 +364,7 @@
 
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="CPU stuck at 100% → lower priority then kill" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text="CPU stuck at 100% ? lower priority then kill" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
                                 <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
                                            ToolTip="If a single process stays near 100% CPU for ~10s, TaskCore lowers its priority. If it stays stuck, TaskCore kills it. All actions are logged."/>
                             </StackPanel>
@@ -213,7 +382,7 @@
 
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Edge WebView2 extras → kill" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text="Edge WebView2 extras ? kill" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
                                 <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
                                            ToolTip="If msedgewebview2.exe spawns too many instances, TaskCore kills extras. All actions are logged."/>
                             </StackPanel>
@@ -311,7 +480,7 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
-                                    <TextBlock Text="Selected to Show" Foreground="{StaticResource AccentBrush}" FontSize="11" Margin="8 6" Grid.Row="0" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Selected to Show" Foreground="{DynamicResource AccentBrush}" FontSize="11" Margin="8 6" Grid.Row="0" FontWeight="SemiBold"/>
                                     <ListBox Grid.Row="1"
                                              ItemsSource="{Binding SelectedProcesses}"
                                              SelectedItem="{Binding SelectedProcessToRemove}"
@@ -325,7 +494,7 @@
                                                 <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                                                 <Style.Triggers>
                                                     <Trigger Property="IsSelected" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                                                         <Setter Property="Foreground" Value="White"/>
                                                     </Trigger>
                                                 </Style.Triggers>

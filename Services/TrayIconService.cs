@@ -115,7 +115,11 @@ namespace TaskCore.Services
                     tooltip = tooltip.Substring(0, 60) + "...";
                 }
 
-                _notifyIcon.Text = tooltip;
+                // Double-check null to avoid race condition with Dispose
+                if (_notifyIcon != null)
+                {
+                    _notifyIcon.Text = tooltip;
+                }
             }
             catch
             {

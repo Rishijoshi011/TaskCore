@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="TaskCore.Views.GraphsView"
+<UserControl x:Class="TaskCore.Views.GraphsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
@@ -17,7 +17,7 @@
         <TextBlock Text="Performance"
                    FontSize="26"
                    FontWeight="Bold"
-                   Foreground="{StaticResource AccentBrush}"
+                   Foreground="{DynamicResource AccentBrush}"
                    Margin="0 0 0 0"/>
 
         <!-- SUB-TABS (like Task Manager) -->

@@ -13,11 +13,11 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("TaskCore")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("4.0.3.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("4.3.0+92b1e89b76a6e881a558cf2a74bac56a0005c4fc")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("4.0.4.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("4.4.0+cfcce0c5cfe9baddda58fd718db44e5cdbbdc70a")]
 [assembly: System.Reflection.AssemblyProductAttribute("TaskCore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TaskCore")]
-[assembly: System.Reflection.AssemblyVersionAttribute("4.0.3.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("4.0.4.0")]
 [assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows10.0.19041.0")]
 [assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("Windows10.0.19041.0")]
 

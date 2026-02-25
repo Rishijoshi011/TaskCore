@@ -68,7 +68,7 @@
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="border" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                        <Setter TargetName="border" Property="Background" Value="{DynamicResource AccentBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -83,7 +83,7 @@
                     <!-- TaskCore Title -->
                     <TextBlock Text="TaskCore"
                                Grid.Column="1"
-                               Foreground="{StaticResource AccentBrush}"
+                               Foreground="{DynamicResource AccentBrush}"
                                FontSize="16"
                                FontWeight="Medium"
                                VerticalAlignment="Center"/>

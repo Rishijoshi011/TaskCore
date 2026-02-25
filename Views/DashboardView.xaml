@@ -26,7 +26,7 @@
                     <TextBlock Text="Dashboard"
                                FontSize="26"
                                FontWeight="Bold"
-                               Foreground="{StaticResource AccentBrush}"/>
+                               Foreground="{DynamicResource AccentBrush}"/>
                     <Control Style="{StaticResource InfoIcon}" Margin="10 0 0 0" VerticalAlignment="Center"
                              ToolTip="At-a-glance overview of daily usage, peaks, alerts, and trends."/>
                 </StackPanel>
@@ -35,7 +35,7 @@
 
             <!-- Empty State -->
             <Border Background="{StaticResource BackgroundCard}"
-                    BorderBrush="{StaticResource AccentBrush}"
+                    BorderBrush="{DynamicResource AccentBrush}"
                     BorderThickness="1"
                     CornerRadius="10"
                     Padding="40"
@@ -87,7 +87,7 @@
                 <Border Grid.Column="4" Style="{StaticResource CardPanel}" Padding="14" MinHeight="88" Cursor="Hand">
                     <StackPanel>
                         <TextBlock Text="Top Offender" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
-                        <TextBlock Text="{Binding TopOffenderName}" Foreground="{StaticResource AccentBrush}" FontSize="16" FontWeight="SemiBold" Margin="0 6 0 0" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding TopOffenderName}" Foreground="{DynamicResource AccentBrush}" FontSize="16" FontWeight="SemiBold" Margin="0 6 0 0" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding TopOffenderDetail}" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                     </StackPanel>
                     <Border.InputBindings>
@@ -304,7 +304,7 @@
                                 <TextBlock Text="Med" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0"/>
                                 <Ellipse Width="8" Height="8" Fill="#F87171" Margin="0 0 4 0"/>
                                 <TextBlock Text="Heavy" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0"/>
-                                <Ellipse Width="8" Height="8" Fill="{StaticResource AccentBrush}" Margin="0 0 4 0"/>
+                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" Margin="0 0 4 0"/>
                                 <TextBlock Text="Today" FontSize="9" Foreground="{StaticResource TextSecondary}"/>
                             </StackPanel>
 
@@ -321,7 +321,7 @@
                                             <!-- Day label with trend -->
                                             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                                 <TextBlock x:Name="DayText" Text="{Binding DayLabel}" FontSize="11"/>
-                                                <TextBlock Text="{Binding TrendArrow}" Foreground="{StaticResource AccentBrush}" FontSize="10" Margin="2 0 0 0"/>
+                                                <TextBlock Text="{Binding TrendArrow}" Foreground="{DynamicResource AccentBrush}" FontSize="10" Margin="2 0 0 0"/>
                                             </StackPanel>
 
                                             <!-- Bar with average line -->
@@ -346,9 +346,9 @@
                                         </Grid>
                                         <DataTemplate.Triggers>
                                             <DataTrigger Binding="{Binding IsToday}" Value="True">
-                                                <Setter TargetName="DayText" Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                                <Setter TargetName="DayText" Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                                 <Setter TargetName="DayText" Property="FontWeight" Value="Bold"/>
-                                                <Setter TargetName="UsageBar" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                                <Setter TargetName="UsageBar" Property="Background" Value="{DynamicResource AccentBrush}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding IsToday}" Value="False">
                                                 <Setter TargetName="DayText" Property="Foreground" Value="{StaticResource TextSecondary}"/>

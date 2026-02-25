@@ -151,6 +151,9 @@ namespace TaskCore.Services
         public bool SoundAlertEnabled { get; set; } = true;
         public string SoundMode { get; set; } = "Default";
 
+        // Theme settings
+        public string AccentColor { get; set; } = "#FF9A4DFF"; // Default purple
+
         public System.Collections.Generic.Dictionary<string, bool>? SessionTrackerSummaryColumns { get; set; } = new();
         public System.Collections.Generic.Dictionary<string, bool>? SessionTrackerSessionColumns { get; set; } = new();
 

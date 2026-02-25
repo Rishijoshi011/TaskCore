@@ -15,6 +15,9 @@ namespace TaskCore
             var settings = AppSettingsService.Load();
             var watchdogMode = settings.WatchdogMode;
 
+            // Initialize theme with saved accent color
+            ThemeService.ApplyAccentColor(settings.AccentColor ?? "#FF9A4DFF");
+
             // LiveCharts/SkiaSharp initialization - skip in watchdog mode (no graphs shown)
             // This saves ~30-50MB memory in minimal mode
             if (!watchdogMode)
