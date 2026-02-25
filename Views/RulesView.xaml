@@ -196,7 +196,7 @@
                 Background="{StaticResource BackgroundSecondary}"
                 CornerRadius="8"
                 Padding="0"
-                BorderBrush="{StaticResource BackgroundCard}"
+                BorderBrush="{DynamicResource AccentBrush}"
                 BorderThickness="1">
 
             <Grid>
@@ -347,7 +347,7 @@
                 Background="{StaticResource BackgroundSecondary}"
                 CornerRadius="8"
                 Padding="0"
-                BorderBrush="{StaticResource BackgroundCard}"
+                BorderBrush="{DynamicResource AccentBrush}"
                 BorderThickness="1">
 
             <Grid>

@@ -470,8 +470,8 @@
                             </Border>
 
                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10 0">
-                                <Button Content="Add &gt;" Command="{Binding AddSelectedProcessCommand}" Style="{StaticResource SmallActionButton}" Margin="0 0 0 8" Height="32" Width="70"/>
-                                <Button Content="&lt; Remove" Command="{Binding RemoveSelectedProcessCommand}" Style="{StaticResource SmallActionButton}" Height="32" Width="70"/>
+                                <Button Content="Add &gt;" Command="{Binding AddSelectedProcessCommand}" Style="{StaticResource SmallActionButton}" Margin="0 0 0 8" Height="32" Width="90"/>
+                                <Button Content="&lt; Remove" Command="{Binding RemoveSelectedProcessCommand}" Style="{StaticResource SmallActionButton}" Height="32" Width="90"/>
                             </StackPanel>
 
                             <Border Grid.Column="2" Background="{StaticResource BackgroundSecondary}" BorderBrush="{StaticResource BackgroundCard}" BorderThickness="1">

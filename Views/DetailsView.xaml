@@ -141,6 +141,13 @@
                 </Grid>
             </Border>
 
+            <StackPanel Orientation="Horizontal" Margin="0 20 0 8">
+                <TextBlock Text="App Summary" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold"/>
+                <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+              ToolTip="Completed unique app sessions from today.&#10;Shows duration, peak/average CPU and memory usage."/>
+            </StackPanel>
+
+
             <!-- Empty State -->
             <Border Background="{StaticResource BackgroundCard}"
                     BorderBrush="{DynamicResource AccentBrush}"
@@ -173,7 +180,7 @@
             </StackPanel>
 
             <Border Background="{StaticResource BackgroundCard}"
-                    BorderThickness="4"
+                    BorderThickness="1"
                     CornerRadius="10"
                     SnapsToDevicePixels="True"
                     Padding="0"
@@ -281,7 +288,7 @@
             </StackPanel>
 
             <Border Background="{StaticResource BackgroundCard}"
-                    BorderThickness="4"
+                    BorderThickness="1"
                     CornerRadius="10"
                     SnapsToDevicePixels="True"
                     Padding="0"
@@ -381,7 +388,7 @@
             </StackPanel>
 
             <Border Background="{StaticResource BackgroundCard}"
-                    BorderThickness="4"
+                    BorderThickness="1"
                     CornerRadius="10"
                     SnapsToDevicePixels="True"
                     Padding="0"
