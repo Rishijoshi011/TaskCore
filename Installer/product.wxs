@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+  <Product Id="*"
+           Name="TaskCore"
+           Language="1033"
+           Version="4.4.2.0"
+           Manufacturer="RIAUHAS"
+           UpgradeCode="{8F79B9C2-9A0C-4C7A-B5E0-6CE7C6F92A34}">
+
+    <Package InstallerVersion="500"
+             Compressed="yes"
+             InstallScope="perUser"
+             InstallPrivileges="limited" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Enable folder selection -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <UIRef Id="WixUI_InstallDir" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+
+    <!-- Remove License Dialog -->
+    <UI>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg">1</Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg">1</Publish>
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+    </UI>
+
+    <!-- Directory Structure -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="INSTALLFOLDER" Name="TaskCore"/>
+      </Directory>
+
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="TaskCoreStartMenu" Name="TaskCore"/>
+      </Directory>
+
+      <Directory Id="DesktopFolder"/>
+    </Directory>
+
+    <!-- Features -->
+    <Feature Id="MainFeature" Title="TaskCore" Level="1">
+      <ComponentGroupRef Id="TaskCoreFiles"/>
+      <ComponentRef Id="DesktopShortcutComponent"/>
+      <ComponentRef Id="StartMenuShortcutComponent"/>
+    </Feature>
+
+    <!-- Desktop Shortcut -->
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="DesktopShortcutComponent" Guid="{8DDC6BDD-F366-4FF7-9E93-1A457BFBC066}">
+        <Shortcut Id="DesktopShortcut"
+                  Name="TaskCore"
+                  Target="[INSTALLFOLDER]TaskCore.exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+
+        <RegistryValue Root="HKCU"
+                       Key="Software\RIAUHAS\TaskCore"
+                       Name="DesktopShortcut"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+
+    <!-- Start Menu Shortcut -->
+    <DirectoryRef Id="TaskCoreStartMenu">
+      <Component Id="StartMenuShortcutComponent" Guid="{0DB9C81C-61DF-44F1-A624-228312644A75}">
+        <Shortcut Id="StartMenuShortcut"
+                  Name="TaskCore"
+                  Target="[INSTALLFOLDER]TaskCore.exe"
+                  WorkingDirectory="INSTALLFOLDER"/>
+
+        <RemoveFile Id="RemoveStartMenuFolder"
+                    On="uninstall"
+                    Name="*"
+                    Directory="TaskCoreStartMenu"/>
+
+        <RegistryValue Root="HKCU"
+                       Key="Software\RIAUHAS\TaskCore"
+                       Name="StartMenuShortcut"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+
+    <!-- Auto Launch -->
+    <CustomAction Id="LaunchTaskCore"
+                  Directory="INSTALLFOLDER"
+                  ExeCommand="TaskCore.exe"
+                  Execute="immediate"
+                  Return="asyncNoWait"/>
+
+    <InstallExecuteSequence>
+      <Custom Action="LaunchTaskCore" After="InstallFinalize">NOT Installed</Custom>
+    </InstallExecuteSequence>
+
+  </Product>
+
+</Wix>
