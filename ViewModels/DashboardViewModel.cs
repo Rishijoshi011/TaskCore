@@ -426,6 +426,27 @@ namespace TaskCore.ViewModels
             }
         }
 
+        public void PauseRefresh()
+        {
+            try
+            {
+                if (_refreshTimer.IsEnabled)
+                    _refreshTimer.Stop();
+            }
+            catch { }
+        }
+
+        public void ResumeRefresh()
+        {
+            try
+            {
+                if (!_refreshTimer.IsEnabled)
+                    _refreshTimer.Start();
+                Refresh();
+            }
+            catch { }
+        }
+
         private void OnViewChanged(string viewName)
         {
             try
@@ -652,7 +673,7 @@ namespace TaskCore.ViewModels
             try
             {
                 var date = DateOnly.FromDateTime(DateTime.Today);
-                var sessions = UsageTrackingService.GetDailySessions(date);
+                var sessions = UsageTrackingService.GetDailySessions(date, mergeOverlappingSessions: true);
                 var totalSeconds = sessions.Sum(s => Math.Max(0, s.durationSeconds));
 
                 var dialog = new Microsoft.Win32.SaveFileDialog
@@ -742,7 +763,7 @@ namespace TaskCore.ViewModels
                 TodayDateText = DateTime.Today.ToString("ddd, dd MMM");
 
                 var date = DateOnly.FromDateTime(DateTime.Today);
-                var sessions = UsageTrackingService.GetDailySessions(date);
+                var sessions = UsageTrackingService.GetDailySessions(date, mergeOverlappingSessions: true);
 
                 IsEmpty = sessions.Count == 0;
                 OnPropertyChanged(nameof(IsNotEmpty));
@@ -914,7 +935,7 @@ namespace TaskCore.ViewModels
 
             var dayData = days.Select(d =>
             {
-                var sessions = UsageTrackingService.GetDailySessions(d);
+                var sessions = UsageTrackingService.GetDailySessions(d, mergeOverlappingSessions: true);
                 var totalSec = sessions.Sum(s => Math.Max(0, s.durationSeconds));
 
                 // Find peak app

@@ -24,6 +24,25 @@ namespace TaskCore.Services
         private DateTime _lastInputTime = DateTime.Now;
         private readonly TimeSpan _idleThreshold = TimeSpan.FromMinutes(5);
 
+        // Background persistence queue
+        private readonly System.Collections.Concurrent.ConcurrentQueue<SessionWriteRequest> _writeQueue = new();
+        private readonly System.Threading.CancellationTokenSource _writeCts = new();
+        private readonly Task _backgroundWriter;
+
+        private sealed class SessionWriteRequest
+        {
+            public string AppName { get; set; } = string.Empty;
+            public int FirstPid { get; set; }
+            public string Path { get; set; } = string.Empty;
+            public DateTime Start { get; set; }
+            public DateTime End { get; set; }
+            public double PeakCpu { get; set; }
+            public double AvgCpu { get; set; }
+            public double PeakMem { get; set; }
+            public double AvgMem { get; set; }
+            public bool IsIdle { get; set; }
+        }
+
         private UsageTrackingService()
         {
             try
@@ -36,9 +55,65 @@ namespace TaskCore.Services
             // Subscribe to session switch events to detect lock/unlock
             SystemEvents.SessionSwitch += OnSessionSwitch;
 
+            // Start background writer
+            _backgroundWriter = Task.Run(BackgroundWriterLoop);
+
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += (_, __) => KickTick();
             _timer.Start();
+        }
+
+        private async Task BackgroundWriterLoop()
+        {
+            while (!_writeCts.IsCancellationRequested)
+            {
+                try
+                {
+                    // Process up to 100 sessions per batch
+                    var batch = new List<SessionWriteRequest>();
+                    for (int i = 0; i < 100 && _writeQueue.TryDequeue(out var request); i++)
+                    {
+                        batch.Add(request);
+                    }
+
+                    if (batch.Count > 0)
+                    {
+                        foreach (var req in batch)
+                        {
+                            UsageTrackingStorage.AppendSession(
+                                req.AppName,
+                                req.FirstPid,
+                                req.Path,
+                                req.Start,
+                                req.End,
+                                req.PeakCpu,
+                                req.AvgCpu,
+                                req.PeakMem,
+                                req.AvgMem,
+                                req.IsIdle);
+                        }
+                    }
+                    else
+                    {
+                        // No items, wait a bit
+                        await Task.Delay(100, _writeCts.Token).ConfigureAwait(false);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        File.AppendAllText(Path.Combine(UsageTrackingStorage.BaseDirectory, "usage-errors.txt"),
+                            $"[{DateTime.Now:HH:mm:ss}] Background writer error: {ex.Message}\n");
+                    }
+                    catch { }
+                    await Task.Delay(1000, _writeCts.Token).ConfigureAwait(false);
+                }
+            }
         }
 
         private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
@@ -101,9 +176,9 @@ namespace TaskCore.Services
         }
 
         
-        public static List<SessionRecord> GetDailySessions(DateOnly date)
+        public static List<SessionRecord> GetDailySessions(DateOnly date, bool mergeOverlappingSessions = true)
         {
-            return UsageTrackingStorage.GetDailySessions(date);
+            return UsageTrackingStorage.GetDailySessions(date, mergeOverlappingSessions);
         }
 
         public static string GetBaseDirectory()
@@ -239,20 +314,22 @@ namespace TaskCore.Services
                 {
                     var endedSessions = _sessionTracker.ProcessTick(currentApps, current, _metricsSampler, isSystemIdle);
 
-                    // Write ended sessions to storage
+                    // Queue ended sessions for async background persistence
                     foreach (var session in endedSessions)
                     {
-                        UsageTrackingStorage.AppendSession(
-                            session.AppName,
-                            session.FirstPid,
-                            session.Path,
-                            session.Start,
-                            session.End,
-                            session.PeakCpu,
-                            session.AvgCpu,
-                            session.PeakMem,
-                            session.AvgMem,
-                            session.IsIdle);
+                        _writeQueue.Enqueue(new SessionWriteRequest
+                        {
+                            AppName = session.AppName,
+                            FirstPid = session.FirstPid,
+                            Path = session.Path,
+                            Start = session.Start,
+                            End = session.End,
+                            PeakCpu = session.PeakCpu,
+                            AvgCpu = session.AvgCpu,
+                            PeakMem = session.PeakMem,
+                            AvgMem = session.AvgMem,
+                            IsIdle = session.IsIdle
+                        });
 
                         // Debug log
                         UsageDebugLogger.LogTrack($"END {session.AppName} (App session) after {session.MissCount} misses, duration {(session.End - session.Start).TotalSeconds:F0}s, PIDs seen: {session.PidsSeen}");
@@ -267,6 +344,61 @@ namespace TaskCore.Services
                 }
                 catch { }
             }
+        }
+
+        private bool _disposed;
+
+        ~UsageTrackingService()
+        {
+            Dispose(false);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            if (disposing)
+            {
+                // Dispose managed resources
+                _timer?.Stop();
+                _writeCts?.Cancel();
+                
+                try
+                {
+                    _backgroundWriter?.Wait(TimeSpan.FromSeconds(5));
+                }
+                catch { }
+
+                // Write any remaining queued sessions
+                while (_writeQueue.TryDequeue(out var request))
+                {
+                    try
+                    {
+                        UsageTrackingStorage.AppendSession(
+                            request.AppName,
+                            request.FirstPid,
+                            request.Path,
+                            request.Start,
+                            request.End,
+                            request.PeakCpu,
+                            request.AvgCpu,
+                            request.PeakMem,
+                            request.AvgMem,
+                            request.IsIdle);
+                    }
+                    catch { }
+                }
+            }
+
+            // Unsubscribe from events (always do this)
+            SystemEvents.SessionSwitch -= OnSessionSwitch;
         }
     }
 }

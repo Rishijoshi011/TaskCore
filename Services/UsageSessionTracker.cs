@@ -7,11 +7,18 @@ namespace TaskCore.Services
 {
     internal sealed class UsageSessionTracker
     {
+        // Miss count threshold - increased to 30 seconds for better session continuity
+        private const int MissThreshold = 30;
+        
         private readonly Dictionary<string, (DateTime start, string path, HashSet<int> pids)> _trackedApps = new();
         private readonly Dictionary<string, (double peakCpu, double totalCpu, double peakMem, double totalMem, int samples)> _appMetrics = new();
         private readonly Dictionary<int, int> _missCountByApp = new();
 
         private readonly Dictionary<string, bool> _appIdleState = new();  // Track if app was started during idle
+
+        // Session continuation: track recently ended sessions for 60-second window
+        private readonly Dictionary<string, (DateTime endTime, double peakCpu, double totalCpu, double peakMem, double totalMem, int samples)> _recentlyEnded = new();
+        private const int SessionContinuationWindowSeconds = 60;
 
         public IReadOnlyDictionary<string, (DateTime start, string path, HashSet<int> pids)> TrackedApps => _trackedApps;
 
@@ -39,7 +46,7 @@ namespace TaskCore.Services
                 miss++;
                 _missCountByApp[appKey] = miss;
 
-                if (miss < 5)
+                if (miss < MissThreshold)
                     continue;
 
                 // App session has truly ended - prepare session record
@@ -73,11 +80,20 @@ namespace TaskCore.Services
                     IsIdle = isIdleSession
                 });
 
+                // Store for potential session continuation (within 60 seconds)
+                _recentlyEnded[appName] = (end, peakCpu, metric.totalCpu, peakMem, metric.totalMem, metric.samples);
+
                 _trackedApps.Remove(appName);
                 _appMetrics.Remove(appName);
                 _missCountByApp.Remove(appKey);
                 _appIdleState.Remove(appName);
             }
+
+            // Clean up old recently-ended sessions (older than 60 seconds) - do this outside the loop
+            var now = DateTime.Now;
+            var expired = _recentlyEnded.Where(x => (now - x.Value.endTime).TotalSeconds > SessionContinuationWindowSeconds).Select(x => x.Key).ToList();
+            foreach (var key in expired)
+                _recentlyEnded.Remove(key);
 
             // Check for new apps (first time we see any process for this app)
             foreach (var kvp in current)
@@ -87,7 +103,7 @@ namespace TaskCore.Services
 
                 if (!_trackedApps.ContainsKey(appName))
                 {
-                    // First time seeing this app - start tracking
+                    // First time seeing this app - check if it's a continuation
                     string path;
                     try
                     {
@@ -99,7 +115,19 @@ namespace TaskCore.Services
                         path = string.Empty;
                     }
 
-                    _trackedApps[appName] = (DateTime.Now, path, new HashSet<int> { pid });
+                    if (_recentlyEnded.TryGetValue(appName, out var recent))
+                    {
+                        // Continue the previous session - restore metrics
+                        _trackedApps[appName] = (recent.endTime, path, new HashSet<int> { pid });
+                        _appMetrics[appName] = (recent.peakCpu, recent.totalCpu, recent.peakMem, recent.totalMem, recent.samples);
+                        _recentlyEnded.Remove(appName);
+                    }
+                    else
+                    {
+                        // Brand new session
+                        _trackedApps[appName] = (DateTime.Now, path, new HashSet<int> { pid });
+                    }
+                    
                     _missCountByApp.Remove(appName.GetHashCode());
                     _appIdleState[appName] = isSystemIdle;  // Track if started during idle
                 }

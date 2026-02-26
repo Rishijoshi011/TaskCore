@@ -11,16 +11,17 @@ namespace TaskCore
     {
         private bool _isSidebarCollapsed = false;
         private readonly bool _watchdogMode;
+        private FrameworkElement? _currentView;
 
-        // Heavy views - only initialized in normal mode
-        private readonly DashboardView? _dashboardView;
-        private readonly ProcessesView? _processesView;
-        private readonly GraphsView? _graphsView;
-        private readonly DetailsView? _detailsView;
+        // Heavy views - lazily initialized
+        private DashboardView? _dashboardView;
+        private ProcessesView? _processesView;
+        private GraphsView? _graphsView;
+        private DetailsView? _detailsView;
 
         // Light views - always available
-        private readonly RulesView _rulesView;
-        private readonly SettingsView _settingsView;
+        private RulesView? _rulesView;
+        private SettingsView? _settingsView;
 
         public MainWindow()
         {
@@ -33,10 +34,8 @@ namespace TaskCore
             // Initialize views based on mode
             if (!_watchdogMode)
             {
+                // Views are lazily initialized - only Dashboard created initially
                 _dashboardView = new DashboardView();
-                _processesView = new ProcessesView();
-                _graphsView = new GraphsView();
-                _detailsView = new DetailsView();
             }
 
             _rulesView = new RulesView();
@@ -94,8 +93,22 @@ namespace TaskCore
             Sidebar.Items.Add(item);
         }
 
+        // Lazy view getters - create on first access
+        private DashboardView GetDashboardView() => _dashboardView ??= new DashboardView();
+        private ProcessesView GetProcessesView() => _processesView ??= new ProcessesView();
+        private GraphsView GetGraphsView() => _graphsView ??= new GraphsView();
+        private DetailsView GetDetailsView() => _detailsView ??= new DetailsView();
+        private RulesView GetRulesView() => _rulesView ??= new RulesView();
+        private SettingsView GetSettingsView() => _settingsView ??= new SettingsView();
+
         private void Sidebar_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
+            // Deactivate current view before switching
+            if (_currentView is IActivatableView activatable)
+            {
+                activatable.OnDeactivated();
+            }
+
             if (_watchdogMode)
             {
                 // Watchdog Mode: Only 2 tabs (Rules, Settings)
@@ -106,13 +119,14 @@ namespace TaskCore
                     _ => "Rules"
                 };
 
-                ContentArea.Content = viewName switch
+                _currentView = viewName switch
                 {
-                    "Rules" => _rulesView,
-                    "Settings" => _settingsView,
-                    _ => _rulesView
+                    "Rules" => GetRulesView(),
+                    "Settings" => GetSettingsView(),
+                    _ => GetRulesView()
                 };
 
+                ContentArea.Content = _currentView;
                 AppViewStateService.SetView(viewName);
             }
             else
@@ -129,18 +143,25 @@ namespace TaskCore
                     _ => "Dashboard"
                 };
 
-                ContentArea.Content = viewName switch
+                _currentView = viewName switch
                 {
-                    "Dashboard" => _dashboardView,
-                    "Processes" => _processesView,
-                    "Graphs" => _graphsView,
-                    "Details" => _detailsView,
-                    "Rules" => _rulesView,
-                    "Settings" => _settingsView,
-                    _ => _dashboardView
+                    "Dashboard" => GetDashboardView(),
+                    "Processes" => GetProcessesView(),
+                    "Graphs" => GetGraphsView(),
+                    "Details" => GetDetailsView(),
+                    "Rules" => GetRulesView(),
+                    "Settings" => GetSettingsView(),
+                    _ => GetDashboardView()
                 };
 
+                ContentArea.Content = _currentView;
                 AppViewStateService.SetView(viewName);
+            }
+
+            // Activate new view after switching
+            if (_currentView is IActivatableView newActivatable)
+            {
+                newActivatable.OnActivated();
             }
         }
 

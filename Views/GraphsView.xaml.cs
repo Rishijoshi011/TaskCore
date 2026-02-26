@@ -3,7 +3,7 @@ using System.Windows.Controls;
 
 namespace TaskCore.Views
 {
-    public partial class GraphsView : UserControl
+    public partial class GraphsView : UserControl, IActivatableView
     {
         private readonly Graphs.CpuGraphView _cpuView = new();
         private readonly Graphs.MemoryGraphView _memoryView = new();
@@ -17,6 +17,18 @@ namespace TaskCore.Views
 
             // default view
             GraphContent.Content = _cpuView;
+        }
+
+        public void OnActivated()
+        {
+            if (GraphContent.Content is IActivatableView activatable)
+                activatable.OnActivated();
+        }
+
+        public void OnDeactivated()
+        {
+            if (GraphContent.Content is IActivatableView activatable)
+                activatable.OnDeactivated();
         }
 
         private void Cpu_Checked(object sender, RoutedEventArgs e)

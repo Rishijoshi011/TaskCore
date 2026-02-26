@@ -54,6 +54,8 @@ namespace TaskCore.Services
         private readonly List<RuleTriggerEvent> _recentEvents = new();
         private readonly object _eventsLock = new();
         private int _tickRunning;
+        private AppSettings _cachedSettings = new();
+        private DateTime _lastSettingsLoad = DateTime.MinValue;
 
         public event Action? RulesChanged;
         public event Action<RuleTriggerEvent>? RuleTriggered;
@@ -85,11 +87,17 @@ namespace TaskCore.Services
 
         private void EvaluateRules()
         {
-            var settings = AppSettingsService.Load();
-            if (!settings.RulesEngineEnabled)
+            // Cache settings and reload only every 30 seconds
+            if (DateTime.Now - _lastSettingsLoad > TimeSpan.FromSeconds(30))
+            {
+                _cachedSettings = AppSettingsService.Load();
+                _lastSettingsLoad = DateTime.Now;
+            }
+            
+            if (!_cachedSettings.RulesEngineEnabled)
                 return;
 
-            var rules = settings.Rules;
+            var rules = _cachedSettings.Rules;
             if (rules == null || rules.Count == 0)
                 return;
 
@@ -293,6 +301,7 @@ namespace TaskCore.Services
 
         private readonly Dictionary<int, double> _cachedCpuValues = new();
         private DateTime _lastCpuCacheUpdate = DateTime.MinValue;
+        private readonly HashSet<int> _seenPids = new();
 
         private bool CheckCpuCondition(Rule rule, int processId)
         {
@@ -304,9 +313,18 @@ namespace TaskCore.Services
                 {
                     if (DateTime.Now - _lastCpuCacheUpdate > TimeSpan.FromSeconds(2))
                     {
-                        _cachedCpuValues.Clear();
+                        // Clear cache every 2 seconds but first remove PIDs we haven't seen recently
+                        var currentPids = new HashSet<int>(_cachedCpuValues.Keys);
+                        foreach (var pid in currentPids)
+                        {
+                            if (!_seenPids.Contains(pid))
+                                _cachedCpuValues.Remove(pid);
+                        }
+                        _seenPids.Clear();
                         _lastCpuCacheUpdate = DateTime.Now;
                     }
+                    
+                    _seenPids.Add(processId);
                 }
 
                 // Get fresh CPU reading
@@ -500,7 +518,7 @@ namespace TaskCore.Services
         {
             try
             {
-                var settings = AppSettingsService.Load();
+                var settings = _cachedSettings;
                 // Check if sound alert is enabled
                 if (!settings.SoundAlertEnabled)
                     return;
@@ -538,8 +556,7 @@ namespace TaskCore.Services
             }
             catch (Exception ex)
             {
-                var settings = AppSettingsService.Load();
-                if (settings.PreferAdminForProtectedActions && !ElevationService.IsRunningAsAdmin())
+                if (_cachedSettings.PreferAdminForProtectedActions && !ElevationService.IsRunningAsAdmin())
                 {
                     TryPromptForElevationOnce();
                 }

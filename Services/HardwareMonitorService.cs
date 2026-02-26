@@ -303,12 +303,58 @@ namespace TaskCore.Services
 
         public float? GetCpuPackageTemp()
         {
-            lock (_lock) return _cpuPackageTemp ?? _anyTemp;
+            lock (_lock) 
+            {
+                // Try LibreHardwareMonitor first
+                if (_cpuPackageTemp.HasValue) return _cpuPackageTemp;
+                if (_anyTemp.HasValue) return _anyTemp;
+                
+                // Fallback to WMI
+                return GetCpuTempFromWmi();
+            }
         }
 
         public float? GetMemoryTemp()
         {
-            lock (_lock) return _memoryTemp ?? _anyTemp;
+            lock (_lock) 
+            {
+                if (_memoryTemp.HasValue) return _memoryTemp;
+                if (_anyTemp.HasValue) return _anyTemp;
+                return null;
+            }
+        }
+
+        private float? GetCpuTempFromWmi()
+        {
+            try
+            {
+                using var searcher = new System.Management.ManagementObjectSearcher(
+                    "SELECT * FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation");
+                foreach (var obj in searcher.Get())
+                {
+                    var temp = obj["Temperature"] as uint?;
+                    if (temp.HasValue && temp.Value > 0)
+                        return temp.Value - 273.15f; // Convert from Kelvin to Celsius
+                }
+            }
+            catch { }
+
+            try
+            {
+                // Try MS ACPI thermal zones
+                using var searcher = new System.Management.ManagementObjectSearcher(
+                    "root\\WMI", 
+                    "SELECT * FROM MSAcpi_ThermalZoneTemperature");
+                foreach (var obj in searcher.Get())
+                {
+                    var temp = obj["CurrentTemperature"] as uint?;
+                    if (temp.HasValue && temp.Value > 0)
+                        return (temp.Value - 2732) / 10.0f; // Convert from tenths of Kelvin
+                }
+            }
+            catch { }
+
+            return null;
         }
 
         public float? GetGpuTempByName(string gpuName)

@@ -13,6 +13,7 @@ namespace TaskCore.Services
 
         private Forms.NotifyIcon? _notifyIcon;
         private Window? _mainWindow;
+        private System.Timers.Timer? _tooltipTimer;
         private bool _isDisposed;
 
         public bool IsInitialized => _notifyIcon != null;
@@ -84,10 +85,10 @@ namespace TaskCore.Services
             UpdateTooltip();
 
             // Set up a timer to update tooltip every 5 seconds
-            var timer = new System.Timers.Timer(5000);
-            timer.Elapsed += (_, _) => UpdateTooltip();
-            timer.AutoReset = true;
-            timer.Start();
+            _tooltipTimer = new System.Timers.Timer(5000);
+            _tooltipTimer.Elapsed += (_, _) => UpdateTooltip();
+            _tooltipTimer.AutoReset = true;
+            _tooltipTimer.Start();
         }
 
         private void UpdateTooltip()
@@ -205,6 +206,13 @@ namespace TaskCore.Services
             {
                 _mainWindow.Closing -= OnMainWindowClosing;
                 _mainWindow.StateChanged -= OnMainWindowStateChanged;
+            }
+
+            if (_tooltipTimer != null)
+            {
+                _tooltipTimer.Stop();
+                _tooltipTimer.Dispose();
+                _tooltipTimer = null;
             }
 
             if (_notifyIcon != null)

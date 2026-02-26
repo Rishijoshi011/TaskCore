@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -16,7 +17,7 @@ namespace TaskCore.Services
         }
 
         private static readonly object _dailySessionsCacheLock = new();
-        private static readonly Dictionary<DateOnly, DailySessionsCacheEntry> _dailySessionsCache = new();
+        private static readonly Dictionary<string, DailySessionsCacheEntry> _dailySessionsCache = new();
 
         private sealed class AppSummaryData
         {
@@ -76,14 +77,21 @@ namespace TaskCore.Services
             }
         }
 
-        public static List<UsageTrackingService.SessionRecord> GetDailySessions(DateOnly date)
+        public static List<UsageTrackingService.SessionRecord> GetDailySessions(DateOnly date, bool mergeOverlappingSessions = true)
         {
             var file = Path.Combine(BaseDirectory, $"sessions-{date:yyyy-MM-dd}.jsonl");
+            var compressedFile = file + ".gz";
             var legacyFile = Path.Combine(BaseDirectory, $"sessions_{date:yyyy-MM-dd}.json");
             string? chosenFile = null;
+            bool isCompressed = false;
 
             if (File.Exists(file))
                 chosenFile = file;
+            else if (File.Exists(compressedFile))
+            {
+                chosenFile = compressedFile;
+                isCompressed = true;
+            }
             else if (File.Exists(legacyFile))
                 chosenFile = legacyFile;
 
@@ -98,11 +106,12 @@ namespace TaskCore.Services
 
                 lock (_dailySessionsCacheLock)
                 {
-                    if (_dailySessionsCache.TryGetValue(date, out var cached)
+                    var cacheKey = mergeOverlappingSessions ? $"{date}_merged" : date.ToString();
+                    if (_dailySessionsCache.TryGetValue(cacheKey, out var cached)
                         && cached.lastWriteUtc == lastWriteUtc
                         && cached.length == length)
                     {
-                        return cached.sessions;
+                        return mergeOverlappingSessions ? MergeOverlappingSessions(cached.sessions) : cached.sessions;
                     }
                 }
             }
@@ -115,7 +124,24 @@ namespace TaskCore.Services
 
             try
             {
-                if (string.Equals(chosenFile, file, StringComparison.OrdinalIgnoreCase))
+                if (isCompressed)
+                {
+                    // Read from compressed file
+                    using var fileStream = File.OpenRead(compressedFile);
+                    using var gzipStream = new System.IO.Compression.GZipStream(fileStream, System.IO.Compression.CompressionMode.Decompress);
+                    using var reader = new StreamReader(gzipStream);
+                    string? line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            var session = JsonSerializer.Deserialize<UsageTrackingService.SessionRecord>(line);
+                            if (session != null)
+                                sessions.Add(session);
+                        }
+                    }
+                }
+                else if (string.Equals(chosenFile, file, StringComparison.OrdinalIgnoreCase))
                 {
                     foreach (var line in File.ReadLines(file))
                     {
@@ -182,7 +208,8 @@ namespace TaskCore.Services
 
                 lock (_dailySessionsCacheLock)
                 {
-                    _dailySessionsCache[date] = new DailySessionsCacheEntry
+                    var cacheKey = mergeOverlappingSessions ? $"{date}_merged" : date.ToString();
+                    _dailySessionsCache[cacheKey] = new DailySessionsCacheEntry
                     {
                         lastWriteUtc = lastWriteUtc,
                         length = length,
@@ -190,10 +217,18 @@ namespace TaskCore.Services
                     };
 
                     // keep cache bounded (avoid unbounded growth)
-                    if (_dailySessionsCache.Count > 31)
+                    if (_dailySessionsCache.Count > 62) // 31 days * 2 (merged and unmerged keys)
                     {
-                        var cutoff = DateOnly.FromDateTime(DateTime.Today.AddDays(-31));
-                        var keysToRemove = _dailySessionsCache.Keys.Where(d => d < cutoff).ToList();
+                        var cutoff = DateTime.Today.AddDays(-31);
+                        var keysToRemove = _dailySessionsCache.Keys
+                            .Where(k =>
+                            {
+                                // Parse date from key (format: "yyyy-MM-dd" or "yyyy-MM-dd_merged")
+                                var underscoreIndex = k.IndexOf('_');
+                                var dateStr = underscoreIndex >= 0 ? k.Substring(0, underscoreIndex) : k;
+                                return DateTime.TryParse(dateStr, out var keyDate) && keyDate < cutoff;
+                            })
+                            .ToList();
                         foreach (var k in keysToRemove)
                             _dailySessionsCache.Remove(k);
                     }
@@ -203,7 +238,166 @@ namespace TaskCore.Services
             {
             }
 
-            return sessions;
+            return mergeOverlappingSessions ? MergeOverlappingSessions(sessions) : sessions;
+        }
+
+        private static List<UsageTrackingService.SessionRecord> MergeOverlappingSessions(List<UsageTrackingService.SessionRecord> sessions)
+        {
+            Debug.WriteLine($"[UsageTracking] MergeOverlappingSessions called with {sessions.Count} sessions");
+            
+            if (sessions.Count == 0) 
+            {
+                Debug.WriteLine($"[UsageTracking] No sessions to merge");
+                return sessions;
+            }
+
+            // Filter out only core Windows system processes (be conservative)
+            var userSessions = sessions
+                .Where(s => !IsCoreWindowsProcess(s.app))
+                .ToList();
+            
+            Debug.WriteLine($"[UsageTracking] After filtering: {userSessions.Count} user sessions (removed {sessions.Count - userSessions.Count} system sessions)");
+
+            // Group by app name (case-insensitive)
+            var groupedSessions = userSessions
+                .GroupBy(s => s.app?.ToLowerInvariant() ?? "unknown")
+                .ToList();
+
+            var mergedSessions = new List<UsageTrackingService.SessionRecord>();
+
+            foreach (var group in groupedSessions)
+            {
+                var sortedSessions = group
+                    .OrderBy(s => s.startTimeUtc)
+                    .ToList();
+
+                var currentMerged = new List<UsageTrackingService.SessionRecord>();
+
+                foreach (var session in sortedSessions)
+                {
+                    // Skip invalid sessions
+                    if (session.durationSeconds <= 0 || session.endTimeUtc <= session.startTimeUtc)
+                        continue;
+
+                    // Find if this session overlaps or is close to any existing merged session
+                    var overlappingMerged = currentMerged
+                        .FirstOrDefault(m => ShouldMergeSessions(session, m));
+
+                    if (overlappingMerged != null)
+                    {
+                        // Merge the sessions
+                        var newStart = session.startTimeUtc < overlappingMerged.startTimeUtc ? session.startTimeUtc : overlappingMerged.startTimeUtc;
+                        var newEnd = session.endTimeUtc > overlappingMerged.endTimeUtc ? session.endTimeUtc : overlappingMerged.endTimeUtc;
+                        var newDuration = (int)(newEnd - newStart).TotalSeconds;
+
+                        // Update the merged session with combined metrics
+                        overlappingMerged.startTimeUtc = newStart;
+                        overlappingMerged.endTimeUtc = newEnd;
+                        overlappingMerged.durationSeconds = newDuration;
+                        
+                        // Take the maximum of performance metrics
+                        overlappingMerged.peakCpuPercent = Math.Max(overlappingMerged.peakCpuPercent, session.peakCpuPercent);
+                        overlappingMerged.peakMemoryMB = Math.Max(overlappingMerged.peakMemoryMB, session.peakMemoryMB);
+                        
+                        // Average the CPU metrics weighted by duration
+                        var totalCpuTime = overlappingMerged.averageCpuPercent * overlappingMerged.durationSeconds + 
+                                         session.averageCpuPercent * session.durationSeconds;
+                        overlappingMerged.averageCpuPercent = totalCpuTime / newDuration;
+                        
+                        // Average the memory metrics weighted by duration
+                        var totalMemTime = overlappingMerged.averageMemoryMB * overlappingMerged.durationSeconds + 
+                                         session.averageMemoryMB * session.durationSeconds;
+                        overlappingMerged.averageMemoryMB = totalMemTime / newDuration;
+                        
+                        // Mark as idle if either session was idle
+                        overlappingMerged.isIdle = overlappingMerged.isIdle || session.isIdle;
+                    }
+                    else
+                    {
+                        // Add as a new merged session
+                        currentMerged.Add(new UsageTrackingService.SessionRecord
+                        {
+                            app = session.app,
+                            processId = session.processId,
+                            processPath = session.processPath,
+                            startTimeUtc = session.startTimeUtc,
+                            endTimeUtc = session.endTimeUtc,
+                            durationSeconds = session.durationSeconds,
+                            peakCpuPercent = session.peakCpuPercent,
+                            averageCpuPercent = session.averageCpuPercent,
+                            peakMemoryMB = session.peakMemoryMB,
+                            averageMemoryMB = session.averageMemoryMB,
+                            isIdle = session.isIdle
+                        });
+                    }
+                }
+
+                mergedSessions.AddRange(currentMerged);
+            }
+
+            return mergedSessions.OrderBy(s => s.startTimeUtc).ToList();
+        }
+
+        private static bool ShouldMergeSessions(UsageTrackingService.SessionRecord session1, UsageTrackingService.SessionRecord session2)
+        {
+            // Check for direct overlap
+            if (session1.startTimeUtc < session2.endTimeUtc && session1.endTimeUtc > session2.startTimeUtc)
+                return true;
+
+            // Check for small gap (consolidate fragmented sessions)
+            const int maxGapSeconds = 30; // Consolidate sessions with gaps up to 30 seconds
+            
+            if (session1.endTimeUtc < session2.startTimeUtc)
+            {
+                var gap = (int)(session2.startTimeUtc - session1.endTimeUtc).TotalSeconds;
+                return gap <= maxGapSeconds;
+            }
+            else if (session2.endTimeUtc < session1.startTimeUtc)
+            {
+                var gap = (int)(session1.startTimeUtc - session2.endTimeUtc).TotalSeconds;
+                return gap <= maxGapSeconds;
+            }
+
+            return false;
+        }
+
+        private static bool IsCoreWindowsProcess(string? appName)
+        {
+            if (string.IsNullOrWhiteSpace(appName)) return false;
+
+            var name = appName.ToLowerInvariant();
+
+            // Only filter core Windows system processes that are definitely not user apps
+            var coreProcesses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "svchost", "csrss", "wininit", "smss", "dwm", "lsass", "lsm",
+                "services", "winlogon", "conhost", "sihost", "fontdrvhost",
+                "spoolsv", "ctfmon", "audiodg", "smsvchost", "registry",
+                "system", "idle", "searchindexer", "runtimebroker",
+                "taskhost", "taskhostw", "backgroundtaskhost",
+                "searchprotocolhost", "searchfilterhost",
+                "mousocoreworker", "sppsvc", "tiworker", "trustedinstaller",
+                "compattelrunner", "ngciso", "wmiadap", "wmiprvse",
+                "sppextcomobj", "backgrounddownload", "backgroundtransferhost",
+                "bdeuisrv", "defrag", "devicecensus", "dism", "dismhost",
+                "dllhost", "lpremove", "mscorsvw", "ngen", "ngentask",
+                "onedrivelauncher", "onedrivestandaloneupdater",
+                "pickerhost", "provtool", "rundll32", "sc", "slui",
+                "srtasks", "usoclient", "vsixautoupdate", "wermgr",
+                "wmiprvse", "wmiadap"
+            };
+
+            // Check exact match or starts with
+            if (coreProcesses.Contains(name)) return true;
+            
+            // Check if it's a core Windows process by prefix
+            foreach (var proc in coreProcesses)
+            {
+                if (name.StartsWith(proc, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 
         private static DailySummary GetDailySummary(DateOnly date)
@@ -231,25 +425,65 @@ namespace TaskCore.Services
             };
         }
 
-        public static void CleanupOldFiles(int daysToKeep = 90)
+        public static void CleanupOldFiles(int daysToKeep = 90, int compressAfterDays = 30)
         {
             try
             {
                 if (!Directory.Exists(BaseDirectory)) return;
 
-                var cutoffDate = DateTime.Now.AddDays(-daysToKeep);
+                var now = DateTime.Now;
+                var cutoffDelete = now.AddDays(-daysToKeep);
+                var cutoffCompress = now.AddDays(-compressAfterDays);
                 var files = Directory.GetFiles(BaseDirectory, "*.jsonl");
 
                 foreach (var file in files)
                 {
                     var fileInfo = new FileInfo(file);
-                    if (fileInfo.LastWriteTime < cutoffDate)
+                    var compressedFile = file + ".gz";
+
+                    // Delete files older than retention period
+                    if (fileInfo.LastWriteTime < cutoffDelete)
                     {
-                        var compressedFile = file + ".gz";
-                        if (!File.Exists(compressedFile))
+                        // Delete uncompressed file
+                        if (File.Exists(file))
                         {
                             File.Delete(file);
                         }
+                        // Also delete compressed version if exists
+                        if (File.Exists(compressedFile))
+                        {
+                            File.Delete(compressedFile);
+                        }
+                        continue;
+                    }
+
+                    // Compress files older than compressAfterDays
+                    if (fileInfo.LastWriteTime < cutoffCompress && !File.Exists(compressedFile))
+                    {
+                        try
+                        {
+                            CompressFile(file, compressedFile);
+                            // Only delete original if compression succeeded
+                            if (File.Exists(compressedFile))
+                            {
+                                File.Delete(file);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[UsageTracking] Failed to compress {file}: {ex.Message}");
+                        }
+                    }
+                }
+
+                // Also clean up old compressed files beyond retention
+                var compressedFiles = Directory.GetFiles(BaseDirectory, "*.jsonl.gz");
+                foreach (var compressedFile in compressedFiles)
+                {
+                    var fileInfo = new FileInfo(compressedFile);
+                    if (fileInfo.LastWriteTime < cutoffDelete)
+                    {
+                        File.Delete(compressedFile);
                     }
                 }
 
@@ -271,6 +505,22 @@ namespace TaskCore.Services
                 File.AppendAllText(Path.Combine(BaseDirectory, "errors.txt"),
                     $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Cleanup error: {ex.Message}\n");
             }
+        }
+
+        private static void CompressFile(string sourceFile, string destinationFile)
+        {
+            using var inputFileStream = File.OpenRead(sourceFile);
+            using var outputFileStream = File.Create(destinationFile);
+            using var gzipStream = new System.IO.Compression.GZipStream(outputFileStream, System.IO.Compression.CompressionLevel.Optimal);
+            inputFileStream.CopyTo(gzipStream);
+        }
+
+        private static void DecompressFile(string sourceFile, string destinationFile)
+        {
+            using var inputFileStream = File.OpenRead(sourceFile);
+            using var gzipStream = new System.IO.Compression.GZipStream(inputFileStream, System.IO.Compression.CompressionMode.Decompress);
+            using var outputFileStream = File.Create(destinationFile);
+            gzipStream.CopyTo(outputFileStream);
         }
 
         public static string ExportToCsv(DateOnly startDate, DateOnly endDate)

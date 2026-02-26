@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using TaskCore.Models;
@@ -99,12 +100,22 @@ namespace TaskCore.Services
             {
                 try
                 {
+                    // Validate settings before saving
+                    if (!ValidateSettings(settings))
+                    {
+                        Debug.WriteLine("[AppSettings] Validation failed, aborting save");
+                        return;
+                    }
+
                     Directory.CreateDirectory(_dir);
 
                     var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
 
                     // Write to tmp first to avoid corrupting settings.json if the process is killed mid-write.
                     File.WriteAllText(_tmpPath, json);
+
+                    // Create timestamped backup (keep last 10 backups)
+                    CreateTimestampedBackup();
 
                     // Atomically swap tmp into place and keep a .bak.
                     try
@@ -134,6 +145,59 @@ namespace TaskCore.Services
                 }
             }
         }
+
+        private static void CreateTimestampedBackup()
+        {
+            try
+            {
+                if (!File.Exists(_path)) return;
+
+                var backupDir = Path.Combine(_dir, "SettingsBackups");
+                Directory.CreateDirectory(backupDir);
+
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var backupFile = Path.Combine(backupDir, $"settings_{timestamp}.json");
+
+                File.Copy(_path, backupFile, overwrite: true);
+
+                // Keep only last 10 backups
+                var backups = Directory.GetFiles(backupDir, "settings_*.json")
+                    .OrderByDescending(f => File.GetCreationTime(f))
+                    .Skip(10);
+
+                foreach (var oldBackup in backups)
+                {
+                    try { File.Delete(oldBackup); } catch { }
+                }
+            }
+            catch { }
+        }
+
+        public static bool ValidateSettings(AppSettings settings)
+        {
+            if (settings == null) return false;
+
+            // Validate numeric ranges
+            if (settings.RefreshIntervalMs < 100 || settings.RefreshIntervalMs > 60000)
+                settings.RefreshIntervalMs = 1000; // Reset to default
+
+            if (settings.ProcessFilterMode < 0 || settings.ProcessFilterMode > 2)
+                settings.ProcessFilterMode = 1; // Reset to default
+
+            // Validate automation thresholds
+            if (settings.AutomationCpuOffenderThresholdPercent < 50 || settings.AutomationCpuOffenderThresholdPercent > 100)
+                settings.AutomationCpuOffenderThresholdPercent = 95;
+
+            if (settings.AutomationCpuOffenderSustainSeconds < 1 || settings.AutomationCpuOffenderSustainSeconds > 300)
+                settings.AutomationCpuOffenderSustainSeconds = 10;
+
+            // Validate lists are not null
+            settings.SelectedProcesses ??= new System.Collections.Generic.List<string>();
+            settings.CustomFilteredProcesses ??= new System.Collections.Generic.List<string>();
+            settings.Rules ??= new List<Rule>();
+
+            return true;
+        }
     }
 
     public sealed class AppSettings
@@ -162,6 +226,10 @@ namespace TaskCore.Services
 
         // List of user-selected process names to show when ProcessFilterMode=2
         public System.Collections.Generic.List<string>? SelectedProcesses { get; set; } = new();
+
+        // User-configurable custom process filter patterns
+        public System.Collections.Generic.List<string>? CustomFilteredProcesses { get; set; } = new();
+        public bool EnableCustomProcessFilters { get; set; } = false;
 
         // Rules engine settings
         public List<Rule>? Rules { get; set; } = new();

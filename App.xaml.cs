@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using System;
+using System.Threading;
+using System.Windows;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using TaskCore.Services;
@@ -7,13 +9,49 @@ namespace TaskCore
 {
     public partial class App : Application
     {
+        private static Mutex? _instanceMutex;
+        private static bool _ownsMutex;
+        private const string MutexName = "TaskCore_SingleInstance_Mutex";
+
         protected override void OnStartup(StartupEventArgs e)
         {
-            base.OnStartup(e);
-
-            // Check if watchdog mode is enabled
+            // Check if watchdog mode is requested via command line or settings
             var settings = AppSettingsService.Load();
-            var watchdogMode = settings.WatchdogMode;
+            var watchdogMode = settings.WatchdogMode || e.Args.Contains("--watchdog");
+            
+            // Use different mutex for watchdog mode to allow it running alongside regular mode
+            var mutexName = watchdogMode ? "TaskCore_Watchdog_Instance" : MutexName;
+            
+            _instanceMutex = new Mutex(true, mutexName, out bool createdNew);
+            
+            if (!createdNew && !watchdogMode)
+            {
+                // Only block regular mode duplicates. Watchdog mode can have multiple instances
+                try { _instanceMutex.Close(); } catch { }
+                _instanceMutex = null;
+                _ownsMutex = false;
+                
+                // Bring existing window to foreground
+                try
+                {
+                    var existingProcess = System.Diagnostics.Process.GetProcessesByName("TaskCore")
+                        .FirstOrDefault(p => p.Id != System.Diagnostics.Process.GetCurrentProcess().Id);
+                    
+                    if (existingProcess != null)
+                    {
+                        NativeMethods.SetForegroundWindow(existingProcess.MainWindowHandle);
+                    }
+                }
+                catch { }
+                
+                Shutdown();
+                return;
+            }
+
+            // We own the mutex
+            _ownsMutex = true;
+
+            base.OnStartup(e);
 
             // Initialize theme with saved accent color
             ThemeService.ApplyAccentColor(settings.AccentColor ?? "#FF9A4DFF");
@@ -55,6 +93,36 @@ namespace TaskCore
             {
                 TrayIconService.Instance.Initialize(MainWindow);
             }
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            // Only release mutex if we actually acquired it
+            if (_ownsMutex && _instanceMutex != null)
+            {
+                try
+                {
+                    _instanceMutex.ReleaseMutex();
+                }
+                catch { }
+                
+                try
+                {
+                    _instanceMutex.Close();
+                }
+                catch { }
+                
+                _instanceMutex = null;
+                _ownsMutex = false;
+            }
+            
+            base.OnExit(e);
+        }
+
+        private static class NativeMethods
+        {
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            public static extern bool SetForegroundWindow(IntPtr hWnd);
         }
     }
 }

@@ -244,15 +244,34 @@ namespace TaskCore.Services
         }
 
         /// <summary>
-        /// Check if a process is a security/antivirus product
+        /// Check if a process matches user-defined custom filter patterns
         /// </summary>
-        public static bool IsSecurityProduct(string appName)
+        public static bool IsUserFilteredProcess(string appName)
+        {
+            var settings = AppSettingsService.Load();
+            return IsUserFilteredProcess(appName, settings);
+        }
+
+        /// <summary>
+        /// Check if a process matches user-defined custom filter patterns (with cached settings)
+        /// </summary>
+        public static bool IsUserFilteredProcess(string appName, AppSettings settings)
         {
             if (string.IsNullOrWhiteSpace(appName)) return false;
+            if (!settings.EnableCustomProcessFilters || settings.CustomFilteredProcesses == null)
+                return false;
+
             var name = appName.ToLowerInvariant();
-            return SecurityProducts.Contains(name) ||
-                   name.Contains("av") || name.Contains("shield") ||
-                   name.Contains("protect") || name.Contains("defender");
+            foreach (var pattern in settings.CustomFilteredProcesses)
+            {
+                if (string.IsNullOrWhiteSpace(pattern)) continue;
+                
+                var lowerPattern = pattern.ToLowerInvariant();
+                if (name == lowerPattern || name.Contains(lowerPattern))
+                    return true;
+            }
+
+            return false;
         }
     }
 }
