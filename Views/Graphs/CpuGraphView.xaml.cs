@@ -12,17 +12,49 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using TaskCore.Views;
+using TaskCore.ViewModels.Graphs;
 
 namespace TaskCore.Views.Graphs
 {
     /// <summary>
     /// Interaction logic for CpuGraphView.xaml
     /// </summary>
-    public partial class CpuGraphView : UserControl
+    public partial class CpuGraphView : UserControl, IActivatableView, IDisposable
     {
+        private bool _disposed;
+
         public CpuGraphView()
         {
             InitializeComponent();
+        }
+
+        public void OnActivated()
+        {
+            // Recreate ViewModel if needed
+            if (DataContext is not CpuGraphViewModel)
+            {
+                DataContext = new CpuGraphViewModel();
+            }
+        }
+
+        public void OnDeactivated()
+        {
+            // Dispose ViewModel to free memory
+            if (DataContext is IDisposable disposable)
+            {
+                try { disposable.Dispose(); } catch { }
+            }
+            DataContext = null;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            OnDeactivated();
+            GC.SuppressFinalize(this);
         }
     }
 }

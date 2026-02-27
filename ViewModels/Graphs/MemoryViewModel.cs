@@ -450,6 +450,8 @@ namespace TaskCore.ViewModels.Graphs
             catch { }
 
             try { _memoryCounter?.Dispose(); } catch { }
+
+            GC.SuppressFinalize(this);
         }
     }
 }

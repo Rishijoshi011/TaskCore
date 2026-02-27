@@ -4,6 +4,8 @@ using System.Windows;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using TaskCore.Services;
+using System.Diagnostics;
+using System.IO;
 
 namespace TaskCore
 {
@@ -13,18 +15,32 @@ namespace TaskCore
         private static bool _ownsMutex;
         private const string MutexName = "TaskCore_SingleInstance_Mutex";
 
+        private static void Log(string msg)
+        {
+            var logDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "TaskCore", "Logs");
+            Directory.CreateDirectory(logDir);
+            var logFile = Path.Combine(logDir, "startup.txt");
+            File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}");
+        }
+
         protected override void OnStartup(StartupEventArgs e)
         {
+            Log($"OnStartup BEGIN - Elevated: {e.Args.Contains("--elevated")}");
+
             // Check if watchdog mode is requested via command line or settings
             var settings = AppSettingsService.Load();
             var watchdogMode = settings.WatchdogMode || e.Args.Contains("--watchdog");
+            var isElevatedRelaunch = e.Args.Contains("--elevated");
             
             // Use different mutex for watchdog mode to allow it running alongside regular mode
             var mutexName = watchdogMode ? "TaskCore_Watchdog_Instance" : MutexName;
             
             _instanceMutex = new Mutex(true, mutexName, out bool createdNew);
             
-            if (!createdNew && !watchdogMode)
+            // Skip mutex check for elevated relaunch or watchdog mode
+            if (!createdNew && !watchdogMode && !isElevatedRelaunch)
             {
                 // Only block regular mode duplicates. Watchdog mode can have multiple instances
                 try { _instanceMutex.Close(); } catch { }

@@ -111,7 +111,11 @@ namespace TaskCore.Services
                             $"[{DateTime.Now:HH:mm:ss}] Background writer error: {ex.Message}\n");
                     }
                     catch { }
-                    await Task.Delay(1000, _writeCts.Token).ConfigureAwait(false);
+                    try
+                    {
+                        await Task.Delay(1000).ConfigureAwait(false);
+                    }
+                    catch { break; }
                 }
             }
         }

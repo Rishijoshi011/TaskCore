@@ -43,8 +43,9 @@ namespace TaskCore.ViewModels
         [ObservableProperty] private double averageLinePosition;
     }
 
-    public partial class DashboardViewModel : ObservableObject
+    public partial class DashboardViewModel : ObservableObject, IDisposable
     {
+        private bool _disposed;
         private readonly DispatcherTimer _refreshTimer;
 
         private PerformanceCounter? _diskReadBytes;
@@ -72,43 +73,25 @@ namespace TaskCore.ViewModels
         [RelayCommand]
         private void RestartExplorer()
         {
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = "/c taskkill /f /im explorer.exe & start explorer.exe",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                });
-
-                ActionStatusText = "Explorer restarted";
-            }
-            catch (Exception ex)
-            {
-                ActionStatusText = $"Restart Explorer failed: {ex.Message}";
-            }
+            ExecuteCommandWithLogging(
+                "RestartExplorer",
+                "cmd.exe",
+                "/c taskkill /f /im explorer.exe & start explorer.exe",
+                "Explorer restarted successfully",
+                "Failed to restart Explorer"
+            );
         }
 
         [RelayCommand]
         private void FlushDns()
         {
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = "/c ipconfig /flushdns",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                });
-
-                ActionStatusText = "DNS flushed";
-            }
-            catch (Exception ex)
-            {
-                ActionStatusText = $"Flush DNS failed: {ex.Message}";
-            }
+            ExecuteCommandWithLogging(
+                "FlushDns",
+                "ipconfig",
+                "/flushdns",
+                "DNS cache flushed successfully",
+                "Failed to flush DNS"
+            );
         }
 
         [RelayCommand]
@@ -116,173 +99,161 @@ namespace TaskCore.ViewModels
         {
             try
             {
-                var temp = Path.GetTempPath();
-                if (Directory.Exists(temp))
+                ActionStatusText = "Clearing temp files...";
+                long freedBytes = 0;
+                int deletedFiles = 0;
+                int deletedDirs = 0;
+                var errors = new System.Collections.Generic.List<string>();
+                var tempPaths = new[]
                 {
-                    foreach (var file in Directory.GetFiles(temp))
-                    {
-                        try { File.Delete(file); } catch { }
-                    }
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp"),
+                    Path.GetTempPath()
+                };
 
-                    foreach (var dir in Directory.GetDirectories(temp))
+                foreach (var tempPath in tempPaths)
+                {
+                    if (!Directory.Exists(tempPath)) continue;
+                    try
                     {
-                        try { Directory.Delete(dir, recursive: true); } catch { }
+                        foreach (var file in Directory.GetFiles(tempPath, "*.*", SearchOption.TopDirectoryOnly))
+                        {
+                            try
+                            {
+                                var fi = new FileInfo(file);
+                                freedBytes += fi.Length;
+                                File.Delete(file);
+                                deletedFiles++;
+                            }
+                            catch (Exception ex) { errors.Add($"File {file}: {ex.Message}"); }
+                        }
+                        foreach (var dir in Directory.GetDirectories(tempPath))
+                        {
+                            try
+                            {
+                                Directory.Delete(dir, true);
+                                deletedDirs++;
+                            }
+                            catch (Exception ex) { errors.Add($"Dir {dir}: {ex.Message}"); }
+                        }
                     }
+                    catch (Exception ex) { errors.Add($"Path {tempPath}: {ex.Message}"); }
                 }
 
-                ActionStatusText = "Temp cleared";
+                var logMsg = $"[ClearTemp] Deleted {deletedFiles} files, {deletedDirs} directories, freed {freedBytes / 1024 / 1024} MB. Errors: {errors.Count}";
+                LogQuickAction(logMsg);
+
+                ActionStatusText = $"Cleared {freedBytes / 1024 / 1024} MB ({errors.Count} errors)";
             }
             catch (Exception ex)
             {
-                ActionStatusText = $"Clear Temp failed: {ex.Message}";
+                LogQuickAction($"[ClearTemp] Failed: {ex.Message}");
+                ActionStatusText = $"Failed: {ex.Message}";
             }
         }
 
         [RelayCommand]
         private void RestartAudioService()
         {
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = "/c net stop audiosrv & net start audiosrv",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                });
-
-                ActionStatusText = "Audio service restarted";
-            }
-            catch (Exception ex)
-            {
-                ActionStatusText = $"Restart Audio failed: {ex.Message}";
-            }
+            ExecuteCommandWithLogging(
+                "RestartAudioService",
+                "cmd.exe",
+                "/c net stop audiosrv & net start audiosrv",
+                "Audio service restarted successfully",
+                "Failed to restart audio service"
+            );
         }
 
         [RelayCommand]
         private void RestartGpuDriver()
         {
-            try
-            {
-                // Try PowerShell approach to disable/enable display adapters (requires admin)
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "powershell.exe",
-                    Arguments = "-Command \"Get-PnpDevice -Class DisplayAdapter -Status OK | Disable-PnpDevice -Confirm:$false; Start-Sleep 2; Get-PnpDevice -Class DisplayAdapter | Enable-PnpDevice -Confirm:$false\"",
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
-                };
-                Process.Start(psi);
-                ActionStatusText = "GPU driver restart initiated (may need admin)";
-            }
-            catch (Exception ex)
-            {
-                ActionStatusText = $"GPU restart failed: {ex.Message}";
-            }
+            ExecuteCommandWithLogging(
+                "RestartGpuDriver",
+                "powershell.exe",
+                "-Command \"Get-PnpDevice -Class DisplayAdapter -Status OK | Disable-PnpDevice -Confirm:$false; Start-Sleep 2; Get-PnpDevice -Class DisplayAdapter | Enable-PnpDevice -Confirm:$false\"",
+                "GPU driver restart initiated (check log for details)",
+                "Failed to restart GPU driver"
+            );
         }
 
         [RelayCommand]
         private void ResetNetworkStack()
         {
-            try
+            Task.Run(() =>
             {
-                Process.Start(new ProcessStartInfo
+                var results = new System.Collections.Generic.List<string>();
+                var commands = new[]
                 {
-                    FileName = "cmd.exe",
-                    Arguments = "/c netsh winsock reset & netsh int ip reset & ipconfig /release & ipconfig /renew & ipconfig /flushdns",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                });
-                ActionStatusText = "Network stack reset initiated";
-            }
-            catch (Exception ex)
-            {
-                ActionStatusText = $"Network reset failed: {ex.Message}";
-            }
+                    ("netsh", "winsock reset"),
+                    ("netsh", "int ip reset"),
+                    ("ipconfig", "/flushdns"),
+                    ("ipconfig", "/release"),
+                    ("ipconfig", "/renew")
+                };
+
+                foreach (var (exe, args) in commands)
+                {
+                    var (success, output, exitCode) = ExecuteCommandAndCaptureOutput(exe, args, 10000);
+                    results.Add($"[{exe} {args}] Exit: {exitCode}, Success: {success}");
+                    if (!string.IsNullOrEmpty(output))
+                        results.Add($"  Output: {output.Substring(0, Math.Min(200, output.Length))}");
+                }
+
+                LogQuickAction($"[ResetNetworkStack]{Environment.NewLine}" + string.Join(Environment.NewLine, results));
+                ActionStatusText = "Network stack reset completed (see log)";
+            });
         }
 
         [RelayCommand]
         private void RenewIp()
         {
-            try
+            Task.Run(() =>
             {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = "/c ipconfig /release & ipconfig /renew",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                });
-                ActionStatusText = "IP renewed";
-            }
-            catch (Exception ex)
-            {
-                ActionStatusText = $"IP renew failed: {ex.Message}";
-            }
+                var (releaseSuccess, releaseOutput, releaseCode) = ExecuteCommandAndCaptureOutput("ipconfig", "/release", 5000);
+                Thread.Sleep(1000);
+                var (renewSuccess, renewOutput, renewCode) = ExecuteCommandAndCaptureOutput("ipconfig", "/renew", 10000);
+
+                var logMsg = $"[RenewIp] Release Exit: {releaseCode}, Renew Exit: {renewCode}";
+                LogQuickAction(logMsg);
+
+                ActionStatusText = renewSuccess ? "IP renewed successfully" : $"IP renew failed (exit: {renewCode})";
+            });
         }
 
         [RelayCommand]
         private void RestartPrintSpooler()
         {
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = "/c net stop spooler & net start spooler",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                });
-                ActionStatusText = "Print spooler restarted";
-            }
-            catch (Exception ex)
-            {
-                ActionStatusText = $"Print spooler restart failed: {ex.Message}";
-            }
+            ExecuteCommandWithLogging(
+                "RestartPrintSpooler",
+                "cmd.exe",
+                "/c net stop spooler & net start spooler",
+                "Print spooler restarted successfully",
+                "Failed to restart print spooler"
+            );
         }
 
         [RelayCommand]
         private void RestartWindowsSearch()
         {
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = "/c net stop wsearch & net start wsearch",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                });
-                ActionStatusText = "Windows Search restarted";
-            }
-            catch (Exception ex)
-            {
-                ActionStatusText = $"Windows Search restart failed: {ex.Message}";
-            }
+            ExecuteCommandWithLogging(
+                "RestartWindowsSearch",
+                "cmd.exe",
+                "/c net stop wsearch & net start wsearch",
+                "Windows Search restarted successfully",
+                "Failed to restart Windows Search"
+            );
         }
 
         [RelayCommand]
         private void ClearIconCache()
         {
-            try
-            {
-                // Kill explorer, delete icon cache, restart explorer
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = "/c taskkill /f /im explorer.exe & del /f /q %localappdata%\\IconCache.db & start explorer.exe",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                };
-                Process.Start(psi);
-                ActionStatusText = "Icon cache cleared";
-            }
-            catch (Exception ex)
-            {
-                ActionStatusText = $"Clear icon cache failed: {ex.Message}";
-            }
+            ExecuteCommandWithLogging(
+                "ClearIconCache",
+                "cmd.exe",
+                "/c taskkill /f /im explorer.exe & del /f /q %localappdata%\\IconCache.db & start explorer.exe",
+                "Icon cache cleared successfully",
+                "Failed to clear icon cache"
+            );
         }
 
         [RelayCommand]
@@ -290,19 +261,21 @@ namespace TaskCore.ViewModels
         {
             try
             {
-                // SFC requires admin - will fail silently if not elevated
-                Process.Start(new ProcessStartInfo
+                ActionStatusText = "Starting SFC scan...";
+                var psi = new ProcessStartInfo("sfc", "/scannow")
                 {
-                    FileName = "cmd.exe",
-                    Arguments = "/c sfc /scannow",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                });
-                ActionStatusText = "SFC scan started (may need admin)";
+                    CreateNoWindow = false,
+                    UseShellExecute = true,
+                    Verb = "runas"
+                };
+                var proc = Process.Start(psi);
+                LogQuickAction($"[SfcScan] Process started (PID: {proc?.Id}). Requires admin elevation.");
+                ActionStatusText = "SFC scan started (requires admin - see log)";
             }
             catch (Exception ex)
             {
-                ActionStatusText = $"SFC scan failed: {ex.Message}";
+                LogQuickAction($"[SfcScan] Failed: {ex.Message}");
+                ActionStatusText = $"Failed: {ex.Message}";
             }
         }
 
@@ -311,20 +284,89 @@ namespace TaskCore.ViewModels
         {
             try
             {
-                // DISM requires admin
-                Process.Start(new ProcessStartInfo
+                ActionStatusText = "Starting DISM repair...";
+                var psi = new ProcessStartInfo("DISM.exe", "/Online /Cleanup-Image /RestoreHealth")
                 {
-                    FileName = "cmd.exe",
-                    Arguments = "/c DISM /Online /Cleanup-Image /RestoreHealth",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                });
-                ActionStatusText = "DISM repair started (may need admin)";
+                    CreateNoWindow = false,
+                    UseShellExecute = true,
+                    Verb = "runas"
+                };
+                var proc = Process.Start(psi);
+                LogQuickAction($"[DismRepair] Process started (PID: {proc?.Id}). Requires admin elevation.");
+                ActionStatusText = "DISM repair started (requires admin - see log)";
             }
             catch (Exception ex)
             {
-                ActionStatusText = $"DISM repair failed: {ex.Message}";
+                LogQuickAction($"[DismRepair] Failed: {ex.Message}");
+                ActionStatusText = $"Failed: {ex.Message}";
             }
+        }
+
+        private void ExecuteCommandWithLogging(string actionName, string fileName, string arguments, string successText, string failureText)
+        {
+            Task.Run(() =>
+            {
+                try
+                {
+                    ActionStatusText = $"Running {actionName}...";
+                    var (success, output, exitCode) = ExecuteCommandAndCaptureOutput(fileName, arguments, 15000);
+
+                    var logEntry = $"[{actionName}] ExitCode: {exitCode}, Success: {success}";
+                    if (!string.IsNullOrEmpty(output))
+                        logEntry += $", Output: {output.Substring(0, Math.Min(300, output.Length))}";
+                    LogQuickAction(logEntry);
+
+                    ActionStatusText = success ? successText : $"{failureText} (exit: {exitCode})";
+                }
+                catch (Exception ex)
+                {
+                    LogQuickAction($"[{actionName}] Exception: {ex.Message}");
+                    ActionStatusText = $"{failureText}: {ex.Message}";
+                }
+            });
+        }
+
+        private (bool success, string output, int exitCode) ExecuteCommandAndCaptureOutput(string fileName, string arguments, int timeoutMs)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo(fileName, arguments)
+                {
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+
+                using var proc = Process.Start(psi);
+                if (proc == null) return (false, "Failed to start process", -1);
+
+                string output = proc.StandardOutput.ReadToEnd();
+                string error = proc.StandardError.ReadToEnd();
+                proc.WaitForExit(timeoutMs);
+
+                var fullOutput = output + (string.IsNullOrEmpty(error) ? "" : $" [ERR: {error}]");
+                bool success = proc.ExitCode == 0;
+
+                return (success, fullOutput, proc.ExitCode);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Exception: {ex.Message}", -1);
+            }
+        }
+
+        private void LogQuickAction(string message)
+        {
+            try
+            {
+                var logDir = Path.Combine(UsageTrackingService.GetBaseDirectory(), "Logs");
+                Directory.CreateDirectory(logDir);
+                var logFile = Path.Combine(logDir, $"quickactions-{DateTime.Now:yyyy-MM-dd}.txt");
+                var entry = $"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}";
+                File.AppendAllText(logFile, entry);
+            }
+            catch { }
         }
 
         [ObservableProperty] private string todayDateText = DateTime.Today.ToString("ddd, dd MMM");
@@ -756,6 +798,61 @@ namespace TaskCore.ViewModels
             }
         }
 
+        private static int CalculateUniqueDurationSeconds(List<UsageTrackingService.SessionRecord> sessions)
+        {
+            if (sessions == null || sessions.Count == 0) return 0;
+
+            // Filter and collect valid intervals without LINQ overhead
+            int validCount = 0;
+            var tempIntervals = new (DateTime start, DateTime end)[sessions.Count];
+            for (int i = 0; i < sessions.Count; i++)
+            {
+                var s = sessions[i];
+                if (s.durationSeconds > 0 && s.endTimeUtc > s.startTimeUtc)
+                {
+                    tempIntervals[validCount++] = (s.startTimeUtc, s.endTimeUtc);
+                }
+            }
+
+            if (validCount == 0) return 0;
+
+            // Sort in-place using Array.Sort (much faster than LINQ OrderBy + ToList)
+            Array.Sort(tempIntervals, 0, validCount, IntervalComparer.Instance);
+
+            // Merge overlapping intervals without allocating a new list
+            double totalSeconds = 0;
+            var currentStart = tempIntervals[0].start;
+            var currentEnd = tempIntervals[0].end;
+
+            for (int i = 1; i < validCount; i++)
+            {
+                if (tempIntervals[i].start <= currentEnd) // Overlaps or adjacent
+                {
+                    // Extend current interval if needed
+                    if (tempIntervals[i].end > currentEnd)
+                        currentEnd = tempIntervals[i].end;
+                }
+                else
+                {
+                    totalSeconds += (currentEnd - currentStart).TotalSeconds;
+                    currentStart = tempIntervals[i].start;
+                    currentEnd = tempIntervals[i].end;
+                }
+            }
+            totalSeconds += (currentEnd - currentStart).TotalSeconds;
+
+            return (int)totalSeconds;
+        }
+
+        private sealed class IntervalComparer : IComparer<(DateTime start, DateTime end)>
+        {
+            public static readonly IntervalComparer Instance = new();
+            public int Compare((DateTime start, DateTime end) x, (DateTime start, DateTime end) y)
+            {
+                return x.start.CompareTo(y.start);
+            }
+        }
+
         private void Refresh()
         {
             try
@@ -770,9 +867,9 @@ namespace TaskCore.ViewModels
 
                 if (sessions.Count > 0)
                 {
-                    var totalSeconds = sessions.Sum(s => Math.Max(0, s.durationSeconds));
-                    var activeSeconds = sessions.Where(s => !s.isIdle).Sum(s => Math.Max(0, s.durationSeconds));
-                    var idleSeconds = sessions.Where(s => s.isIdle).Sum(s => Math.Max(0, s.durationSeconds));
+                    var totalSeconds = CalculateUniqueDurationSeconds(sessions);
+                    var activeSeconds = CalculateUniqueDurationSeconds(sessions.Where(s => !s.isIdle).ToList());
+                    var idleSeconds = CalculateUniqueDurationSeconds(sessions.Where(s => s.isIdle).ToList());
                     
                     // Show total, but include active/idle breakdown in the subtext
                     TotalUsageText = TimeSpan.FromSeconds(totalSeconds).ToString(@"hh\:mm\:ss");
@@ -884,33 +981,69 @@ namespace TaskCore.ViewModels
 
         private void BuildHeatmap(System.Collections.Generic.List<UsageTrackingService.SessionRecord> sessions)
         {
-            // total runtime per hour (local)
+            // Calculate unique minutes per hour (wall-clock time, not summed durations)
             var minutesPerHour = new double[24];
+            var today = DateTime.Today;
+            var tomorrow = today.AddDays(1);
 
-            foreach (var s in sessions)
+            // Pre-allocate a reusable array for intervals (max 1 per session)
+            var maxIntervals = sessions.Count;
+            var intervals = new (DateTime start, DateTime end)[maxIntervals];
+
+            // Group sessions by hour and calculate unique coverage per hour
+            for (int hour = 0; hour < 24; hour++)
             {
-                var start = s.startTimeUtc.ToLocalTime();
-                var end = s.endTimeUtc.ToLocalTime();
+                var hourStart = today.AddHours(hour);
+                var hourEnd = hourStart.AddHours(1);
 
-                if (end < start) continue;
-                if (start.Date != DateTime.Today.Date && end.Date != DateTime.Today.Date) continue;
-
-                // clamp to today
-                var dayStart = DateTime.Today;
-                var dayEnd = DateTime.Today.AddDays(1);
-                if (start < dayStart) start = dayStart;
-                if (end > dayEnd) end = dayEnd;
-
-                var cursor = start;
-                while (cursor < end)
+                // Find all intervals that intersect with this hour
+                int intervalCount = 0;
+                for (int i = 0; i < sessions.Count; i++)
                 {
-                    var hour = cursor.Hour;
-                    var nextHour = new DateTime(cursor.Year, cursor.Month, cursor.Day, cursor.Hour, 0, 0).AddHours(1);
-                    var sliceEnd = end < nextHour ? end : nextHour;
-                    var mins = (sliceEnd - cursor).TotalMinutes;
-                    minutesPerHour[hour] += Math.Max(0, mins);
-                    cursor = sliceEnd;
+                    var s = sessions[i];
+                    var start = s.startTimeUtc.ToLocalTime();
+                    var end = s.endTimeUtc.ToLocalTime();
+
+                    // Clamp to today
+                    if (start < today) start = today;
+                    if (end > tomorrow) end = tomorrow;
+
+                    // Check if intersects with this hour
+                    if (end > hourStart && start < hourEnd)
+                    {
+                        // Clamp interval to this hour
+                        if (start < hourStart) start = hourStart;
+                        if (end > hourEnd) end = hourEnd;
+                        intervals[intervalCount++] = (start, end);
+                    }
                 }
+
+                if (intervalCount == 0) continue;
+
+                // Sort intervals by start time
+                Array.Sort(intervals, 0, intervalCount, IntervalComparer.Instance);
+
+                // Merge overlapping intervals and sum unique minutes
+                var currentStart = intervals[0].start;
+                var currentEnd = intervals[0].end;
+                double uniqueMinutes = 0;
+
+                for (int i = 1; i < intervalCount; i++)
+                {
+                    if (intervals[i].start <= currentEnd) // Overlaps
+                    {
+                        if (intervals[i].end > currentEnd)
+                            currentEnd = intervals[i].end;
+                    }
+                    else
+                    {
+                        uniqueMinutes += (currentEnd - currentStart).TotalMinutes;
+                        currentStart = intervals[i].start;
+                        currentEnd = intervals[i].end;
+                    }
+                }
+                uniqueMinutes += (currentEnd - currentStart).TotalMinutes;
+                minutesPerHour[hour] = Math.Min(60, uniqueMinutes); // Cap at 60 minutes
             }
 
             var max = minutesPerHour.Max();
@@ -936,7 +1069,7 @@ namespace TaskCore.ViewModels
             var dayData = days.Select(d =>
             {
                 var sessions = UsageTrackingService.GetDailySessions(d, mergeOverlappingSessions: true);
-                var totalSec = sessions.Sum(s => Math.Max(0, s.durationSeconds));
+                var totalSec = CalculateUniqueDurationSeconds(sessions);
 
                 // Find peak app
                 var peakApp = sessions
@@ -1156,6 +1289,36 @@ namespace TaskCore.ViewModels
                 StabilityText = "OK";
                 StabilityDetail = "No issues detected";
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            // Stop timer (readonly, can't null it)
+            try { _refreshTimer?.Stop(); } catch { }
+
+            // Unsubscribe events
+            try { AppViewStateService.ViewChanged -= OnViewChanged; } catch { }
+            try
+            {
+                RecentAlerts.CollectionChanged -= OnRecentAlertsChanged;
+                TopOffenders.CollectionChanged -= OnTopOffendersChanged;
+                Insights.CollectionChanged -= OnInsightsChanged;
+            }
+            catch { }
+
+            // Dispose performance counters and null out
+            try { _diskReadBytes?.Dispose(); _diskReadBytes = null; } catch { }
+            try { _diskWriteBytes?.Dispose(); _diskWriteBytes = null; } catch { }
+            foreach (var pc in _gpuEngineUtil)
+            {
+                try { pc?.Dispose(); } catch { }
+            }
+            _gpuEngineUtil = Array.Empty<PerformanceCounter>();
+
+            GC.SuppressFinalize(this);
         }
     }
 }

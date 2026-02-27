@@ -532,10 +532,12 @@ namespace TaskCore.ViewModels.Graphs
             }
             catch { }
 
-            try { _readBytes?.Dispose(); } catch { }
-            try { _writeBytes?.Dispose(); } catch { }
-            try { _activeTime?.Dispose(); } catch { }
-            try { _queueLen?.Dispose(); } catch { }
+            try { _readBytes?.Dispose(); _readBytes = null; } catch { }
+            try { _writeBytes?.Dispose(); _writeBytes = null; } catch { }
+            try { _activeTime?.Dispose(); _activeTime = null; } catch { }
+            try { _queueLen?.Dispose(); _queueLen = null; } catch { }
+
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -1,9 +1,11 @@
-﻿using System.Windows;
+﻿using System.Security.Principal;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using TaskCore.Views;
 using TaskCore.Services;
+using System.Windows.Media.Imaging;
 
 namespace TaskCore
 {
@@ -40,6 +42,15 @@ namespace TaskCore
 
             _rulesView = new RulesView();
             _settingsView = new SettingsView();
+
+            // Check if running as administrator and show badge
+            if (IsRunningAsAdmin())
+            {
+                AdminBadge.Visibility = Visibility.Visible;
+            }
+
+            // Handle window closing to dispose all resources
+            Closing += OnWindowClosing;
 
             // Configure sidebar based on mode
             ConfigureSidebarForMode();
@@ -87,22 +98,96 @@ namespace TaskCore
         {
             var item = new ListBoxItem();
             var panel = new StackPanel { Orientation = Orientation.Horizontal };
-            panel.Children.Add(new Image { Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(iconPath)), Width = 20, Height = 20, Margin = new Thickness(0, 0, 14, 0) });
+            panel.Children.Add(new Image { Source = GetCachedIcon(iconPath), Width = 20, Height = 20, Margin = new Thickness(0, 0, 14, 0) });
             panel.Children.Add(new TextBlock { Text = text, FontWeight = FontWeights.Medium, FontSize = 15 });
             item.Content = panel;
             Sidebar.Items.Add(item);
         }
 
-        // Lazy view getters - create on first access
-        private DashboardView GetDashboardView() => _dashboardView ??= new DashboardView();
-        private ProcessesView GetProcessesView() => _processesView ??= new ProcessesView();
-        private GraphsView GetGraphsView() => _graphsView ??= new GraphsView();
-        private DetailsView GetDetailsView() => _detailsView ??= new DetailsView();
-        private RulesView GetRulesView() => _rulesView ??= new RulesView();
-        private SettingsView GetSettingsView() => _settingsView ??= new SettingsView();
+        private static readonly Dictionary<string, BitmapImage> _iconCache = new();
+
+        private static BitmapImage GetCachedIcon(string iconPath)
+        {
+            if (!_iconCache.TryGetValue(iconPath, out var image))
+            {
+                image = new BitmapImage(new Uri(iconPath));
+                image.Freeze(); // Make thread-safe and reduce memory
+                _iconCache[iconPath] = image;
+            }
+            return image;
+        }
+
+        // View getters - create new each time to ensure proper disposal
+        private DashboardView GetDashboardView()
+        {
+            DisposeView(_dashboardView);
+            _dashboardView = null;
+            return new DashboardView();
+        }
+        private ProcessesView GetProcessesView()
+        {
+            DisposeView(_processesView);
+            _processesView = null;
+            return new ProcessesView();
+        }
+        private GraphsView GetGraphsView()
+        {
+            DisposeView(_graphsView);
+            _graphsView = null;
+            return new GraphsView();
+        }
+        private DetailsView GetDetailsView()
+        {
+            DisposeView(_detailsView);
+            _detailsView = null;
+            return new DetailsView();
+        }
+        private RulesView GetRulesView()
+        {
+            DisposeView(_rulesView);
+            _rulesView = null;
+            return new RulesView();
+        }
+        private SettingsView GetSettingsView()
+        {
+            DisposeView(_settingsView);
+            _settingsView = null;
+            return new SettingsView();
+        }
+
+        private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Dispose all cached views to free resources
+            DisposeView(_dashboardView);
+            DisposeView(_processesView);
+            DisposeView(_graphsView);
+            DisposeView(_detailsView);
+            DisposeView(_rulesView);
+            DisposeView(_settingsView);
+        }
+
+        private static void DisposeView(object? view)
+        {
+            if (view is IDisposable disposable)
+            {
+                try { disposable.Dispose(); } catch { }
+            }
+        }
+
+        private void DisposeCurrentViewModel()
+        {
+            if (_currentView?.DataContext is IDisposable disposable)
+            {
+                try { disposable.Dispose(); } catch { }
+                _currentView.DataContext = null;
+            }
+        }
 
         private void Sidebar_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
+            // Dispose current view's ViewModel when switching to free memory
+            DisposeCurrentViewModel();
+
             // Deactivate current view before switching
             if (_currentView is IActivatableView activatable)
             {
@@ -231,6 +316,20 @@ namespace TaskCore
             {
                 // Exit the application
                 Application.Current.Shutdown();
+            }
+        }
+
+        private static bool IsRunningAsAdmin()
+        {
+            try
+            {
+                using var identity = WindowsIdentity.GetCurrent();
+                var principal = new WindowsPrincipal(identity);
+                return principal.IsInRole(WindowsBuiltInRole.Administrator);
+            }
+            catch
+            {
+                return false;
             }
         }
     }

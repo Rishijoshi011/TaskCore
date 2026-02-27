@@ -15,8 +15,9 @@ using TaskCore.Services;
 
 namespace TaskCore.ViewModels
 {
-    public partial class SettingsViewModel : ObservableObject
+    public partial class SettingsViewModel : ObservableObject, IDisposable
     {
+        private bool _disposed;
         private readonly AppSettings _settings;
 
         public string AppVersion { get; }
@@ -328,10 +329,38 @@ namespace TaskCore.ViewModels
             ThemeService.ApplyAccentColor(value);
         }
 
+        [ObservableProperty]
+        private string relaunchStatusText = string.Empty;
+
         [RelayCommand]
         private void RelaunchAsAdmin()
         {
-            ElevationService.TryRelaunchAsAdminAndExit();
+            try
+            {
+                var success = ElevationService.TryRelaunchAsAdminAndExit();
+                if (!success)
+                {
+                    RelaunchStatusText = "Failed to relaunch as admin";
+                    MessageBox.Show(
+                        "Failed to relaunch as administrator.\n\n" +
+                        "Possible reasons:\n" +
+                        "• User cancelled the UAC prompt\n" +
+                        "• Antivirus blocked the operation\n" +
+                        "• Executable path not found",
+                        "Relaunch Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                RelaunchStatusText = $"Error: {ex.Message}";
+                MessageBox.Show(
+                    $"Failed to relaunch as administrator:\n\n{ex.Message}",
+                    "Relaunch Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         [RelayCommand]
@@ -477,6 +506,19 @@ namespace TaskCore.ViewModels
             catch
             {
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            // Stop timer
+            try { _refreshTimer?.Stop(); } catch { }
+
+            // Cancel any pending copy status task
+            try { _copyCts?.Cancel(); } catch { }
+            try { _copyCts?.Dispose(); } catch { }
         }
     }
 

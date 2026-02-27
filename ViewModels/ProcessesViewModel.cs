@@ -11,8 +11,9 @@ using TaskCore.Services;
 
 namespace TaskCore.ViewModels
 {
-    public partial class ProcessesViewModel : ObservableObject
+    public partial class ProcessesViewModel : ObservableObject, IDisposable
     {
+        private bool _disposed;
         private readonly ProcessService _service = new();
         private readonly DispatcherTimer _timer;
 
@@ -455,5 +456,24 @@ namespace TaskCore.ViewModels
         }
 
         private bool CanEndTask() => SelectedProcess != null || SelectedGroup != null;
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            // Stop timer and null out
+            try { _timer?.Stop(); } catch { }
+
+            // Cancel any pending filter task
+            try { _filterCts?.Cancel(); } catch { }
+            try { _filterCts?.Dispose(); } catch { }
+
+            // Unsubscribe events
+            try { AppViewStateService.ViewChanged -= OnViewChanged; } catch { }
+            try { RefreshIntervalService.RefreshIntervalChanged -= OnRefreshIntervalChanged; } catch { }
+
+            GC.SuppressFinalize(this);
+        }
     }
 }

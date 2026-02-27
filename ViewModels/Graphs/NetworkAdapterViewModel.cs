@@ -370,6 +370,8 @@ namespace TaskCore.ViewModels.Graphs
                 }
             }
             catch { }
+
+            GC.SuppressFinalize(this);
         }
     }
 }

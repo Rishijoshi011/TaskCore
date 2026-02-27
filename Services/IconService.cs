@@ -160,8 +160,8 @@ namespace TaskCore.Services
 
         private static BitmapSource IconToBitmapSource(IntPtr hIcon)
         {
-            var icon = Icon.FromHandle(hIcon);
-            var bitmap = icon.ToBitmap();
+            using var icon = Icon.FromHandle(hIcon);
+            using var bitmap = icon.ToBitmap();
             IntPtr hBitmap = IntPtr.Zero;
 
             try

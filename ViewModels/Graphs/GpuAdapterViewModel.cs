@@ -874,12 +874,16 @@ namespace TaskCore.ViewModels.Graphs
             }
             catch { }
 
-            foreach (var c in _gpu3dCounters) try { c.Dispose(); } catch { }
-            foreach (var c in _gpuAnyCounters) try { c.Dispose(); } catch { }
-            try { _dedicatedUsage?.Dispose(); } catch { }
-            try { _dedicatedLimit?.Dispose(); } catch { }
-            try { _sharedUsage?.Dispose(); } catch { }
-            try { _sharedLimit?.Dispose(); } catch { }
+            foreach (var c in _gpu3dCounters) { try { c?.Dispose(); } catch { } }
+            _gpu3dCounters.Clear();
+            foreach (var c in _gpuAnyCounters) { try { c?.Dispose(); } catch { } }
+            _gpuAnyCounters.Clear();
+            try { _dedicatedUsage?.Dispose(); _dedicatedUsage = null; } catch { }
+            try { _dedicatedLimit?.Dispose(); _dedicatedLimit = null; } catch { }
+            try { _sharedUsage?.Dispose(); _sharedUsage = null; } catch { }
+            try { _sharedLimit?.Dispose(); _sharedLimit = null; } catch { }
+
+            GC.SuppressFinalize(this);
         }
     }
 }

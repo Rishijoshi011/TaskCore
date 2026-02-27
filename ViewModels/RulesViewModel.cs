@@ -8,8 +8,9 @@ using TaskCore.Services;
 
 namespace TaskCore.ViewModels
 {
-    public partial class RulesViewModel : ObservableObject
+    public partial class RulesViewModel : ObservableObject, IDisposable
     {
+        private bool _disposed;
         private readonly AppSettings _settings;
 
         [ObservableProperty]
@@ -163,9 +164,23 @@ namespace TaskCore.ViewModels
 
                     _settings.CustomAlertSoundPath = destPath;
                     AppSettingsService.Save(_settings);
+
+                    // Notify RulesService to reload settings immediately so custom sound takes effect
+                    RulesService.Instance.ReloadSettings();
+
+                    System.Windows.MessageBox.Show(
+                        "Custom sound saved successfully!",
+                        "Sound Saved",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    System.Windows.MessageBox.Show(
+                        $"Failed to save custom sound: {ex.Message}",
+                        "Error",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
                 }
             }
         }
@@ -295,6 +310,7 @@ namespace TaskCore.ViewModels
         private void SaveRule()
         {
             Rule rule;
+            bool isNewRule = false;
             if (SelectedRule != null)
             {
                 // Edit existing
@@ -305,6 +321,7 @@ namespace TaskCore.ViewModels
                 // Create new
                 rule = new Rule();
                 Rules.Add(rule);
+                isNewRule = true;
             }
 
             rule.Name = EditRuleName;
@@ -328,8 +345,20 @@ namespace TaskCore.ViewModels
             IsEditingRule = false;
             SelectedRule = null;
 
-            // Refresh filtered view
-            UpdateFilteredRules();
+            // Refresh filtered view and notify about all property changes
+            if (!isNewRule)
+            {
+                // For existing rules, force a complete refresh by recreating the filtered list
+                // This ensures the UI sees all property changes
+                var tempRules = FilteredRules.ToList();
+                FilteredRules.Clear();
+                foreach (var r in tempRules)
+                    FilteredRules.Add(r);
+            }
+            else
+            {
+                UpdateFilteredRules();
+            }
             OnPropertyChanged(nameof(HasRules));
             OnPropertyChanged(nameof(RulesCount));
         }
@@ -380,12 +409,10 @@ namespace TaskCore.ViewModels
             _settings.Rules = Rules.ToList();
             AppSettingsService.Save(_settings);
 
-            OnPropertyChanged(nameof(Rules));
-
             // Reset rule states
             RulesService.Instance.ResetStates();
 
-            // Refresh filtered view
+            // Refresh collections - call this AFTER property change to ensure UI updates
             UpdateFilteredRules();
             OnPropertyChanged(nameof(NoRulesFound));
         }
@@ -457,6 +484,19 @@ namespace TaskCore.ViewModels
                 RuleActionType.SetPriority => "Set Priority",
                 _ => type.ToString()
             };
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            // Unsubscribe from RuleTriggered event
+            try
+            {
+                RulesService.Instance.RuleTriggered -= OnRuleTriggered;
+            }
+            catch { }
         }
     }
 }

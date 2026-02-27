@@ -118,7 +118,7 @@ namespace TaskCore.Services
                     if (_recentlyEnded.TryGetValue(appName, out var recent))
                     {
                         // Continue the previous session - restore metrics
-                        _trackedApps[appName] = (recent.endTime, path, new HashSet<int> { pid });
+                        _trackedApps[appName] = (DateTime.Now, path, new HashSet<int> { pid });
                         _appMetrics[appName] = (recent.peakCpu, recent.totalCpu, recent.peakMem, recent.totalMem, recent.samples);
                         _recentlyEnded.Remove(appName);
                     }

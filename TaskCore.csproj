@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>4.4.3</Version>
-    <AssemblyVersion>4.0.4.3</AssemblyVersion>
-    <FileVersion>4.0.4.3</FileVersion>
+    <Version>4.4.4</Version>
+    <AssemblyVersion>4.0.4.4</AssemblyVersion>
+    <FileVersion>4.0.4.4</FileVersion>
     <ApplicationIcon>Resources\AppIcon\TaskCore_icon.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -55,6 +55,10 @@
     <Resource Include="Resources\Icons\Processes.png" />
     <Resource Include="Resources\Icons\Rules.png" />
     <Resource Include="Resources\Icons\Settings.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Installer\" />
   </ItemGroup>
 
 </Project>

@@ -87,17 +87,26 @@ namespace TaskCore.Services
 
         private void EvaluateRules()
         {
-            // Cache settings and reload only every 30 seconds
-            if (DateTime.Now - _lastSettingsLoad > TimeSpan.FromSeconds(30))
+            // Cache settings and reload only every 30 seconds unless ReloadSettings was called
+            var lastLoad = _lastSettingsLoad;
+            if (DateTime.Now - lastLoad > TimeSpan.FromSeconds(30))
             {
-                _cachedSettings = AppSettingsService.Load();
-                _lastSettingsLoad = DateTime.Now;
+                lock (_stateLock)
+                {
+                    // Double-check inside lock
+                    if (DateTime.Now - _lastSettingsLoad > TimeSpan.FromSeconds(30))
+                    {
+                        _cachedSettings = AppSettingsService.Load();
+                        _lastSettingsLoad = DateTime.Now;
+                    }
+                }
             }
             
-            if (!_cachedSettings.RulesEngineEnabled)
+            var settings = _cachedSettings;
+            if (!settings.RulesEngineEnabled)
                 return;
 
-            var rules = _cachedSettings.Rules;
+            var rules = settings.Rules;
             if (rules == null || rules.Count == 0)
                 return;
 
@@ -519,6 +528,14 @@ namespace TaskCore.Services
             try
             {
                 var settings = _cachedSettings;
+                LogRuleEvent(new RuleTriggerEvent
+                {
+                    RuleName = "Debug",
+                    Description = $"SoundAlertEnabled={settings.SoundAlertEnabled}, SoundMode={settings.SoundMode}, Path={settings.CustomAlertSoundPath}",
+                    ActionType = RuleActionType.Log,
+                    ActionResult = "Checking sound settings"
+                });
+                
                 // Check if sound alert is enabled
                 if (!settings.SoundAlertEnabled)
                     return;
@@ -532,16 +549,49 @@ namespace TaskCore.Services
                     !string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path) &&
                     string.Equals(System.IO.Path.GetExtension(path), ".wav", StringComparison.OrdinalIgnoreCase))
                 {
-                    var player = new System.Media.SoundPlayer(path);
-                    player.Play();
+                    LogRuleEvent(new RuleTriggerEvent
+                    {
+                        RuleName = "Debug",
+                        Description = $"Playing custom sound: {path}",
+                        ActionType = RuleActionType.Log,
+                        ActionResult = "Starting"
+                    });
+                    
+                    using var player = new System.Media.SoundPlayer(path);
+                    player.PlaySync(); // Use PlaySync for reliability
+                    
+                    LogRuleEvent(new RuleTriggerEvent
+                    {
+                        RuleName = "Debug",
+                        Description = "Custom sound played successfully",
+                        ActionType = RuleActionType.Log,
+                        ActionResult = "Success"
+                    });
                 }
                 else if (settings.SoundMode != "Custom")
                 {
                     System.Media.SystemSounds.Beep.Play();
                 }
+                else
+                {
+                    LogRuleEvent(new RuleTriggerEvent
+                    {
+                        RuleName = "Debug",
+                        Description = $"Custom sound file not found or invalid: {path}",
+                        ActionType = RuleActionType.Log,
+                        ActionResult = $"FileExists={System.IO.File.Exists(path)}"
+                    });
+                }
             }
-            catch
+            catch (Exception ex)
             {
+                LogRuleEvent(new RuleTriggerEvent
+                {
+                    RuleName = "Debug",
+                    Description = $"Sound play error: {ex.Message}",
+                    ActionType = RuleActionType.Log,
+                    ActionResult = "Error"
+                });
             }
         }
 
@@ -620,6 +670,18 @@ namespace TaskCore.Services
             lock (_stateLock)
             {
                 _ruleStates.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Forces an immediate reload of settings from disk.
+        /// </summary>
+        public void ReloadSettings()
+        {
+            lock (_stateLock)
+            {
+                _cachedSettings = AppSettingsService.Load();
+                _lastSettingsLoad = DateTime.Now;
             }
         }
     }

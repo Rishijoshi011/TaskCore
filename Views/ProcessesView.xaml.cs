@@ -6,11 +6,30 @@ using TaskCore.ViewModels;
 
 namespace TaskCore.Views
 {
-    public partial class ProcessesView : UserControl
+    public partial class ProcessesView : UserControl, IActivatableView
     {
         public ProcessesView()
         {
             InitializeComponent();
+        }
+
+        public void OnActivated()
+        {
+            // ViewModel is created via XAML DataContext - recreate if disposed
+            if (DataContext == null)
+            {
+                DataContext = new ProcessesViewModel();
+            }
+        }
+
+        public void OnDeactivated()
+        {
+            // Dispose ViewModel to free resources
+            if (DataContext is IDisposable vm)
+            {
+                DataContext = null;
+                vm.Dispose();
+            }
         }
 
         // Expand / collapse process group
@@ -38,6 +57,5 @@ namespace TaskCore.Views
                 System.Diagnostics.Debug.WriteLine($"[ProcessesView] Row click: sender={sender?.GetType().Name}, DataContext={((sender as FrameworkElement)?.DataContext)?.GetType().Name}");
             }
         }
-
     }
 }

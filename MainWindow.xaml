@@ -92,6 +92,11 @@
                 <!-- WINDOW BUTTONS -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
 
+                    <!-- Admin Badge -->
+                    <Border x:Name="AdminBadge" Background="#E81123" CornerRadius="4" Padding="8,2" Margin="0,0,8,0" Visibility="Collapsed" VerticalAlignment="Center">
+                        <TextBlock Text="ADMIN" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                    </Border>
+
                     <!-- Minimize -->
                     <Button Width="46" Height="40" Background="Transparent" 
                            Click="Minimize_Click"

@@ -436,8 +436,10 @@
                                     <ColumnDefinition Width="10"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" Content="SFC Scan" Command="{Binding SfcScanCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"/>
-                                <Button Grid.Column="2" Content="DISM Repair" Command="{Binding DismRepairCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"/>
+                                <Button Grid.Column="0" Content="SFC Scan" Command="{Binding SfcScanCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"
+                                    ToolTip="SFC (System File Checker)&#10;• Scans all protected Windows system files&#10;• Replaces corrupted files with cached copies&#10;• Fixes: crashes, blue screens, system errors&#10;• Requires admin privileges&#10;• May take 5-15 minutes to complete"/>
+                                <Button Grid.Column="2" Content="DISM Repair" Command="{Binding DismRepairCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"
+                                    ToolTip="DISM (Deployment Image Servicing)&#10;• Repairs Windows system image corruption&#10;• Uses Windows Update to restore health&#10;• Fixes: Windows Update errors, component store damage&#10;• Run AFTER SFC if SFC couldn't fix all issues&#10;• Requires admin + internet connection&#10;• May take 15-30 minutes"/>
                             </Grid>
 
                             <TextBlock Text="{Binding ActionStatusText}" Foreground="#22C55E" FontSize="11" Margin="0 12 0 0"/>

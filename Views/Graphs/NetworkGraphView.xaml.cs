@@ -1,25 +1,42 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using TaskCore.Views;
+using TaskCore.ViewModels.Graphs;
 
 namespace TaskCore.Views.Graphs
 {
-    public partial class NetworkGraphView : UserControl
+    public partial class NetworkGraphView : UserControl, IActivatableView, IDisposable
     {
+        private bool _disposed;
+
         public NetworkGraphView()
         {
             InitializeComponent();
+        }
+
+        public void OnActivated()
+        {
+            if (DataContext is not NetworkGraphViewModel)
+            {
+                DataContext = new NetworkGraphViewModel();
+            }
+        }
+
+        public void OnDeactivated()
+        {
+            if (DataContext is IDisposable disposable)
+            {
+                try { disposable.Dispose(); } catch { }
+            }
+            DataContext = null;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            OnDeactivated();
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -1,15 +1,17 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace TaskCore.Views
 {
-    public partial class GraphsView : UserControl, IActivatableView
+    public partial class GraphsView : UserControl, IActivatableView, IDisposable
     {
         private readonly Graphs.CpuGraphView _cpuView = new();
         private readonly Graphs.MemoryGraphView _memoryView = new();
         private readonly Graphs.GpuGraphView _gpuView = new();
         private readonly Graphs.DiskGraphView _diskView = new();
         private readonly Graphs.NetworkGraphView _networkView = new();
+        private bool _disposed;
 
         public GraphsView()
         {
@@ -29,6 +31,29 @@ namespace TaskCore.Views
         {
             if (GraphContent.Content is IActivatableView activatable)
                 activatable.OnDeactivated();
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            // Dispose all child views
+            DisposeView(_cpuView);
+            DisposeView(_memoryView);
+            DisposeView(_gpuView);
+            DisposeView(_diskView);
+            DisposeView(_networkView);
+
+            GC.SuppressFinalize(this);
+        }
+
+        private static void DisposeView(object? view)
+        {
+            if (view is IDisposable disposable)
+            {
+                try { disposable.Dispose(); } catch { }
+            }
         }
 
         private void Cpu_Checked(object sender, RoutedEventArgs e)

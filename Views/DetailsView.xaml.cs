@@ -4,15 +4,36 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using TaskCore.ViewModels;
 
 namespace TaskCore.Views
 {
-    public partial class DetailsView : UserControl
+    public partial class DetailsView : UserControl, IActivatableView
     {
         public DetailsView()
         {
             InitializeComponent();
             Loaded += DetailsView_Loaded;
+        }
+
+        public void OnActivated()
+        {
+            // Recreate ViewModel if it was disposed
+            if (DataContext == null)
+            {
+                DataContext = new DetailsViewModel();
+                AttachToViewModel(DataContext);
+            }
+        }
+
+        public void OnDeactivated()
+        {
+            // Dispose ViewModel to free resources
+            if (DataContext is IDisposable vm)
+            {
+                DataContext = null;
+                vm.Dispose();
+            }
         }
 
         private void DetailsView_Loaded(object sender, RoutedEventArgs e)

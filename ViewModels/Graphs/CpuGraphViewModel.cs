@@ -820,6 +820,8 @@ namespace TaskCore.ViewModels.Graphs
 
             try { _cpuCounter?.Dispose(); } catch { }
             try { _speedCounter?.Dispose(); } catch { }
+
+            GC.SuppressFinalize(this);
         }
     }
 }

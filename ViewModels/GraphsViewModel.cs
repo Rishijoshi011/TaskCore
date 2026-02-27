@@ -11,12 +11,13 @@ using TaskCore.Services;
 
 namespace TaskCore.ViewModels
 {
-    public partial class GraphsViewModel : ObservableObject
+    public partial class GraphsViewModel : ObservableObject, IDisposable
     {
         private DispatcherTimer? _timer;
         private PerformanceCounter? _cpuCounter;
         private PerformanceCounter? _ramCounter;
         private bool _isInitialized;
+        private bool _disposed;
 
         [ObservableProperty]
         private ObservableCollection<ISeries> cpuSeries;
@@ -219,6 +220,28 @@ namespace TaskCore.ViewModels
                 if (list is ObservableCollection<T> oc)
                     oc.RemoveAt(0);
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            // Unsubscribe events
+            try
+            {
+                RefreshIntervalService.RefreshIntervalChanged -= OnRefreshIntervalChanged;
+            }
+            catch { }
+
+            try
+            {
+                AppViewStateService.ViewChanged -= OnViewChanged;
+            }
+            catch { }
+
+            // TearDown disposes counters and timer
+            TearDown();
         }
     }
 }

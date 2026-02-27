@@ -15,8 +15,9 @@ using System.IO;
 
 namespace TaskCore.ViewModels
 {
-    public partial class DetailsViewModel : ObservableObject
+    public partial class DetailsViewModel : ObservableObject, IDisposable
     {
+        private bool _disposed;
         private readonly AppSettings _settings;
 
         private readonly DispatcherTimer _refreshTimer;
@@ -762,6 +763,22 @@ namespace TaskCore.ViewModels
             {
                 ShowCopyStatus($"Cleanup failed: {ex.Message}");
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            // Stop timer
+            try { _refreshTimer?.Stop(); } catch { }
+
+            // Cancel any pending copy status task
+            try { _copyCts?.Cancel(); } catch { }
+            try { _copyCts?.Dispose(); } catch { }
+
+            // Unsubscribe events
+            try { AppViewStateService.ViewChanged -= OnViewChanged; } catch { }
         }
     }
 }
