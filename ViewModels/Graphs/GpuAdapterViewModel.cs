@@ -106,50 +106,84 @@ namespace TaskCore.ViewModels.Graphs
 
         public GpuAdapterViewModel(string? adapterMemoryInstance, string? gpuNameHint)
         {
-            _adapterMemoryInstance = adapterMemoryInstance;
-            _luidToken = ExtractLuid(adapterMemoryInstance);
-
-            Series = new ObservableCollection<ISeries>
+            try
             {
-                new LineSeries<double>
+                _adapterMemoryInstance = adapterMemoryInstance;
+                _luidToken = ExtractLuid(adapterMemoryInstance);
+
+                Log("Creating Series collection");
+                Series = new ObservableCollection<ISeries>
                 {
-                    Values = _values,
-                    GeometrySize = 0,
-                    Stroke = new SolidColorPaint(new SKColor(255, 220, 0), 3),
-                    Fill = new SolidColorPaint(new SKColor(255, 220, 0, 40)),
-                    LineSmoothness = 0,
-                    IsVisibleAtLegend = false,
-                    Name = "GPU"
+                    new LineSeries<double>
+                    {
+                        Values = _values,
+                        GeometrySize = 0,
+                        Stroke = new SolidColorPaint(new SKColor(255, 220, 0), 3),
+                        Fill = new SolidColorPaint(new SKColor(255, 220, 0, 40)),
+                        LineSmoothness = 0,
+                        IsVisibleAtLegend = false,
+                        Name = "GPU"
+                    }
+                };
+                Log("Series created successfully");
+
+                Log("Initializing GPU info");
+                InitializeGpuInfo(gpuNameHint);
+                Log("GPU info initialized");
+
+                Log("Initializing counters");
+                TryInitializeCounters();
+                Log("Counters initialized");
+
+                for (int i = 0; i < 10; i++)
+                    _values.Add(0);
+
+                Log("Creating timer");
+                _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.CurrentMs) };
+                _timer.Tick += (_, __) => Tick();
+                _timer.Start();
+                Log("Timer started");
+
+                try
+                {
+                    RefreshIntervalService.RefreshIntervalChanged += OnRefreshIntervalChanged;
+                    OnRefreshIntervalChanged(RefreshIntervalService.CurrentMs);
                 }
-            };
+                catch
+                {
+                }
 
-            InitializeGpuInfo(gpuNameHint);
-            TryInitializeCounters();
+                try
+                {
+                    AppViewStateService.ViewChanged += OnViewChanged;
+                    OnViewChanged(AppViewStateService.CurrentView);
+                }
+                catch
+                {
+                }
+                Log("Constructor complete");
+            }
+            catch (Exception ex)
+            {
+                Log($"FATAL ERROR in constructor: {ex.GetType().Name}: {ex.Message}");
+                Log($"StackTrace: {ex.StackTrace}");
+                System.Diagnostics.Debug.WriteLine($"[GpuAdapterViewModel] Constructor error: {ex}");
+                throw;
+            }
+        }
 
-            for (int i = 0; i < 10; i++)
-                _values.Add(0);
-
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.CurrentMs) };
-            _timer.Tick += (_, __) => Tick();
-            _timer.Start();
-
+        private static void Log(string msg)
+        {
             try
             {
-                RefreshIntervalService.RefreshIntervalChanged += OnRefreshIntervalChanged;
-                OnRefreshIntervalChanged(RefreshIntervalService.CurrentMs);
+                var logDir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "TaskCore", "Logs");
+                System.IO.Directory.CreateDirectory(logDir);
+                var logFile = System.IO.Path.Combine(logDir, "gpuadapter.txt");
+                System.IO.File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}");
             }
-            catch
-            {
-            }
-
-            try
-            {
-                AppViewStateService.ViewChanged += OnViewChanged;
-                OnViewChanged(AppViewStateService.CurrentView);
-            }
-            catch
-            {
-            }
+            catch { }
         }
 
         private void OnViewChanged(string viewName)
@@ -506,12 +540,19 @@ namespace TaskCore.ViewModels.Graphs
 
         private void Tick()
         {
-            System.Diagnostics.Debug.WriteLine($"[GpuGraph] Tick fired - CurrentUtil: {CurrentUtilization:F1}%");
-            UpdateUtilization();
-            UpdateVram();
-            UpdateTemperature();
-            System.Diagnostics.Debug.WriteLine($"[GpuGraph] After update - CurrentUtil: {CurrentUtilization:F1}%");
-            AppendPoint(CurrentUtilization);
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[GpuGraph] Tick fired - CurrentUtil: {CurrentUtilization:F1}%");
+                UpdateUtilization();
+                UpdateVram();
+                UpdateTemperature();
+                System.Diagnostics.Debug.WriteLine($"[GpuGraph] After update - CurrentUtil: {CurrentUtilization:F1}%");
+                AppendPoint(CurrentUtilization);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[GpuGraph] Tick error: {ex}");
+            }
         }
 
         private void UpdateUtilization()

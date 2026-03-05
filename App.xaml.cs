@@ -1,11 +1,13 @@
 ﻿using System;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using TaskCore.Services;
 using System.Diagnostics;
-using System.IO;
 
 namespace TaskCore
 {
@@ -27,7 +29,28 @@ namespace TaskCore
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            // Setup global exception handlers FIRST - before anything else
+            AppDomain.CurrentDomain.UnhandledException += (s, args) =>
+            {
+                Log($"FATAL UnhandledException: {args.ExceptionObject}");
+                MessageBox.Show($"Fatal Error: {args.ExceptionObject}", "TaskCore Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            };
+            DispatcherUnhandledException += (s, args) =>
+            {
+                Log($"DispatcherUnhandledException: {args.Exception}");
+                args.Handled = true;
+                MessageBox.Show($"UI Error: {args.Exception.Message}", "TaskCore Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            };
+            TaskScheduler.UnobservedTaskException += (s, args) =>
+            {
+                Log($"UnobservedTaskException: {args.Exception}");
+                args.SetObserved();
+            };
+
             Log($"OnStartup BEGIN - Elevated: {e.Args.Contains("--elevated")}");
+
+            // Setup native DLL resolution for SkiaSharp - critical for MSI-installed apps
+            SetupNativeDllResolver();
 
             // Check if watchdog mode is requested via command line or settings
             var settings = AppSettingsService.Load();
@@ -140,5 +163,81 @@ namespace TaskCore
             [System.Runtime.InteropServices.DllImport("user32.dll")]
             public static extern bool SetForegroundWindow(IntPtr hWnd);
         }
+
+        private static void SetupNativeDllResolver()
+        {
+            try
+            {
+                var appDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                if (string.IsNullOrEmpty(appDir))
+                {
+                    Log("WARNING: Could not determine app directory for DLL resolver");
+                    return;
+                }
+
+                Log($"Setting up native DLL resolver for: {appDir}");
+
+                // Set DLL directory for Windows LoadLibrary calls
+                SetDllDirectory(appDir);
+
+                // Subscribe to assembly resolution for native libs
+                NativeLibrary.SetDllImportResolver(typeof(SkiaSharp.SKImageInfo).Assembly, (libraryName, assembly, searchPath) =>
+                {
+                    Log($"Resolving native library: {libraryName}");
+
+                    // Handle SkiaSharp native library
+                    if (libraryName.Contains("SkiaSharp") || libraryName == "libSkiaSharp")
+                    {
+                        var skiaPath = Path.Combine(appDir, "libSkiaSharp.dll");
+                        if (File.Exists(skiaPath))
+                        {
+                            Log($"Found libSkiaSharp.dll at: {skiaPath}");
+                            try
+                            {
+                                return NativeLibrary.Load(skiaPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                Log($"Error loading libSkiaSharp.dll: {ex.Message}");
+                            }
+                        }
+                        else
+                        {
+                            Log($"libSkiaSharp.dll NOT FOUND at: {skiaPath}");
+                        }
+                    }
+
+                    // Handle HarfBuzz native library
+                    if (libraryName.Contains("HarfBuzzSharp") || libraryName == "libHarfBuzzSharp")
+                    {
+                        var harfPath = Path.Combine(appDir, "libHarfBuzzSharp.dll");
+                        if (File.Exists(harfPath))
+                        {
+                            Log($"Found libHarfBuzzSharp.dll at: {harfPath}");
+                            try
+                            {
+                                return NativeLibrary.Load(harfPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                Log($"Error loading libHarfBuzzSharp.dll: {ex.Message}");
+                            }
+                        }
+                    }
+
+                    // Let default resolution handle it
+                    return IntPtr.Zero;
+                });
+
+                Log("Native DLL resolver setup complete");
+            }
+            catch (Exception ex)
+            {
+                Log($"ERROR setting up native DLL resolver: {ex}");
+            }
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool SetDllDirectory(string lpPathName);
     }
 }

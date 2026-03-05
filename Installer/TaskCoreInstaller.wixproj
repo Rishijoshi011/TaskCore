@@ -1,0 +1,22 @@
+<Project Sdk="WixToolset.Sdk/5.0.0">
+
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <Platform>x64</Platform>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <DefineConstants>
+      PublishDir=..\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish
+    </DefineConstants>
+  </PropertyGroup>
+
+  <!-- Add UI extension -->
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Product.wxs" />
+    <Compile Include="Components.wxs" />
+  </ItemGroup>
+
+</Project>

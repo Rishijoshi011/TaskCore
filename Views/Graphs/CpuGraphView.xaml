@@ -10,13 +10,6 @@
         <vm:CpuGraphViewModel />
     </UserControl.DataContext>
 
-    <UserControl.Resources>
-        <!-- Dark mode theme for LiveCharts -->
-        <lvc:SolidColorPaint x:Key="DarkBackground" Color="#1E1E1E"/>
-        <lvc:SolidColorPaint x:Key="DarkGrid" Color="#333333"/>
-        <lvc:SolidColorPaint x:Key="DarkText" Color="#CCCCCC"/>
-    </UserControl.Resources>
-
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <Grid MinWidth="300">
             <Grid.RowDefinitions>

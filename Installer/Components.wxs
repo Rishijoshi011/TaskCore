@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <ComponentGroup Id="TaskCoreFiles" Directory="INSTALLFOLDER">
+      <!-- Core App -->
+      <Component><File Source="$(var.PublishDir)\TaskCore.exe" /></Component>
+      <Component><File Source="$(var.PublishDir)\TaskCore.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\TaskCore.deps.json" /></Component>
+      <Component><File Source="$(var.PublishDir)\TaskCore.runtimeconfig.json" /></Component>
+      <Component><File Source="$(var.PublishDir)\TaskCore.pdb" /></Component>
+
+      <!-- Core Libraries -->
+      <Component><File Source="$(var.PublishDir)\CommunityToolkit.Mvvm.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\System.Management.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\System.CodeDom.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\System.IO.Ports.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\Microsoft.Windows.SDK.NET.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\WinRT.Runtime.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\Microsoft.Toolkit.Uwp.Notifications.dll" /></Component>
+
+      <!-- Hardware Monitoring -->
+      <Component><File Source="$(var.PublishDir)\LibreHardwareMonitorLib.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\HidSharp.dll" /></Component>
+
+      <!-- OpenTK / OpenGL -->
+      <Component><File Source="$(var.PublishDir)\OpenTK.Compute.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\OpenTK.Core.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\OpenTK.Graphics.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\OpenTK.Input.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\OpenTK.Mathematics.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\OpenTK.OpenAL.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\OpenTK.Windowing.Common.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\OpenTK.Windowing.Desktop.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\OpenTK.Windowing.GraphicsLibraryFramework.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\glfw3.dll" /></Component>
+
+      <!-- LiveCharts / SkiaSharp -->
+      <Component><File Source="$(var.PublishDir)\LiveChartsCore.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\LiveChartsCore.SkiaSharpView.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\LiveChartsCore.SkiaSharpView.WPF.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\SkiaSharp.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\SkiaSharp.HarfBuzz.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\SkiaSharp.Views.Desktop.Common.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\SkiaSharp.Views.WPF.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\HarfBuzzSharp.dll" /></Component>
+
+      <!-- Native Libraries -->
+      <Component><File Source="$(var.PublishDir)\libSkiaSharp.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\libHarfBuzzSharp.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\Mono.Posix.NETStandard.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\MonoPosixHelper.dll" /></Component>
+      <Component><File Source="$(var.PublishDir)\libMonoPosixHelper.dll" /></Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

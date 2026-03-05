@@ -61,4 +61,8 @@
     <Folder Include="Installer\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="installer\TaskCoreInstaller.wixproj" />
+  </ItemGroup>
+
 </Project>
