@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>4.4.4</Version>
-    <AssemblyVersion>4.0.4.4</AssemblyVersion>
-    <FileVersion>4.0.4.4</FileVersion>
+    <Version>4.5.1</Version>
+    <AssemblyVersion>4.5.0.1</AssemblyVersion>
+    <FileVersion>4.5.0.1</FileVersion>
     <ApplicationIcon>Resources\AppIcon\TaskCore_icon.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -24,11 +24,12 @@
     <None Remove="Resources\Fonts\Montserrat-Bold.ttf" />
     <None Remove="Resources\Icons\Dashboard.png" />
     <None Remove="Resources\Icons\Dashboard_main.png" />
-    <None Remove="Resources\Icons\Details.png" />
+    <None Remove="Resources\Icons\Session.png" />
     <None Remove="Resources\Icons\Graphs.png" />
     <None Remove="Resources\Icons\Processes.png" />
     <None Remove="Resources\Icons\Rules.png" />
     <None Remove="Resources\Icons\Settings.png" />
+    <None Remove="Session.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -49,12 +50,12 @@
     <Resource Include="Resources\Fonts\Montserrat-SemiBold.ttf" />
     <Resource Include="Resources\Fonts\Montserrat-Bold.ttf" />
     <Resource Include="Resources\Icons\Dashboard.png" />
-    <Resource Include="Resources\Icons\Dashboard_main.png" />
-    <Resource Include="Resources\Icons\Details.png" />
     <Resource Include="Resources\Icons\Graphs.png" />
     <Resource Include="Resources\Icons\Processes.png" />
     <Resource Include="Resources\Icons\Rules.png" />
+    <Resource Include="Resources\Icons\Session.png" />
     <Resource Include="Resources\Icons\Settings.png" />
+    <Resource Include="Session.png" />
   </ItemGroup>
 
   <ItemGroup>

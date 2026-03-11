@@ -27,11 +27,11 @@ namespace TaskCore.Services
                 var exe = Environment.ProcessPath;
                 if (string.IsNullOrWhiteSpace(exe))
                 {
-                    Debug.WriteLine("[ElevationService] ProcessPath is null or empty");
+                    TaskCoreLogger.Error("elevation", "ProcessPath is null or empty");
                     return false;
                 }
 
-                Debug.WriteLine($"[ElevationService] Relaunching: {exe}");
+                TaskCoreLogger.Info("elevation", $"Relaunching: {exe}");
 
                 var psi = new ProcessStartInfo(exe)
                 {
@@ -44,11 +44,11 @@ namespace TaskCore.Services
                 var proc = Process.Start(psi);
                 if (proc == null)
                 {
-                    Debug.WriteLine("[ElevationService] Process.Start returned null");
+                    TaskCoreLogger.Error("elevation", "Process.Start returned null");
                     return false;
                 }
 
-                Debug.WriteLine($"[ElevationService] New process started (PID: {proc.Id}), waiting...");
+                TaskCoreLogger.Info("elevation", $"New process started (PID: {proc.Id}), waiting...");
                 
                 // Give the new process time to initialize before exiting
                 Thread.Sleep(500);
@@ -59,19 +59,19 @@ namespace TaskCore.Services
                     proc.Refresh();
                     if (proc.HasExited)
                     {
-                        Debug.WriteLine($"[ElevationService] New process exited early with code: {proc.ExitCode}");
+                        TaskCoreLogger.Error("elevation", $"New process exited early with code: {proc.ExitCode}");
                         return false;
                     }
                 }
                 catch { }
 
-                Debug.WriteLine("[ElevationService] Exiting current process...");
+                TaskCoreLogger.Info("elevation", "Exiting current process...");
                 Environment.Exit(0);
                 return true;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[ElevationService] Failed to relaunch: {ex.Message}");
+                TaskCoreLogger.Error("elevation", $"Failed to relaunch: {ex.Message}");
                 return false;
             }
         }

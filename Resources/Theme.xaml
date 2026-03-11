@@ -410,6 +410,13 @@
 
     </Style>
 
+    <Style x:Key="QuickActionButton" TargetType="Button" BasedOn="{StaticResource ActionButton}">
+        <Setter Property="MinWidth" Value="60"/>
+        <Setter Property="Padding" Value="8 4"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
 
 
     <Style x:Key="FlatTextBox" TargetType="TextBox">

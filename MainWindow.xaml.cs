@@ -89,7 +89,7 @@ namespace TaskCore
                 AddSidebarItem("Dashboard", "pack://application:,,,/TaskCore;component/Resources/Icons/Dashboard.png");
                 AddSidebarItem("Processes", "pack://application:,,,/TaskCore;component/Resources/Icons/Processes.png");
                 AddSidebarItem("Graphs", "pack://application:,,,/TaskCore;component/Resources/Icons/Graphs.png");
-                AddSidebarItem("Session Tracker", "pack://application:,,,/TaskCore;component/Resources/Icons/Details.png");
+                AddSidebarItem("Session Tracker", "pack://application:,,,/TaskCore;component/Resources/Icons/Session.png");
                 AddSidebarItem("Rules", "pack://application:,,,/TaskCore;component/Resources/Icons/Rules.png");
                 AddSidebarItem("Settings", "pack://application:,,,/TaskCore;component/Resources/Icons/Settings.png");
             }

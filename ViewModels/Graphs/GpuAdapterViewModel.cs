@@ -167,24 +167,12 @@ namespace TaskCore.ViewModels.Graphs
             {
                 Log($"FATAL ERROR in constructor: {ex.GetType().Name}: {ex.Message}");
                 Log($"StackTrace: {ex.StackTrace}");
-                System.Diagnostics.Debug.WriteLine($"[GpuAdapterViewModel] Constructor error: {ex}");
+                TaskCoreLogger.Error("gpu-adapter", $"Constructor error: {ex}");
                 throw;
             }
         }
 
-        private static void Log(string msg)
-        {
-            try
-            {
-                var logDir = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "TaskCore", "Logs");
-                System.IO.Directory.CreateDirectory(logDir);
-                var logFile = System.IO.Path.Combine(logDir, "gpuadapter.txt");
-                System.IO.File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}");
-            }
-            catch { }
-        }
+        private static void Log(string msg) => TaskCoreLogger.Info("gpu-adapter", msg);
 
         private void OnViewChanged(string viewName)
         {
@@ -551,7 +539,7 @@ namespace TaskCore.ViewModels.Graphs
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[GpuGraph] Tick error: {ex}");
+                TaskCoreLogger.Error("gpu-graph", $"Tick error: {ex}");
             }
         }
 
@@ -571,11 +559,10 @@ namespace TaskCore.ViewModels.Graphs
                     }
 
                     gpu = Math.Round(Math.Clamp(max, 0, 100), 1);
-                    System.Diagnostics.Debug.WriteLine($"[GpuGraph] Using 3D counters: {gpu:F1}% (from {_gpu3dCounters.Count} counters)");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[GpuGraph] 3D counter error: {ex.Message}");
+                    TaskCoreLogger.Error("gpu-graph", $"3D counter error: {ex.Message}");
                     gpu = CurrentUtilization;
                 }
             }
@@ -591,11 +578,10 @@ namespace TaskCore.ViewModels.Graphs
                     }
 
                     gpu = Math.Round(Math.Clamp(max, 0, 100), 1);
-                    System.Diagnostics.Debug.WriteLine($"[GpuGraph] Using AnyEngine counters: {gpu:F1}%");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[GpuGraph] AnyEngine counter error: {ex.Message}");
+                    TaskCoreLogger.Error("gpu-graph", $"AnyEngine counter error: {ex.Message}");
                     gpu = CurrentUtilization;
                 }
             }
@@ -607,12 +593,10 @@ namespace TaskCore.ViewModels.Graphs
                     if (_cachedWmiUtil.HasValue)
                     {
                         gpu = _cachedWmiUtil.Value;
-                        System.Diagnostics.Debug.WriteLine($"[GpuGraph] Using WMI cached: {gpu:F1}%");
                     }
                     else
                     {
                         gpu = CurrentUtilization;
-                        System.Diagnostics.Debug.WriteLine($"[GpuGraph] No counters available, using current: {gpu:F1}%");
                     }
                 }
             }
@@ -867,11 +851,11 @@ namespace TaskCore.ViewModels.Graphs
                 _values.Add(value);
                 while (_values.Count > MaxPoints)
                     _values.RemoveAt(0);
-                System.Diagnostics.Debug.WriteLine($"[GpuGraph] Added point: {value:F1}% (total points: {_values.Count})");
+                TaskCoreLogger.Debug("gpu-graph", $"Added point: {value:F1}% (total points: {_values.Count})");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[GpuGraph] Error adding point: {ex.Message}");
+                TaskCoreLogger.Error("gpu-graph", $"Error adding point: {ex.Message}");
             }
         }
 

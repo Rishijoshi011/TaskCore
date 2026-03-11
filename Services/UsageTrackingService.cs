@@ -17,7 +17,7 @@ namespace TaskCore.Services
         private readonly DispatcherTimer _timer;
         private readonly UsageMetricsSampler _metricsSampler = new();
         private readonly UsageSessionTracker _sessionTracker = new();
-        private Dictionary<string, (DateTime start, string path, HashSet<int> pids)> _trackedApps => _sessionTracker.TrackedApps as Dictionary<string, (DateTime start, string path, HashSet<int> pids)>;
+        private IReadOnlyDictionary<string, (DateTime start, string path, HashSet<int> pids)> _trackedApps => _sessionTracker.TrackedApps;
         private readonly object _lock = new();
         private int _tickRunning;
         private bool _isSessionLocked = false;
@@ -52,15 +52,112 @@ namespace TaskCore.Services
             }
             catch { }
 
+            // Finalize any orphaned sessions from previous crash/kill
+            UsageTrackingStorage.FinalizeOrphanedSessions();
+
             // Subscribe to session switch events to detect lock/unlock
             SystemEvents.SessionSwitch += OnSessionSwitch;
+
+            // Subscribe to crash/exit handlers to save sessions
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
             // Start background writer
             _backgroundWriter = Task.Run(BackgroundWriterLoop);
 
+            // Start periodic active session saver (for crash recovery)
+            _ = Task.Run(PeriodicActiveSessionSaver);
+
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += (_, __) => KickTick();
             _timer.Start();
+        }
+
+        private async Task PeriodicActiveSessionSaver()
+        {
+            while (!_writeCts.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), _writeCts.Token);
+                    
+                    // Only save if there are active sessions (skip when idle)
+                    if (_trackedApps.Count > 0)
+                    {
+                        SaveActiveSessionsToDisk();
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch { }
+            }
+        }
+
+        private void SaveActiveSessionsToDisk()
+        {
+            try
+            {
+                var sessions = new List<ActiveSessionData>();
+                var now = DateTime.UtcNow;
+
+                lock (_lock)
+                {
+                    foreach (var kvp in _trackedApps)
+                    {
+                        var appName = kvp.Key;
+                        var (startTime, path, pids) = kvp.Value;
+                        
+                        _sessionTracker.GetMetricsForApp(appName, out var peakCpu, out var avgCpu, out var peakMem, out var avgMem);
+                        
+                        sessions.Add(new ActiveSessionData
+                        {
+                            appName = appName,
+                            firstPid = pids.FirstOrDefault(),
+                            path = path,
+                            startTime = startTime.ToUniversalTime(),
+                            lastUpdateTime = now,
+                            peakCpu = peakCpu,
+                            avgCpu = avgCpu,
+                            peakMem = peakMem,
+                            avgMem = avgMem
+                        });
+                    }
+                }
+
+                UsageTrackingStorage.SaveActiveSessions(sessions);
+                
+                if (sessions.Count > 0)
+                {
+                    TaskCoreLogger.SessionTracking.ActiveSessionsSaved(sessions.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                TaskCoreLogger.Errors.ActiveSessionSave($"SaveActiveSessionsToDisk error: {ex.Message}");
+            }
+        }
+
+        private void OnProcessExit(object? sender, EventArgs e)
+        {
+            try
+            {
+                TaskCoreLogger.Lifecycle.ProcessExit();
+                SaveRunningSessionsOnShutdown();
+            }
+            catch { }
+        }
+
+        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                var ex = e.ExceptionObject as Exception;
+                TaskCoreLogger.Lifecycle.UnhandledException(ex?.Message ?? "Unknown");
+                SaveRunningSessionsOnShutdown();
+            }
+            catch { }
         }
 
         private async Task BackgroundWriterLoop()
@@ -105,12 +202,7 @@ namespace TaskCore.Services
                 }
                 catch (Exception ex)
                 {
-                    try
-                    {
-                        File.AppendAllText(Path.Combine(UsageTrackingStorage.BaseDirectory, "usage-errors.txt"),
-                            $"[{DateTime.Now:HH:mm:ss}] Background writer error: {ex.Message}\n");
-                    }
-                    catch { }
+                    TaskCoreLogger.Errors.BackgroundWriter($"Background writer error: {ex.Message}");
                     try
                     {
                         await Task.Delay(1000).ConfigureAwait(false);
@@ -301,8 +393,8 @@ namespace TaskCore.Services
                 UsageDebugLogger.LogTick($"Total processes: {allProcesses.Length}");
                 UsageDebugLogger.LogTick($"Non-system processes: {current.Count}");
                 UsageDebugLogger.LogTick($"Currently tracked apps: {string.Join(", ", _trackedApps.Keys)}");
-                
-                var userApps = current.Values.Distinct().Where(n => 
+
+                var userApps = current.Values.Distinct().Where(n =>
                     !n.StartsWith("svchost", StringComparison.OrdinalIgnoreCase) &&
                     !n.StartsWith("csrss", StringComparison.OrdinalIgnoreCase) &&
                     !n.StartsWith("dwm", StringComparison.OrdinalIgnoreCase));
@@ -342,11 +434,7 @@ namespace TaskCore.Services
             }
             catch (Exception ex)
             {
-                try
-                {
-                    File.AppendAllText(Path.Combine(UsageTrackingStorage.BaseDirectory, "usage-errors.txt"), $"[{DateTime.Now:HH:mm:ss}] Tick error: {ex.Message}\n");
-                }
-                catch { }
+                TaskCoreLogger.Errors.BackgroundWriter($"Tick error: {ex.Message}");
             }
         }
 
@@ -370,7 +458,6 @@ namespace TaskCore.Services
 
             if (disposing)
             {
-                // Dispose managed resources
                 _timer?.Stop();
                 _writeCts?.Cancel();
                 
@@ -401,8 +488,62 @@ namespace TaskCore.Services
                 }
             }
 
-            // Unsubscribe from events (always do this)
+            // Save running sessions as completed on shutdown (run even in finalizer)
+            SaveRunningSessionsOnShutdown();
+
+            // Delete active sessions file on graceful shutdown (since we saved them properly)
+            if (disposing)
+            {
+                UsageTrackingStorage.DeleteActiveSessions();
+            }
+
             SystemEvents.SessionSwitch -= OnSessionSwitch;
+        }
+
+        private void SaveRunningSessionsOnShutdown()
+        {
+            try
+            {
+                var shutdownTime = DateTime.Now;
+                
+                TaskCoreLogger.Lifecycle.DisposeCalled();
+                TaskCoreLogger.Info("shutdown", $"Starting session save at {shutdownTime:HH:mm:ss}");
+                
+                lock (_lock)
+                {
+                    TaskCoreLogger.Info("shutdown", $"Tracked apps count: {_trackedApps.Count}");
+                    
+                    foreach (var kvp in _trackedApps)
+                    {
+                        var appName = kvp.Key;
+                        var (startTime, path, pids) = kvp.Value;
+                        
+                        _sessionTracker.GetMetricsForApp(appName, out var peakCpu, out var avgCpu, out var peakMem, out var avgMem);
+                        
+                        TaskCoreLogger.SessionTracking.SessionEnded(appName, shutdownTime - startTime);
+                        
+                        UsageTrackingStorage.AppendSession(
+                            appName,
+                            pids.FirstOrDefault(),
+                            path,
+                            startTime,
+                            shutdownTime,
+                            peakCpu,
+                            avgCpu,
+                            peakMem,
+                            avgMem,
+                            false);
+                    }
+                    
+                    TaskCoreLogger.Info("shutdown", $"Save complete, saved {_trackedApps.Count} sessions");
+                }
+                
+                TaskCoreLogger.Lifecycle.GracefulShutdown();
+            }
+            catch (Exception ex)
+            {
+                TaskCoreLogger.Error("shutdown", $"ERROR during shutdown save: {ex.Message}");
+            }
         }
     }
 }

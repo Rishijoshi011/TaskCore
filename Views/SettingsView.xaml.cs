@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using TaskCore.ViewModels;
 using TaskCore.Services;
+using TaskCore.Models;
 
 namespace TaskCore.Views
 {
@@ -35,9 +36,20 @@ namespace TaskCore.Views
 
         private void RelaunchAsAdmin_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[SettingsView] RelaunchAsAdmin_Click fired");
+            TaskCoreLogger.Info("elevation", "RelaunchAsAdmin_Click fired from SettingsView");
             var result = ElevationService.TryRelaunchAsAdminAndExit();
-            Debug.WriteLine($"[SettingsView] TryRelaunchAsAdminAndExit returned: {result}");
+            TaskCoreLogger.Info("elevation", $"TryRelaunchAsAdminAndExit returned: {result}");
+        }
+
+        private void ProcessRow_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is ProcessItem item)
+            {
+                if (DataContext is ProcessesViewModel vm)
+                {
+                    vm.SelectedProcess = item;
+                }
+            }
         }
     }
 }

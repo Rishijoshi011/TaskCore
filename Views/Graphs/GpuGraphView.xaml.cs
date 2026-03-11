@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Windows.Controls;
+using TaskCore.Services;
 using TaskCore.Views;
 using TaskCore.ViewModels.Graphs;
 
@@ -16,19 +16,7 @@ namespace TaskCore.Views.Graphs
             InitializeComponent();
         }
 
-        private static void Log(string msg)
-        {
-            try
-            {
-                var logDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "TaskCore", "Logs");
-                Directory.CreateDirectory(logDir);
-                var logFile = Path.Combine(logDir, "gpugraph.txt");
-                File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}");
-            }
-            catch { }
-        }
+        private static void Log(string msg) => TaskCoreLogger.Info("gpu-graph", msg);
 
         public void OnActivated()
         {
@@ -50,7 +38,7 @@ namespace TaskCore.Views.Graphs
             {
                 Log($"ERROR in OnActivated: {ex.GetType().Name}: {ex.Message}");
                 Log($"StackTrace: {ex.StackTrace}");
-                Debug.WriteLine($"[GpuGraphView] Activation error: {ex}");
+                TaskCoreLogger.Error("gpu-graph", $"Activation error: {ex}");
             }
             Log("OnActivated END");
         }

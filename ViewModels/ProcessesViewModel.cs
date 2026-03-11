@@ -395,7 +395,7 @@ namespace TaskCore.ViewModels
             // Handle group selection - kill all processes in group
             if (SelectedGroup != null)
             {
-                System.Diagnostics.Debug.WriteLine($"[EndTask] Killing all processes in group: {SelectedGroup.GroupName} ({SelectedGroup.Items.Count} processes)");
+                TaskCoreLogger.Info("endtask", $"Killing all processes in group: {SelectedGroup.GroupName} ({SelectedGroup.Items.Count} processes)");
                 int killed = 0;
                 foreach (var item in SelectedGroup.Items)
                 {
@@ -410,7 +410,7 @@ namespace TaskCore.ViewModels
                     }
                     catch { /* ignore failures */ }
                 }
-                System.Diagnostics.Debug.WriteLine($"[EndTask] Killed {killed}/{SelectedGroup.Items.Count} processes");
+                TaskCoreLogger.Info("endtask", $"Killed {killed}/{SelectedGroup.Items.Count} processes");
                 SelectedGroup = null;
                 _ = Task.Run(async () =>
                 {
@@ -423,24 +423,24 @@ namespace TaskCore.ViewModels
             // Handle individual process selection
             if (SelectedProcess == null)
             {
-                System.Diagnostics.Debug.WriteLine("[EndTask] No process or group selected");
+                TaskCoreLogger.Warn("endtask", "No process or group selected");
                 return;
             }
 
             var pid = SelectedProcess.PID;
-            System.Diagnostics.Debug.WriteLine($"[EndTask] Attempting to kill PID {pid} - {SelectedProcess.Name}");
+            TaskCoreLogger.Info("endtask", $"Attempting to kill PID {pid} - {SelectedProcess.Name}");
 
             try
             {
                 var proc = System.Diagnostics.Process.GetProcessById(pid);
                 if (proc.HasExited)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[EndTask] Process {pid} already exited");
+                    TaskCoreLogger.Warn("endtask", $"Process {pid} already exited");
                     return;
                 }
 
                 proc.Kill();
-                System.Diagnostics.Debug.WriteLine($"[EndTask] Successfully killed PID {pid}");
+                TaskCoreLogger.Info("endtask", $"Successfully killed PID {pid}");
 
                 SelectedProcess = null;
                 _ = Task.Run(async () =>
@@ -451,7 +451,7 @@ namespace TaskCore.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[EndTask] Failed to kill PID {pid}: {ex.Message}");
+                TaskCoreLogger.Error("endtask", $"Failed to kill PID {pid}: {ex.Message}");
             }
         }
 

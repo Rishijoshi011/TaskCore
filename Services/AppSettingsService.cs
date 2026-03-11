@@ -29,6 +29,7 @@ namespace TaskCore.Services
                 {
                     if (!File.Exists(_path))
                     {
+                        TaskCoreLogger.Warn("settings", "settings.json not found, checking backup");
                         if (File.Exists(_bakPath))
                         {
                             try
@@ -46,23 +47,32 @@ namespace TaskCore.Services
                                     {
                                     }
 
+                                    TaskCoreLogger.Info("settings", "Settings restored from backup");
                                     return bakSettings;
                                 }
                             }
-                            catch
+                            catch (Exception ex)
                             {
+                                TaskCoreLogger.Error("settings", $"Backup restore failed: {ex.Message}");
                             }
                         }
 
+                        TaskCoreLogger.Info("settings", "Creating new default settings");
                         return new AppSettings();
                     }
 
                     var json = File.ReadAllText(_path);
                     var settings = JsonSerializer.Deserialize<AppSettings>(json);
-                    return settings ?? new AppSettings();
+                    if (settings == null)
+                    {
+                        throw new JsonException("Deserialized settings is null");
+                    }
+                    TaskCoreLogger.Info("settings", "Settings loaded successfully");
+                    return settings;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    TaskCoreLogger.Error("settings", $"Load failed: {ex.Message}, attempting recovery from backup");
                     // If settings.json is corrupted/partially written, try recovering from .bak.
                     try
                     {
@@ -81,14 +91,17 @@ namespace TaskCore.Services
                                 {
                                 }
 
+                                TaskCoreLogger.Info("settings", "Settings recovered from backup");
                                 return bakSettings;
                             }
                         }
                     }
-                    catch
+                    catch (Exception ex2)
                     {
+                        TaskCoreLogger.Error("settings", $"Recovery failed: {ex2.Message}");
                     }
 
+                    TaskCoreLogger.Warn("settings", "Returning default settings");
                     return new AppSettings();
                 }
             }
@@ -103,7 +116,7 @@ namespace TaskCore.Services
                     // Validate settings before saving
                     if (!ValidateSettings(settings))
                     {
-                        Debug.WriteLine("[AppSettings] Validation failed, aborting save");
+                        TaskCoreLogger.Error("settings", "Validation failed, aborting save");
                         return;
                     }
 
@@ -113,17 +126,17 @@ namespace TaskCore.Services
 
                     // Write to tmp first to avoid corrupting settings.json if the process is killed mid-write.
                     File.WriteAllText(_tmpPath, json);
-
-                    // Create timestamped backup (keep last 10 backups)
-                    CreateTimestampedBackup();
+                    TaskCoreLogger.Info("settings", $"Settings written to temp file ({json.Length} bytes)");
 
                     // Atomically swap tmp into place and keep a .bak.
                     try
                     {
                         File.Replace(_tmpPath, _path, _bakPath, ignoreMetadataErrors: true);
+                        TaskCoreLogger.Info("settings", "Settings saved successfully (atomic replace)");
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        TaskCoreLogger.Warn("settings", $"File.Replace failed: {ex.Message}, using fallback");
                         // Fall back if File.Replace fails (e.g. different volume).
                         try
                         {
@@ -134,14 +147,20 @@ namespace TaskCore.Services
 
                             File.Copy(_tmpPath, _path, overwrite: true);
                             try { File.Delete(_tmpPath); } catch { }
+                            TaskCoreLogger.Info("settings", "Settings saved successfully (fallback copy)");
                         }
-                        catch
+                        catch (Exception ex2)
                         {
+                            TaskCoreLogger.Error("settings", $"Fallback save failed: {ex2.Message}");
                         }
                     }
+
+                    // Create timestamped backup AFTER successful save
+                    CreateTimestampedBackup();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    TaskCoreLogger.Error("settings", $"Save failed: {ex.Message}");
                 }
             }
         }
@@ -159,6 +178,7 @@ namespace TaskCore.Services
                 var backupFile = Path.Combine(backupDir, $"settings_{timestamp}.json");
 
                 File.Copy(_path, backupFile, overwrite: true);
+                TaskCoreLogger.Info("settings", $"Timestamped backup created: settings_{timestamp}.json");
 
                 // Keep only last 10 backups
                 var backups = Directory.GetFiles(backupDir, "settings_*.json")
@@ -170,7 +190,10 @@ namespace TaskCore.Services
                     try { File.Delete(oldBackup); } catch { }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                TaskCoreLogger.Error("settings", $"Timestamped backup failed: {ex.Message}");
+            }
         }
 
         public static bool ValidateSettings(AppSettings settings)

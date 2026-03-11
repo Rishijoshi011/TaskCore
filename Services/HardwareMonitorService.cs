@@ -163,7 +163,7 @@ namespace TaskCore.Services
                 foreach (var hw in _computer.Hardware)
                     AppendTempsRecursive(sb, hw, indent: "");
 
-                Debug.WriteLine(sb.ToString());
+                TaskCoreLogger.Debug("hardware", sb.ToString());
             }
             catch
             {

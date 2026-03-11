@@ -375,6 +375,12 @@ namespace TaskCore.ViewModels
         [ObservableProperty] private string lastUpdatedText = "Updated: --";
         [ObservableProperty] private string sessionCountText = "0 sessions";
 
+        // Date picker for viewing past data
+        [ObservableProperty] private DateOnly selectedDate = DateOnly.FromDateTime(DateTime.Today);
+        [ObservableProperty] private ObservableCollection<DateOnly> availableDates = new();
+        [ObservableProperty] private bool canGoToPreviousDate = false;
+        [ObservableProperty] private bool canGoToNextDate = false;
+
         [ObservableProperty] private string peakCpuText = "N/A";
         [ObservableProperty] private string peakRamText = "N/A";
         [ObservableProperty] private string peakGpuUsageText = "N/A";
@@ -406,6 +412,7 @@ namespace TaskCore.ViewModels
         public DashboardViewModel()
         {
             BuildHeatmapSkeleton();
+            LoadAvailableDates();
 
             try
             {
@@ -432,7 +439,60 @@ namespace TaskCore.ViewModels
             {
             }
 
+            UpdateDateNavigation();
             Refresh();
+        }
+
+        private void LoadAvailableDates()
+        {
+            try
+            {
+                AvailableDates.Clear();
+                var files = Directory.GetFiles(UsageTrackingService.GetBaseDirectory(), "sessions-*.jsonl");
+                var dates = files
+                    .Select(f =>
+                    {
+                        var fileName = Path.GetFileNameWithoutExtension(f);
+                        var dateStr = fileName.Replace("sessions-", "");
+                        return DateOnly.TryParse(dateStr, out var date) ? date : (DateOnly?)null;
+                    })
+                    .Where(d => d.HasValue)
+                    .Select(d => d!.Value)
+                    .OrderBy(d => d)
+                    .ToList();
+
+                foreach (var date in dates)
+                {
+                    AvailableDates.Add(date);
+                }
+
+                // Always include today even if no data yet
+                var today = DateOnly.FromDateTime(DateTime.Today);
+                if (!AvailableDates.Contains(today))
+                {
+                    AvailableDates.Add(today);
+                }
+
+                // Sort again after adding today
+                var sorted = AvailableDates.OrderBy(d => d).ToList();
+                AvailableDates.Clear();
+                foreach (var d in sorted)
+                {
+                    AvailableDates.Add(d);
+                }
+
+                // Ensure SelectedDate is set to today if not already set or if current selection is not in list
+                if (!AvailableDates.Contains(SelectedDate))
+                {
+                    SelectedDate = today;
+                }
+                else
+                {
+                    // Force UI refresh even if date hasn't changed, to ensure ComboBox displays correctly
+                    OnPropertyChanged(nameof(SelectedDate));
+                }
+            }
+            catch { }
         }
 
         private void OnRecentAlertsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -468,6 +528,43 @@ namespace TaskCore.ViewModels
             }
         }
 
+        partial void OnSelectedDateChanged(DateOnly value)
+        {
+            UpdateDateNavigation();
+            Refresh();
+        }
+
+        private void UpdateDateNavigation()
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            CanGoToPreviousDate = AvailableDates.Any() && SelectedDate > AvailableDates.Min();
+            CanGoToNextDate = SelectedDate < today;
+        }
+
+        [RelayCommand]
+        private void GoToPreviousDate()
+        {
+            if (CanGoToPreviousDate)
+            {
+                SelectedDate = SelectedDate.AddDays(-1);
+            }
+        }
+
+        [RelayCommand]
+        private void GoToNextDate()
+        {
+            if (CanGoToNextDate)
+            {
+                SelectedDate = SelectedDate.AddDays(1);
+            }
+        }
+
+        [RelayCommand]
+        private void GoToToday()
+        {
+            SelectedDate = DateOnly.FromDateTime(DateTime.Today);
+        }
+
         public void PauseRefresh()
         {
             try
@@ -497,6 +594,9 @@ namespace TaskCore.ViewModels
                 {
                     ResetPerfPeaksIfNewDay();
                     EnsurePerfCountersInitialized();
+
+                    // Refresh available dates in case new session files were added
+                    LoadAvailableDates();
 
                     if (!_refreshTimer.IsEnabled)
                         _refreshTimer.Start();
@@ -857,11 +957,11 @@ namespace TaskCore.ViewModels
         {
             try
             {
-                TodayDateText = DateTime.Today.ToString("ddd, dd MMM");
+                TodayDateText = SelectedDate.ToString("ddd, dd MMM yyyy");
 
-                var date = DateOnly.FromDateTime(DateTime.Today);
-                var sessions = UsageTrackingService.GetDailySessions(date, mergeOverlappingSessions: true);
-
+                var sessions = UsageTrackingService.GetDailySessions(SelectedDate, mergeOverlappingSessions: true);
+                
+                // Show empty state if no data for selected date
                 IsEmpty = sessions.Count == 0;
                 OnPropertyChanged(nameof(IsNotEmpty));
 
@@ -1062,8 +1162,9 @@ namespace TaskCore.ViewModels
         {
             WeeklyOverview.Clear();
 
+            // Build 7-day window ending on the selected date
             var days = Enumerable.Range(0, 7)
-                .Select(offset => DateOnly.FromDateTime(DateTime.Today.AddDays(-6 + offset)))
+                .Select(offset => SelectedDate.AddDays(-6 + offset))
                 .ToList();
 
             var dayData = days.Select(d =>
@@ -1146,7 +1247,7 @@ namespace TaskCore.ViewModels
             try
             {
                 var logDir = Path.Combine(AppSettingsService.BaseDirectory, "RulesLogs");
-                var logFile = Path.Combine(logDir, $"{DateTime.Now:yyyy-MM-dd}.log");
+                var logFile = Path.Combine(logDir, $"{SelectedDate:yyyy-MM-dd}.log");
                 if (!File.Exists(logFile))
                 {
                     OnPropertyChanged(nameof(HasNoAlerts));

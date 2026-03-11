@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -68,12 +67,7 @@ namespace TaskCore.Services
             }
             catch (Exception ex)
             {
-                try
-                {
-                    File.AppendAllText(Path.Combine(BaseDirectory, "errors.txt"),
-                        $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Failed to append session for {name}: {ex.Message}\n");
-                }
-                catch { }
+                TaskCoreLogger.Errors.SessionSave($"Failed to append session for {name}: {ex.Message}");
             }
         }
 
@@ -192,12 +186,7 @@ namespace TaskCore.Services
             }
             catch (Exception ex)
             {
-                try
-                {
-                    File.AppendAllText(Path.Combine(BaseDirectory, "errors.txt"),
-                        $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Failed to read daily sessions: {ex.Message}\n");
-                }
-                catch { }
+                TaskCoreLogger.Errors.FileOperation($"Failed to read daily sessions: {ex.Message}");
             }
 
             try
@@ -243,11 +232,8 @@ namespace TaskCore.Services
 
         private static List<UsageTrackingService.SessionRecord> MergeOverlappingSessions(List<UsageTrackingService.SessionRecord> sessions)
         {
-            Debug.WriteLine($"[UsageTracking] MergeOverlappingSessions called with {sessions.Count} sessions");
-            
             if (sessions.Count == 0) 
             {
-                Debug.WriteLine($"[UsageTracking] No sessions to merge");
                 return sessions;
             }
 
@@ -255,8 +241,6 @@ namespace TaskCore.Services
             var userSessions = sessions
                 .Where(s => !IsCoreWindowsProcess(s.app))
                 .ToList();
-            
-            Debug.WriteLine($"[UsageTracking] After filtering: {userSessions.Count} user sessions (removed {sessions.Count - userSessions.Count} system sessions)");
 
             // Group by app name (case-insensitive)
             var groupedSessions = userSessions
@@ -425,14 +409,17 @@ namespace TaskCore.Services
             };
         }
 
-        public static void CleanupOldFiles(int daysToKeep = 90, int compressAfterDays = 30)
+        /// <summary>
+        /// Compresses old session files to save disk space. Does NOT delete any data.
+        /// Data is kept indefinitely unless manually deleted by user.
+        /// </summary>
+        public static void CleanupOldFiles(int compressAfterDays = 30)
         {
             try
             {
                 if (!Directory.Exists(BaseDirectory)) return;
 
                 var now = DateTime.Now;
-                var cutoffDelete = now.AddDays(-daysToKeep);
                 var cutoffCompress = now.AddDays(-compressAfterDays);
                 var files = Directory.GetFiles(BaseDirectory, "*.jsonl");
 
@@ -441,52 +428,28 @@ namespace TaskCore.Services
                     var fileInfo = new FileInfo(file);
                     var compressedFile = file + ".gz";
 
-                    // Delete files older than retention period
-                    if (fileInfo.LastWriteTime < cutoffDelete)
-                    {
-                        // Delete uncompressed file
-                        if (File.Exists(file))
-                        {
-                            File.Delete(file);
-                        }
-                        // Also delete compressed version if exists
-                        if (File.Exists(compressedFile))
-                        {
-                            File.Delete(compressedFile);
-                        }
-                        continue;
-                    }
-
-                    // Compress files older than compressAfterDays
+                    // Compress files older than compressAfterDays (to save space)
+                    // Note: We keep both compressed and uncompressed for recent files
                     if (fileInfo.LastWriteTime < cutoffCompress && !File.Exists(compressedFile))
                     {
                         try
                         {
                             CompressFile(file, compressedFile);
-                            // Only delete original if compression succeeded
+                            // Delete original only after successful compression
                             if (File.Exists(compressedFile))
                             {
                                 File.Delete(file);
+                                TaskCoreLogger.Info("storage", $"Compressed {Path.GetFileName(file)} to save space");
                             }
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine($"[UsageTracking] Failed to compress {file}: {ex.Message}");
+                            TaskCoreLogger.Errors.FileOperation($"Failed to compress {file}: {ex.Message}");
                         }
                     }
                 }
 
-                // Also clean up old compressed files beyond retention
-                var compressedFiles = Directory.GetFiles(BaseDirectory, "*.jsonl.gz");
-                foreach (var compressedFile in compressedFiles)
-                {
-                    var fileInfo = new FileInfo(compressedFile);
-                    if (fileInfo.LastWriteTime < cutoffDelete)
-                    {
-                        File.Delete(compressedFile);
-                    }
-                }
-
+                // Clean up old errors.txt file (not session data)
                 var errorFile = Path.Combine(BaseDirectory, "errors.txt");
                 if (File.Exists(errorFile))
                 {
@@ -499,6 +462,8 @@ namespace TaskCore.Services
                     }).ToArray();
                     File.WriteAllLines(errorFile, recentLines);
                 }
+
+                TaskCoreLogger.Info("storage", "Cleanup completed - session data retained indefinitely");
             }
             catch (Exception ex)
             {
@@ -619,5 +584,129 @@ namespace TaskCore.Services
                 return false;
             }
         }
+
+        // Active session persistence for crash recovery
+        private static readonly string ActiveSessionsFile = Path.Combine(BaseDirectory, "active-sessions.json");
+        private static readonly object _activeSessionsLock = new();
+
+        public static void SaveActiveSessions(List<ActiveSessionData> sessions)
+        {
+            try
+            {
+                var data = new ActiveSessionsData
+                {
+                    savedAt = DateTime.UtcNow,
+                    sessions = sessions
+                };
+                var json = JsonSerializer.Serialize(data);
+                lock (_activeSessionsLock)
+                {
+                    File.WriteAllText(ActiveSessionsFile, json);
+                }
+            }
+            catch (Exception ex)
+            {
+                TaskCoreLogger.Errors.ActiveSessionSave($"SaveActiveSessions error: {ex.Message}");
+            }
+        }
+
+        public static List<ActiveSessionData> LoadActiveSessions()
+        {
+            try
+            {
+                lock (_activeSessionsLock)
+                {
+                    if (!File.Exists(ActiveSessionsFile))
+                        return new List<ActiveSessionData>();
+
+                    var json = File.ReadAllText(ActiveSessionsFile);
+                    var data = JsonSerializer.Deserialize<ActiveSessionsData>(json);
+                    return data?.sessions ?? new List<ActiveSessionData>();
+                }
+            }
+            catch
+            {
+                return new List<ActiveSessionData>();
+            }
+        }
+
+        public static void DeleteActiveSessions()
+        {
+            try
+            {
+                lock (_activeSessionsLock)
+                {
+                    if (File.Exists(ActiveSessionsFile))
+                        File.Delete(ActiveSessionsFile);
+                }
+            }
+            catch { }
+        }
+
+        public static void FinalizeOrphanedSessions()
+        {
+            try
+            {
+                var orphanedSessions = LoadActiveSessions();
+                if (orphanedSessions.Count == 0) return;
+
+                TaskCoreLogger.Lifecycle.TaskManagerKill();
+                TaskCoreLogger.SessionTracking.OrphanedSessionsRecovered(orphanedSessions.Count);
+
+                var now = DateTime.UtcNow;
+                foreach (var session in orphanedSessions)
+                {
+                    // Calculate end time - use the last saved time or now
+                    var endTime = session.lastUpdateTime > session.startTime 
+                        ? session.lastUpdateTime 
+                        : now;
+
+                    // Ensure minimum 1 second duration
+                    if (endTime <= session.startTime)
+                        endTime = session.startTime.AddSeconds(1);
+
+                    AppendSession(
+                        session.appName,
+                        session.firstPid,
+                        session.path,
+                        session.startTime,
+                        endTime,
+                        session.peakCpu,
+                        session.avgCpu,
+                        session.peakMem,
+                        session.avgMem,
+                        false);
+
+                    TaskCoreLogger.Info("recovery", $"Finalized: {session.appName}, duration: {(endTime - session.startTime).TotalSeconds:F0}s");
+                }
+
+                DeleteActiveSessions();
+                TaskCoreLogger.SessionTracking.SessionsFinalizedOnRecovery(orphanedSessions.Count);
+            }
+            catch (Exception ex)
+            {
+                TaskCoreLogger.Error("recovery", $"ERROR finalizing orphaned sessions: {ex.Message}");
+            }
+        }
+    }
+
+    public class ActiveSessionData
+    {
+        public string appName { get; set; } = string.Empty;
+        public int firstPid { get; set; }
+        public string path { get; set; } = string.Empty;
+        public DateTime startTime { get; set; }
+        public DateTime lastUpdateTime { get; set; }
+        public double peakCpu { get; set; }
+        public double avgCpu { get; set; }
+        public double peakMem { get; set; }
+        public double avgMem { get; set; }
+        public int samples { get; set; }
+    }
+
+    public class ActiveSessionsData
+    {
+        public DateTime savedAt { get; set; }
+        public List<ActiveSessionData> sessions { get; set; } = new();
     }
 }

@@ -19,31 +19,30 @@ namespace TaskCore
 
         private static void Log(string msg)
         {
-            var logDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "TaskCore", "Logs");
-            Directory.CreateDirectory(logDir);
-            var logFile = Path.Combine(logDir, "startup.txt");
-            File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}");
+            TaskCoreLogger.Info("startup", msg);
         }
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            // Cleanup old logs on startup
+            TaskCoreLogger.CleanupOldLogs();
+            TaskCoreLogger.SessionTracking.Startup();
+
             // Setup global exception handlers FIRST - before anything else
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
-                Log($"FATAL UnhandledException: {args.ExceptionObject}");
+                TaskCoreLogger.Lifecycle.UnhandledException(args.ExceptionObject?.ToString() ?? "Unknown");
                 MessageBox.Show($"Fatal Error: {args.ExceptionObject}", "TaskCore Error", MessageBoxButton.OK, MessageBoxImage.Error);
             };
             DispatcherUnhandledException += (s, args) =>
             {
-                Log($"DispatcherUnhandledException: {args.Exception}");
+                TaskCoreLogger.Error("ui", $"DispatcherUnhandledException: {args.Exception}");
                 args.Handled = true;
                 MessageBox.Show($"UI Error: {args.Exception.Message}", "TaskCore Error", MessageBoxButton.OK, MessageBoxImage.Warning);
             };
             TaskScheduler.UnobservedTaskException += (s, args) =>
             {
-                Log($"UnobservedTaskException: {args.Exception}");
+                TaskCoreLogger.Error("task", $"UnobservedTaskException: {args.Exception}");
                 args.SetObserved();
             };
 
@@ -136,6 +135,15 @@ namespace TaskCore
 
         protected override void OnExit(ExitEventArgs e)
         {
+            TaskCoreLogger.Lifecycle.OnExitCalled();
+            
+            // Save running sessions before exit
+            try
+            {
+                UsageTrackingService.Instance.Dispose();
+            }
+            catch { }
+
             // Only release mutex if we actually acquired it
             if (_ownsMutex && _instanceMutex != null)
             {

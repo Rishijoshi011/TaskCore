@@ -53,7 +53,7 @@ namespace TaskCore.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Toast notification failed: {ex.Message}");
+                TaskCoreLogger.Error("toast", $"Toast notification failed: {ex.Message}");
             }
         }
 
@@ -85,7 +85,7 @@ namespace TaskCore.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Toast notification failed: {ex.Message}");
+                TaskCoreLogger.Error("toast", $"Toast notification failed: {ex.Message}");
             }
         }
 
@@ -105,7 +105,7 @@ namespace TaskCore.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Toast notification failed: {ex.Message}");
+                TaskCoreLogger.Error("toast", $"Toast notification failed: {ex.Message}");
             }
         }
     }
