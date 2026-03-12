@@ -130,7 +130,9 @@ namespace TaskCore.ViewModels
 
         private CancellationTokenSource? _filterCts;
 
+#pragma warning disable CS8618 // Non-nullable field is initialized in constructor after design mode check
         public ProcessesViewModel()
+#pragma warning restore CS8618
         {
             if (IsInDesignMode())
                 return;
@@ -412,11 +414,13 @@ namespace TaskCore.ViewModels
                 }
                 TaskCoreLogger.Info("endtask", $"Killed {killed}/{SelectedGroup.Items.Count} processes");
                 SelectedGroup = null;
+#pragma warning disable CS4014 // Intentionally fire-and-forget
                 _ = Task.Run(async () =>
                 {
                     await Task.Delay(500);
-                    Application.Current.Dispatcher.BeginInvoke(() => _ = LoadProcessListAsync());
+                    Application.Current?.Dispatcher?.BeginInvoke(() => _ = LoadProcessListAsync());
                 });
+#pragma warning restore CS4014
                 return;
             }
 
@@ -443,11 +447,13 @@ namespace TaskCore.ViewModels
                 TaskCoreLogger.Info("endtask", $"Successfully killed PID {pid}");
 
                 SelectedProcess = null;
+#pragma warning disable CS4014 // Intentionally fire-and-forget
                 _ = Task.Run(async () =>
                 {
                     await Task.Delay(500);
-                    Application.Current.Dispatcher.BeginInvoke(() => _ = LoadProcessListAsync());
+                    Application.Current?.Dispatcher?.BeginInvoke(() => _ = LoadProcessListAsync());
                 });
+#pragma warning restore CS4014
             }
             catch (Exception ex)
             {

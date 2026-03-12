@@ -18,10 +18,10 @@ namespace TaskCore.ViewModels.Graphs
     {
         private bool _disposed;
         [ObservableProperty]
-        private ObservableCollection<ISeries> series;
+        private ObservableCollection<ISeries>? series;
 
         [ObservableProperty]
-        private ObservableCollection<string> xLabels;
+        private ObservableCollection<string>? xLabels;
 
         // Memory Information Properties
         [ObservableProperty]
@@ -85,7 +85,7 @@ namespace TaskCore.ViewModels.Graphs
         private string memoryDeviceType = "Unknown";
 
         private readonly DispatcherTimer _timer;
-        private readonly PerformanceCounter _memoryCounter;
+        private readonly PerformanceCounter? _memoryCounter;
         private readonly Queue<double> _memoryBuffer = new();
         private readonly Queue<string> _timeBuffer = new();
         private const int MaxDataPoints = 60;
@@ -304,14 +304,19 @@ namespace TaskCore.ViewModels.Graphs
                 _timeBuffer.Dequeue();
 
             // Batch update UI for better performance
-            var memoryValues = (ObservableCollection<double>)Series[0].Values;
-            memoryValues.Clear();
-            foreach (var value in _memoryBuffer)
-                memoryValues.Add(value);
+            if (series != null && series.Count > 0 && series[0].Values is ObservableCollection<double> memoryValues)
+            {
+                memoryValues.Clear();
+                foreach (var value in _memoryBuffer)
+                    memoryValues.Add(value);
+            }
 
-            XLabels.Clear();
-            foreach (var label in _timeBuffer)
-                XLabels.Add(label);
+            if (xLabels != null)
+            {
+                xLabels.Clear();
+                foreach (var label in _timeBuffer)
+                    xLabels.Add(label);
+            }
         }
 
         private string GetMemoryType(int memoryType)

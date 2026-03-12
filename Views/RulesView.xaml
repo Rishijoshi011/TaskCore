@@ -131,7 +131,7 @@
             <Border Grid.Column="0" 
                     Background="{StaticResource BackgroundSecondary}"
                     CornerRadius="4"
-                    BorderBrush="{StaticResource BackgroundCard}"
+                    BorderBrush="{DynamicResource AccentBrush}"
                     BorderThickness="1"
                     Padding="8 4">
                 <Grid>

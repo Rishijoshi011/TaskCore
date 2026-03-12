@@ -58,7 +58,9 @@ namespace TaskCore.Services
         private DateTime _lastSettingsLoad = DateTime.MinValue;
 
         public event Action? RulesChanged;
+#pragma warning disable CS0067 // Used externally via reflection or interface
         public event Action<RuleTriggerEvent>? RuleTriggered;
+#pragma warning restore CS0067
 
         private RulesService()
         {

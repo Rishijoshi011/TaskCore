@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>4.5.1</Version>
-    <AssemblyVersion>4.5.0.1</AssemblyVersion>
-    <FileVersion>4.5.0.1</FileVersion>
+    <Version>4.5.2</Version>
+    <AssemblyVersion>4.5.2.1</AssemblyVersion>
+    <FileVersion>4.5.2.1</FileVersion>
     <ApplicationIcon>Resources\AppIcon\TaskCore_icon.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -29,7 +29,6 @@
     <None Remove="Resources\Icons\Processes.png" />
     <None Remove="Resources\Icons\Rules.png" />
     <None Remove="Resources\Icons\Settings.png" />
-    <None Remove="Session.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -55,7 +54,6 @@
     <Resource Include="Resources\Icons\Rules.png" />
     <Resource Include="Resources\Icons\Session.png" />
     <Resource Include="Resources\Icons\Settings.png" />
-    <Resource Include="Session.png" />
   </ItemGroup>
 
   <ItemGroup>

@@ -153,8 +153,8 @@ namespace TaskCore.ViewModels.Graphs
             }
             catch
             {
-                _cpuCounter = null;
-                _speedCounter = null;
+                _cpuCounter = null!;
+                _speedCounter = null!;
             }
 
             // Start update timer
@@ -764,17 +764,16 @@ namespace TaskCore.ViewModels.Graphs
             // Update chart data safely
             try
             {
-                if (Series.Count > 0 && Series[0].Values != null)
+                if (Series.Count > 0 && Series[0].Values is ObservableCollection<double> cpuValues)
                 {
-                    var cpuValues = (ObservableCollection<double>)Series[0].Values;
                     cpuValues.Clear();
                     foreach (var value in _cpuBuffer)
                         cpuValues.Add(value);
                 }
 
-                XLabels.Clear();
+                XLabels?.Clear();
                 foreach (var label in _timeBuffer)
-                    XLabels.Add(label);
+                    XLabels?.Add(label);
             }
             catch
             {

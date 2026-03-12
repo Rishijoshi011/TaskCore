@@ -88,7 +88,7 @@ namespace TaskCore.ViewModels
         public string SessionLogsDirectory => UsageTrackingService.GetBaseDirectory();
 
         // Helper method to safely extract values from JsonElement
-        private static T SafeGetValue<T>(Dictionary<string, object> dict, string key, Func<JsonElement, T> converter, T defaultValue = default)
+        private static T SafeGetValue<T>(Dictionary<string, object> dict, string key, Func<JsonElement, T> converter, T defaultValue = default!) where T : notnull
         {
             try
             {

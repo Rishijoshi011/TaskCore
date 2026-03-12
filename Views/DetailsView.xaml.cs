@@ -96,7 +96,7 @@ namespace TaskCore.Views
             foreach (var col in visibleCols)
             {
                 var header = (col.Header ?? string.Empty).ToString();
-                if (header.Contains("Application", StringComparison.OrdinalIgnoreCase))
+                if (header?.Contains("Application", StringComparison.OrdinalIgnoreCase) == true)
                 {
                     col.Width = new DataGridLength(2, DataGridLengthUnitType.Star);
                 }

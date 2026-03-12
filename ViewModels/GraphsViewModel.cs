@@ -113,7 +113,7 @@ namespace TaskCore.ViewModels
             _isInitialized = true;
         }
 
-        private void TearDown()
+        private async Task TearDownAsync()
         {
             if (!_isInitialized) return;
 
@@ -161,7 +161,7 @@ namespace TaskCore.ViewModels
                 }
                 else
                 {
-                    TearDown();
+                    _ = TearDownAsync();
                 }
             }
             catch
@@ -200,7 +200,8 @@ namespace TaskCore.ViewModels
         {
             try
             {
-                _timer.Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.Normalize(ms));
+                if (_timer != null)
+                    _timer.Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.Normalize(ms));
             }
             catch
             {
@@ -241,7 +242,7 @@ namespace TaskCore.ViewModels
             catch { }
 
             // TearDown disposes counters and timer
-            TearDown();
+            _ = TearDownAsync();
         }
     }
 }

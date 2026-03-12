@@ -29,7 +29,7 @@
             </StackPanel>
 
             <!-- Controls Section -->
-            <Border Style="{StaticResource CardPanel}" Margin="0 0 0 14" Padding="14">
+            <Border Style="{StaticResource CardPanel}" Margin="0 14 0 14" Padding="14" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                 <StackPanel>
                     <!-- Top Row with Date, Search, and Buttons -->
                     <StackPanel Orientation="Horizontal" Margin="0 0 0 12">
@@ -89,26 +89,26 @@
 
             <!-- Overview Cards -->
             <UniformGrid Columns="4" Margin="0 14 0 14">
-                <Border Style="{StaticResource CardPanel}" Margin="0 0 10 0" Padding="14">
+                <Border Style="{StaticResource CardPanel}" Margin="0 0 10 0" Padding="14" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <StackPanel>
                         <TextBlock Text="Apps" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                         <TextBlock Text="{Binding AppSummaries.Count}" Foreground="{StaticResource TextPrimary}" FontSize="20" FontWeight="Bold" Margin="0 6 0 0"/>
                     </StackPanel>
                 </Border>
-                <Border Style="{StaticResource CardPanel}" Margin="0 0 10 0" Padding="14">
+                <Border Style="{StaticResource CardPanel}" Margin="0 0 10 0" Padding="14" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <StackPanel>
                         <TextBlock Text="Sessions" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                         <TextBlock Text="{Binding Sessions.Count}" Foreground="{StaticResource TextPrimary}" FontSize="20" FontWeight="Bold" Margin="0 6 0 0"/>
                     </StackPanel>
                 </Border>
-                <Border Style="{StaticResource CardPanel}" Margin="0 0 10 0" Padding="14">
+                <Border Style="{StaticResource CardPanel}" Margin="0 0 10 0" Padding="14" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <StackPanel>
                         <TextBlock Text="Top App" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                         <TextBlock Text="{Binding TopAppName}" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0 6 0 0" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding TopAppSessionsText}" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                     </StackPanel>
                 </Border>
-                <Border Style="{StaticResource CardPanel}" Margin="0" Padding="14">
+                <Border Style="{StaticResource CardPanel}" Margin="0" Padding="14" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <StackPanel>
                         <TextBlock Text="Longest Session" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                         <TextBlock Text="{Binding LongestSessionText}" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0 6 0 0"/>
@@ -117,7 +117,7 @@
             </UniformGrid>
 
             <!-- Export Controls -->
-            <Border Style="{StaticResource CardPanel}" Margin="0 0 0 14" Padding="14">
+            <Border Style="{StaticResource CardPanel}" Margin="0 0 0 14" Padding="14" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
