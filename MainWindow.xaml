@@ -203,7 +203,8 @@
                                  Background="Transparent"
                                  BorderThickness="0"
                                  Foreground="{StaticResource TextPrimary}"
-                                 FontSize="14">
+                                 FontSize="14"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 
                             <ListBox.ItemContainerStyle>
                                 <Style TargetType="ListBoxItem">

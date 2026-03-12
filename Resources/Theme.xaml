@@ -250,6 +250,15 @@
 
 
 
+    <!-- Base TextBlock Style with Default Font -->
+
+    <Style TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource DefaultFont}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+    </Style>
+
+
+
     <!-- ======================= -->
 
     <!--     BUTTON STYLE        -->
