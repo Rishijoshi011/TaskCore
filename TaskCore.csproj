@@ -7,8 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <Version>4.5.2</Version>
-    <AssemblyVersion>4.5.2.2</AssemblyVersion>
-    <FileVersion>4.5.2.2</FileVersion>
+    <AssemblyVersion>4.5.2.3</AssemblyVersion>
+    <FileVersion>4.5.2.3</FileVersion>
     <ApplicationIcon>Resources\AppIcon\TaskCore_icon.ico</ApplicationIcon>
   </PropertyGroup>
 
