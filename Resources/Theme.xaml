@@ -2,12 +2,14 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:TaskCore.Converters">
 
-
+    <!-- ======================= -->
+    <!--     CONVERTERS          -->
+    <!-- ======================= -->
+    
+    <local:StringToBrushConverter x:Key="StringToBrushConverter"/>
 
     <!-- ======================= -->
-
     <!--   COLOR PALETTE (SOFT DARK + PURPLE) -->
-
     <!-- ======================= -->
 
 
@@ -1456,6 +1458,7 @@
     <!-- ======================= -->
     <!--    GRAPH TAB TOGGLE     -->
     <!-- ======================= -->
+    
     <Style x:Key="GraphTabToggle" TargetType="ToggleButton">
         <Setter Property="Background" Value="{StaticResource BackgroundSecondary}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
@@ -1485,6 +1488,11 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <!-- ======================= -->
+    <!--     SHADOW EFFECTS      -->
+    <!-- ======================= -->
+    <DropShadowEffect x:Key="CardShadow" ShadowDepth="8" BlurRadius="16" Opacity="0.6" Direction="270" Color="#000000"/>
 
     <!-- ======================= -->
     <!--     INFO ICON STYLE       -->

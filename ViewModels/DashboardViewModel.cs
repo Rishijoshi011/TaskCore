@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using TaskCore.Models;
 using TaskCore.Services;
 
 namespace TaskCore.ViewModels
@@ -16,12 +17,37 @@ namespace TaskCore.ViewModels
     {
         [ObservableProperty] private string name = string.Empty;
         [ObservableProperty] private string detail = string.Empty;
+        [ObservableProperty] private int rank;
+        [ObservableProperty] private string duration = string.Empty;
+        [ObservableProperty] private double impactScore;
+        [ObservableProperty] private double barWidth;
+        [ObservableProperty] private string barColor = "#9A4DFF";
+        [ObservableProperty] private string icon = "📱";
+        [ObservableProperty] private string cpuText = string.Empty;
+        [ObservableProperty] private string ramText = string.Empty;
+        [ObservableProperty] private double peakCpu;
+        [ObservableProperty] private double peakRam;
+        [ObservableProperty] private string trendArrow = string.Empty;
+        [ObservableProperty] private bool isTopRank;
     }
 
     public sealed partial class InsightItem : ObservableObject
     {
         [ObservableProperty] private string title = string.Empty;
         [ObservableProperty] private string detail = string.Empty;
+        [ObservableProperty] private string processName = string.Empty;
+        [ObservableProperty] private double impactScore;
+        [ObservableProperty] private string category = string.Empty;
+        [ObservableProperty] private double predictedCpu;
+        [ObservableProperty] private double predictedMemory;
+        [ObservableProperty] private bool isAnomaly;
+        [ObservableProperty] private string icon = "📊";
+        [ObservableProperty] private string colorBrush = "#9A4DFF";
+
+        public void ShowDetails()
+        {
+            // This will be handled by the command in DashboardViewModel
+        }
     }
 
     public sealed partial class HeatmapHourCell : ObservableObject
@@ -47,6 +73,7 @@ namespace TaskCore.ViewModels
     {
         private bool _disposed;
         private readonly DispatcherTimer _refreshTimer;
+        private readonly ProcessAnalyticsEngine _analyticsEngine;
 
         private PerformanceCounter? _diskReadBytes;
         private PerformanceCounter? _diskWriteBytes;
@@ -404,6 +431,15 @@ namespace TaskCore.ViewModels
         [ObservableProperty] private ObservableCollection<InsightItem> insights = new();
         public bool HasNoInsights => Insights.Count == 0;
 
+        // Throttle analytics to reduce CPU usage (run max once per 30 seconds)
+        private DateTime _lastInsightsBuildTime = DateTime.MinValue;
+        private readonly TimeSpan _insightsThrottleInterval = TimeSpan.FromSeconds(30);
+
+        [ObservableProperty] private bool isInsightPopupOpen = false;
+        [ObservableProperty] private InsightItem? selectedInsight = null;
+        [ObservableProperty] private string insightPopupTitle = string.Empty;
+        [ObservableProperty] private string insightPopupContent = string.Empty;
+
         [ObservableProperty] private ObservableCollection<HeatmapHourCell> hourlyHeatmap = new();
         [ObservableProperty] private ObservableCollection<WeeklyOverviewItem> weeklyOverview = new();
 
@@ -411,6 +447,15 @@ namespace TaskCore.ViewModels
 
         public DashboardViewModel()
         {
+            _analyticsEngine = new ProcessAnalyticsEngine(new ProcessAnalyticsEngine.Options
+            {
+                MaxHistorySamples = 60,
+                AnomalyZThreshold = 2.0,
+                HeavyCpuThreshold = 60.0,
+                PredictionMinutes = 5,
+                TopOffenders = 10
+            });
+
             BuildHeatmapSkeleton();
             LoadAvailableDates();
 
@@ -789,7 +834,37 @@ namespace TaskCore.ViewModels
         }
 
         [RelayCommand]
-        private void OpenRules() => AppViewStateService.SetView("Rules");
+        private void OpenInsightPopup(InsightItem? insight)
+        {
+            if (insight == null) return;
+
+            SelectedInsight = insight;
+            InsightPopupTitle = $"{insight.ProcessName} - {insight.Category}";
+            
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"📊 Impact Score: {insight.ImpactScore:F1}/100");
+            sb.AppendLine($"🔮 Predicted CPU (5min): {insight.PredictedCpu:F1}%");
+            sb.AppendLine($"🔮 Predicted Memory (5min): {insight.PredictedMemory:F1} MB");
+            sb.AppendLine();
+            
+            if (insight.IsAnomaly)
+            {
+                sb.AppendLine("⚠️ ANOMALY DETECTED");
+                sb.AppendLine("This process shows unusual behavior patterns.");
+            }
+            
+            sb.AppendLine(insight.Detail);
+            InsightPopupContent = sb.ToString();
+            
+            IsInsightPopupOpen = true;
+        }
+
+        [RelayCommand]
+        private void CloseInsightPopup()
+        {
+            IsInsightPopupOpen = false;
+            SelectedInsight = null;
+        }
 
         [RelayCommand]
         private void OpenSettings() => AppViewStateService.SetView("Settings");
@@ -896,6 +971,30 @@ namespace TaskCore.ViewModels
                     ToolTip = $"{i:00}:00 - 0 min"
                 });
             }
+        }
+
+        private static string GetCategoryIcon(BehaviorCategory category)
+        {
+            return category switch
+            {
+                BehaviorCategory.Heavy => "🔥",
+                BehaviorCategory.Idle => "💤",
+                BehaviorCategory.Unstable => "🔄",
+                BehaviorCategory.Suspicious => "👁️",
+                _ => "✅"
+            };
+        }
+
+        private static string GetCategoryColor(BehaviorCategory category)
+        {
+            return category switch
+            {
+                BehaviorCategory.Heavy => "#FACC15",     // Yellow
+                BehaviorCategory.Idle => "#4ADE80",      // Green
+                BehaviorCategory.Unstable => "#F87171",   // Red
+                BehaviorCategory.Suspicious => "#F87171", // Red
+                _ => "#9A4DFF"                            // Purple (Normal)
+            };
         }
 
         private static int CalculateUniqueDurationSeconds(List<UsageTrackingService.SessionRecord> sessions)
@@ -1281,18 +1380,69 @@ namespace TaskCore.ViewModels
                         App = g.Key,
                         Seconds = g.Sum(x => Math.Max(0, x.durationSeconds)),
                         PeakCpu = g.Max(x => x.peakCpuPercent),
-                        PeakMem = g.Max(x => x.peakMemoryMB)
+                        PeakMem = g.Max(x => x.peakMemoryMB),
+                        AvgCpu = g.Average(x => x.averageCpuPercent),
+                        SessionCount = g.Count()
                     })
                     .OrderByDescending(x => x.Seconds)
                     .Take(6)
                     .ToList();
 
-                foreach (var g in grouped)
+                if (grouped.Count == 0) return;
+
+                // Calculate max for progress bar scaling
+                var maxSeconds = grouped.Max(x => x.Seconds);
+                var maxBarWidth = 200; // max pixels
+
+                for (int i = 0; i < grouped.Count; i++)
                 {
+                    var g = grouped[i];
+                    var rank = i + 1;
+                    
+                    // Calculate impact score (0-100) based on duration + resource usage
+                    var durationScore = Math.Min(g.Seconds / 3600.0 * 20, 40); // 1hr = 20pts, max 40
+                    var cpuScore = Math.Min(g.PeakCpu * 0.4, 35); // peak CPU % * 0.4, max 35
+                    var memScore = Math.Min(g.PeakMem / 100.0, 25); // 2.5GB = 25pts max
+                    var impactScore = Math.Min(durationScore + cpuScore + memScore, 100);
+
+                    // Determine color based on impact
+                    string barColor;
+                    if (impactScore >= 60) barColor = "#F87171"; // Red - high impact
+                    else if (impactScore >= 35) barColor = "#FACC15"; // Yellow - medium
+                    else barColor = "#4ADE80"; // Green - low impact
+
+                    // Top rank gets special treatment
+                    bool isTopRank = rank == 1;
+                    if (isTopRank) barColor = "{DynamicResource AccentBrush}"; // Purple for #1
+
+                    // Get icon based on process type
+                    var icon = GetProcessIcon(g.App);
+
+                    // Calculate trend (placeholder - would compare with yesterday)
+                    var trendArrow = rank <= 2 ? "🔥" : "";
+
+                    // Format duration
+                    var duration = TimeSpan.FromSeconds(g.Seconds);
+                    var durationText = duration.TotalHours >= 1 
+                        ? $"{duration.Hours}h {duration.Minutes}m"
+                        : $"{duration.Minutes}m {duration.Seconds}s";
+
                     TopOffenders.Add(new TopOffenderItem
                     {
                         Name = g.App,
-                        Detail = $"{TimeSpan.FromSeconds(g.Seconds).ToString(@"hh\:mm")} | CPU {g.PeakCpu:F0}% | RAM {g.PeakMem:F0}MB"
+                        Detail = $"{g.SessionCount} session{(g.SessionCount == 1 ? "" : "s")}",
+                        Rank = rank,
+                        Duration = durationText,
+                        ImpactScore = impactScore,
+                        BarWidth = (g.Seconds / maxSeconds) * maxBarWidth,
+                        BarColor = barColor,
+                        Icon = icon,
+                        CpuText = $"{g.PeakCpu:F0}%",
+                        RamText = $"{g.PeakMem:F0}MB",
+                        PeakCpu = g.PeakCpu,
+                        PeakRam = g.PeakMem,
+                        TrendArrow = trendArrow,
+                        IsTopRank = isTopRank
                     });
                 }
             }
@@ -1303,56 +1453,117 @@ namespace TaskCore.ViewModels
             OnPropertyChanged(nameof(HasNoTopOffenders));
         }
 
+        private static string GetProcessIcon(string processName)
+        {
+            var name = processName.ToLowerInvariant();
+            
+            // Check against ProcessBehaviorClassifier categories
+            var behavior = ProcessBehaviorClassifier.GetExpectedBehavior(processName);
+            
+            return behavior switch
+            {
+                ExpectedBehavior.Gaming => "🎮",
+                ExpectedBehavior.Creative => "🎨",
+                ExpectedBehavior.Interactive when name.Contains("chrome") || name.Contains("firefox") || 
+                    name.Contains("edge") || name.Contains("browser") => "🌐",
+                ExpectedBehavior.Interactive when name.Contains("discord") || name.Contains("teams") || 
+                    name.Contains("zoom") || name.Contains("slack") => "💬",
+                _ => name.Contains("code") || name.Contains("studio") || name.Contains("visual") ? "💻" :
+                     name.Contains("explorer") || name.Contains("shell") ? "📁" :
+                     name.Contains("msbuild") || name.Contains("dotnet") || name.Contains("compiler") ? "🔨" :
+                     "📱"
+            };
+        }
+
         private void BuildInsights(System.Collections.Generic.List<UsageTrackingService.SessionRecord> sessions)
         {
+            // Throttle expensive ML analytics to reduce CPU usage
+            var now = DateTime.Now;
+            if (now - _lastInsightsBuildTime < _insightsThrottleInterval && Insights.Count > 0)
+            {
+                // Skip rebuilding insights if we have data and throttle hasn't elapsed
+                return;
+            }
+            _lastInsightsBuildTime = now;
+
             Insights.Clear();
 
             try
             {
-                var perApp = sessions
-                    .GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app)
-                    .Select(g => new
-                    {
-                        App = g.Key,
-                        TotalSeconds = g.Sum(x => Math.Max(0, x.durationSeconds)),
-                        SessionCount = g.Count(),
-                        PeakCpu = g.Max(x => x.peakCpuPercent),
-                        AvgCpu = g.Average(x => x.averageCpuPercent),
-                        PeakMem = g.Max(x => x.peakMemoryMB),
-                        AvgMem = g.Average(x => x.averageMemoryMB)
-                    })
-                    .ToList();
+                // Get real-time process metrics with live historical samples
+                var realtimeMetrics = UsageTrackingService.Instance.GetProcessMetricsForAnalytics();
+                
+                // Get past session data (last 2 days instead of 7) for additional ML context - reduced for performance
+                var historicalMetrics = UsageTrackingService.Instance.GetHistoricalProcessMetricsForAnalytics(daysBack: 2);
 
-                var cpuHogs = perApp.Where(x => x.PeakCpu >= 70).OrderByDescending(x => x.PeakCpu).Take(2).ToList();
-                foreach (var x in cpuHogs)
+                // Run ML-powered analytics with both real-time and historical data
+                var mlInsights = _analyticsEngine.Analyze(realtimeMetrics, historicalMetrics, DateTime.Now);
+
+                // Add ML-powered insights first (most important)
+                foreach (var insight in mlInsights.Take(5))
                 {
-                    Insights.Add(new InsightItem
+                    // Determine icon and color based on category and anomaly status
+                    string icon = insight.IsAnomaly ? "⚠️" : GetCategoryIcon(insight.BehaviorCategory);
+                    string color = insight.IsAnomaly ? "#F87171" : GetCategoryColor(insight.BehaviorCategory);
+                    
+                    var item = new InsightItem
                     {
-                        Title = "High CPU spikes",
-                        Detail = $"{x.App} peaked at {x.PeakCpu:F0}% CPU (avg {x.AvgCpu:F0}%)."
-                    });
+                        Title = insight.IsAnomaly ? "Anomaly detected" : insight.BehaviorCategory.ToString(),
+                        Detail = string.IsNullOrEmpty(insight.RecommendationText)
+                            ? $"{insight.ProcessName}: Impact {insight.ImpactScore:F0}, Predicted CPU {insight.PredictionCpu:F1}%"
+                            : insight.RecommendationText,
+                        ProcessName = insight.ProcessName,
+                        ImpactScore = insight.ImpactScore,
+                        Category = insight.BehaviorCategory.ToString(),
+                        PredictedCpu = insight.PredictionCpu,
+                        PredictedMemory = insight.PredictionMemory,
+                        IsAnomaly = insight.IsAnomaly,
+                        Icon = icon,
+                        ColorBrush = color
+                    };
+
+                    Insights.Add(item);
                 }
 
-                var memHogs = perApp.Where(x => x.PeakMem >= 1500).OrderByDescending(x => x.PeakMem).Take(2).ToList();
-                foreach (var x in memHogs)
+                // Fallback: add traditional session-based insights if no ML insights
+                if (Insights.Count == 0)
                 {
-                    Insights.Add(new InsightItem
+                    var perApp = sessions
+                        .GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app)
+                        .Select(g => new
+                        {
+                            App = g.Key,
+                            TotalSeconds = g.Sum(x => Math.Max(0, x.durationSeconds)),
+                            SessionCount = g.Count(),
+                            PeakCpu = g.Max(x => x.peakCpuPercent),
+                            AvgCpu = g.Average(x => x.averageCpuPercent),
+                            PeakMem = g.Max(x => x.peakMemoryMB),
+                            AvgMem = g.Average(x => x.averageMemoryMB)
+                        })
+                        .ToList();
+
+                    var cpuHogs = perApp.Where(x => x.PeakCpu >= 70).OrderByDescending(x => x.PeakCpu).Take(2).ToList();
+                    foreach (var x in cpuHogs)
                     {
-                        Title = "High memory usage",
-                        Detail = $"{x.App} peaked at {x.PeakMem:F0} MB RAM (avg {x.AvgMem:F0} MB)."
-                    });
+                        Insights.Add(new InsightItem
+                        {
+                            Title = "High CPU spikes",
+                            Detail = $"{x.App} peaked at {x.PeakCpu:F0}% CPU (avg {x.AvgCpu:F0}%)."
+                        });
+                    }
+
+                    var memHogs = perApp.Where(x => x.PeakMem >= 1500).OrderByDescending(x => x.PeakMem).Take(2).ToList();
+                    foreach (var x in memHogs)
+                    {
+                        Insights.Add(new InsightItem
+                        {
+                            Title = "High memory usage",
+                            Detail = $"{x.App} peaked at {x.PeakMem:F0} MB RAM (avg {x.AvgMem:F0} MB)."
+                        });
+                    }
                 }
 
-                var frequent = perApp.Where(x => x.SessionCount >= 5).OrderByDescending(x => x.SessionCount).Take(2).ToList();
-                foreach (var x in frequent)
-                {
-                    Insights.Add(new InsightItem
-                    {
-                        Title = "Frequent restarts",
-                        Detail = $"{x.App} started {x.SessionCount} times today."
-                    });
-                }
-
+                // Show "All good" if still empty
                 if (Insights.Count == 0)
                 {
                     Insights.Add(new InsightItem
@@ -1362,8 +1573,21 @@ namespace TaskCore.ViewModels
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                // Log error and show fallback message
+                try
+                {
+                    var errorFile = Path.Combine(UsageTrackingService.GetBaseDirectory(), "dashboard-errors.txt");
+                    File.AppendAllText(errorFile, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] BuildInsights error: {ex.Message}{Environment.NewLine}");
+                }
+                catch { }
+
+                Insights.Add(new InsightItem
+                {
+                    Title = "Analytics unavailable",
+                    Detail = "Process analytics engine temporarily unavailable."
+                });
             }
 
             OnPropertyChanged(nameof(HasNoInsights));

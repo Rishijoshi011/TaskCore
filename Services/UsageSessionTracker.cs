@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using TaskCore.Models;
 
 namespace TaskCore.Services
 {
@@ -13,8 +14,12 @@ namespace TaskCore.Services
         private readonly Dictionary<string, (DateTime start, string path, HashSet<int> pids)> _trackedApps = new();
         private readonly Dictionary<string, (double peakCpu, double totalCpu, double peakMem, double totalMem, int samples)> _appMetrics = new();
         private readonly Dictionary<int, int> _missCountByApp = new();
-
         private readonly Dictionary<string, bool> _appIdleState = new();  // Track if app was started during idle
+
+        // Historical samples for ML.NET forecasting (CPU and memory samples per app)
+        private readonly Dictionary<string, List<double>> _appCpuHistory = new();
+        private readonly Dictionary<string, List<double>> _appMemoryHistory = new();
+        private const int MaxHistorySamples = 60;
 
         // Session continuation: track recently ended sessions for 60-second window
         private readonly Dictionary<string, (DateTime endTime, double peakCpu, double totalCpu, double peakMem, double totalMem, int samples)> _recentlyEnded = new();
@@ -155,6 +160,25 @@ namespace TaskCore.Services
                     {
                         _appMetrics[appName] = (cpuUsage, cpuUsage, memoryMB, memoryMB, 1);
                     }
+
+                    // Record historical samples for ML forecasting
+                    if (!_appCpuHistory.TryGetValue(appName, out var cpuHistory))
+                    {
+                        cpuHistory = new List<double>();
+                        _appCpuHistory[appName] = cpuHistory;
+                    }
+                    cpuHistory.Add(cpuUsage);
+                    if (cpuHistory.Count > MaxHistorySamples)
+                        cpuHistory.RemoveAt(0);
+
+                    if (!_appMemoryHistory.TryGetValue(appName, out var memHistory))
+                    {
+                        memHistory = new List<double>();
+                        _appMemoryHistory[appName] = memHistory;
+                    }
+                    memHistory.Add(memoryMB);
+                    if (memHistory.Count > MaxHistorySamples)
+                        memHistory.RemoveAt(0);
                 }
                 catch
                 {
@@ -179,6 +203,38 @@ namespace TaskCore.Services
                 peakMem = metric.peakMem;
                 avgMem = metric.samples > 0 ? metric.totalMem / metric.samples : 0;
             }
+        }
+
+        public List<ProcessMetrics> GetProcessMetrics()
+        {
+            var result = new List<ProcessMetrics>();
+            var now = DateTime.Now;
+
+            foreach (var kvp in _trackedApps)
+            {
+                var appName = kvp.Key;
+                var (startTime, path, pids) = kvp.Value;
+
+                GetMetricsForApp(appName, out var peakCpu, out var avgCpu, out var peakMem, out var avgMem);
+
+                // Get historical samples (cloned to avoid modification issues)
+                var cpuHistory = _appCpuHistory.TryGetValue(appName, out var cpuHist) ? new List<double>(cpuHist) : new List<double>();
+                var memHistory = _appMemoryHistory.TryGetValue(appName, out var memHist) ? new List<double>(memHist) : new List<double>();
+
+                result.Add(new ProcessMetrics
+                {
+                    ProcessName = appName,
+                    CpuUsage = avgCpu,
+                    MemoryUsage = avgMem,
+                    StartTime = startTime,
+                    RuntimeMinutes = (now - startTime).TotalMinutes,
+                    RestartCount = 0, // Real-time tracking doesn't have restart count
+                    HistoricalCpuUsage = cpuHistory,
+                    HistoricalMemoryUsage = memHistory
+                });
+            }
+
+            return result;
         }
     }
 

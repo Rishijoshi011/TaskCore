@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using Microsoft.Win32;
+using TaskCore.Models;
 
 namespace TaskCore.Services
 {
@@ -354,6 +355,89 @@ namespace TaskCore.Services
                 }
                 return result;
             }
+        }
+
+        // Get real-time process metrics for analytics engine (includes historical samples for ML forecasting)
+        public List<ProcessMetrics> GetProcessMetricsForAnalytics()
+        {
+            lock (_lock)
+            {
+                return _sessionTracker.GetProcessMetrics();
+            }
+        }
+
+        // Get historical process metrics from past sessions (last N days) for ML context
+        public List<ProcessMetrics> GetHistoricalProcessMetricsForAnalytics(int daysBack = 7)
+        {
+            var result = new List<ProcessMetrics>();
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            
+            // Collect all sessions from past N days
+            var allSessions = new List<UsageTrackingService.SessionRecord>();
+            for (int i = 1; i <= daysBack; i++)
+            {
+                var date = today.AddDays(-i);
+                var sessions = GetDailySessions(date, mergeOverlappingSessions: true);
+                allSessions.AddRange(sessions);
+            }
+
+            if (allSessions.Count == 0)
+                return result;
+
+            // Group by app and build historical metrics
+            var grouped = allSessions
+                .GroupBy(s => s.app ?? "Unknown")
+                .ToList();
+
+            foreach (var group in grouped)
+            {
+                var appName = group.Key;
+                var sessions = group.OrderBy(s => s.startTimeUtc).ToList();
+                
+                // Build historical CPU and memory samples from past sessions
+                var cpuHistory = new List<double>();
+                var memHistory = new List<double>();
+                int restartCount = sessions.Count;
+                double totalRuntimeMinutes = 0;
+                DateTime earliestStart = sessions.First().startTimeUtc;
+
+                foreach (var session in sessions)
+                {
+                    // Add average CPU and memory as sample points (simulate 1 sample per minute of runtime)
+                    var runtimeMinutes = session.durationSeconds / 60.0;
+                    totalRuntimeMinutes += runtimeMinutes;
+                    
+                    // Add samples proportional to session duration (up to 10 samples per session)
+                    int sampleCount = Math.Min(10, Math.Max(1, (int)runtimeMinutes));
+                    for (int i = 0; i < sampleCount; i++)
+                    {
+                        cpuHistory.Add(session.averageCpuPercent);
+                        memHistory.Add(session.averageMemoryMB);
+                    }
+                }
+
+                // Limit to 60 samples max
+                if (cpuHistory.Count > 60)
+                    cpuHistory = cpuHistory.Skip(cpuHistory.Count - 60).ToList();
+                if (memHistory.Count > 60)
+                    memHistory = memHistory.Skip(memHistory.Count - 60).ToList();
+
+                // Calculate current averages from most recent session
+                var recentSession = sessions.Last();
+                result.Add(new ProcessMetrics
+                {
+                    ProcessName = appName,
+                    CpuUsage = recentSession.averageCpuPercent,
+                    MemoryUsage = recentSession.averageMemoryMB,
+                    StartTime = earliestStart,
+                    RuntimeMinutes = totalRuntimeMinutes,
+                    RestartCount = restartCount,
+                    HistoricalCpuUsage = cpuHistory,
+                    HistoricalMemoryUsage = memHistory
+                });
+            }
+
+            return result;
         }
 
         private void KickTick()

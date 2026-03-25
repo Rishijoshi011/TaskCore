@@ -134,8 +134,6 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="10"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="10"/>
-                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="14" MinHeight="88"  BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
@@ -153,18 +151,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Column="4" Style="{StaticResource CardPanel}" Padding="14" MinHeight="88" Cursor="Hand" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock Text="Top Offender" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
-                        <TextBlock Text="{Binding TopOffenderName}" Foreground="{DynamicResource AccentBrush}" FontSize="16" FontWeight="SemiBold" Margin="0 6 0 0" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Text="{Binding TopOffenderDetail}" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
-                    </StackPanel>
-                    <Border.InputBindings>
-                        <MouseBinding Gesture="LeftClick" Command="{Binding ViewTopOffenderDetailsCommand}"/>
-                    </Border.InputBindings>
-                </Border>
-
-                <Border Grid.Column="6" Style="{StaticResource CardPanel}" Padding="14" MinHeight="88" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                <Border Grid.Column="4" Style="{StaticResource CardPanel}" Padding="14" MinHeight="88" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
                             <TextBlock Text="Stability" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
@@ -263,26 +250,111 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="14" MinHeight="170" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                <Border Grid.Column="0" Style="{StaticResource CardPanel}" Padding="14" MinHeight="220" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
-                            <TextBlock Text="Top Offenders" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 12">
+                            <TextBlock Text="Top Offenders" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="SemiBold"/>
                             <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
-                                     ToolTip="Apps with the highest total runtime today."/>
+                                     ToolTip="Apps with highest impact on your system today. Impact = Duration + CPU usage + Memory usage."/>
+                        </StackPanel>
+
+                        <!-- Legend -->
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10" Opacity="0.8">
+                            <Ellipse Width="8" Height="8" Fill="#4ADE80" Margin="0 0 4 0"/>
+                            <TextBlock Text="Low" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 12 0"/>
+                            <Ellipse Width="8" Height="8" Fill="#FACC15" Margin="0 0 4 0"/>
+                            <TextBlock Text="Med" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 12 0"/>
+                            <Ellipse Width="8" Height="8" Fill="#F87171" Margin="0 0 4 0"/>
+                            <TextBlock Text="High" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 12 0"/>
+                            <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" Margin="0 0 4 0"/>
+                            <TextBlock Text="#1" FontSize="9" Foreground="{StaticResource TextSecondary}"/>
                         </StackPanel>
 
                         <ItemsControl ItemsSource="{Binding TopOffenders}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0 0 0 6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
+                                    <Border Margin="0 0 0 8" 
+                                            Background="{StaticResource BackgroundSecondary}" 
+                                            CornerRadius="10" 
+                                            Padding="12 10"
+                                            Cursor="Hand"
+                                            BorderThickness="2"
+                                            BorderBrush="Transparent">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsTopRank}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                    </DataTrigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource BackgroundCard}"/>
+                                                        <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
 
-                                        <TextBlock Grid.Column="0" Text="{Binding Name}" Foreground="{StaticResource TextPrimary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Detail}" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="12 0 0 0"/>
-                                    </Grid>
+                                            <!-- Rank -->
+                                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14" 
+                                                    Background="{Binding BarColor}" 
+                                                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                    Margin="0 0 12 0">
+                                                <TextBlock Text="{Binding Rank}" FontSize="12" FontWeight="Bold" 
+                                                           Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+
+                                            <!-- App Info and Progress -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" 
+                                                               Foreground="{StaticResource TextPrimary}" 
+                                                               FontSize="13" FontWeight="SemiBold" 
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding TrendArrow}" FontSize="12" Margin="4 0 0 0"/>
+                                                </Grid>
+                                                
+                                                <!-- Progress Bar -->
+                                                <Grid Height="4" Margin="0 8 0 0">
+                                                    <Border Background="{StaticResource BackgroundCard}" CornerRadius="2"/>
+                                                    <Border Width="{Binding BarWidth}" 
+                                                            Background="{Binding BarColor}" 
+                                                            CornerRadius="2" 
+                                                            HorizontalAlignment="Left"/>
+                                                </Grid>
+                                                
+                                                <!-- Stats Row -->
+                                                <StackPanel Orientation="Horizontal" Margin="0 6 0 0" Opacity="0.9">
+                                                    <TextBlock Text="{Binding Duration}" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                                    <TextBlock Text="•" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="8 0"/>
+                                                    <TextBlock Text="CPU " FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                                    <TextBlock Text="{Binding CpuText}" FontSize="11" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="•" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="8 0"/>
+                                                    <TextBlock Text="RAM " FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                                    <TextBlock Text="{Binding RamText}" FontSize="11" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold"/>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <!-- Impact Score -->
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="12 0 0 0">
+                                                <TextBlock Text="{Binding ImpactScore, StringFormat='{}{0:F0}'}" 
+                                                           FontSize="20" FontWeight="Bold" 
+                                                           Foreground="{Binding BarColor}"
+                                                           HorizontalAlignment="Center"/>
+                                                <TextBlock Text="IMPACT" FontSize="9" Foreground="{StaticResource TextSecondary}" 
+                                                           HorizontalAlignment="Center" Margin="0 2 0 0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -292,28 +364,75 @@
                 </Border>
 
                 <Border Grid.Column="2" Style="{StaticResource CardPanel}" Padding="14" MinHeight="170" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
-                            <TextBlock Text="Process Insights" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
-                            <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
-                                     ToolTip="Heuristics based on today's session logs (runtime + peaks)."/>
+                    <Grid>
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                                <TextBlock Text="Process Insights" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
+                                         ToolTip="ML-powered analytics with anomaly detection and 5-minute predictions. Click any insight for details."/>
+                            </StackPanel>
+
+                            <ItemsControl ItemsSource="{Binding Insights}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource BackgroundSecondary}" 
+                                                CornerRadius="8" 
+                                                Padding="10 8" 
+                                                Margin="0 0 0 8"
+                                                Cursor="Hand"
+                                                BorderThickness="2"
+                                                BorderBrush="{DynamicResource AccentBrush}">
+                                            <Border.InputBindings>
+                                                <MouseBinding Gesture="LeftClick" Command="{Binding DataContext.OpenInsightPopupCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="{Binding ColorBrush}" Margin="0 0 10 0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                    <TextBlock Text="{Binding Icon}" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{Binding Title}" Foreground="{Binding ColorBrush, TargetNullValue={StaticResource TextPrimary}}" FontSize="12" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding Detail}" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="0 4 0 0"/>
+                                                    <TextBlock Text="Click for details →" Foreground="{DynamicResource AccentBrush}" FontSize="10" Margin="0 4 0 0" Opacity="0.8"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="No insights yet" Foreground="{StaticResource TextSecondary}" FontSize="11" Visibility="{Binding HasNoInsights, Converter={StaticResource BoolToVisibility}}"/>
                         </StackPanel>
 
-                        <ItemsControl ItemsSource="{Binding Insights}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="{StaticResource BackgroundSecondary}" CornerRadius="8" Padding="10 8" Margin="0 0 0 8">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Title}" Foreground="{StaticResource TextPrimary}" FontSize="12" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Detail}" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="0 4 0 0"/>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <TextBlock Text="No insights yet" Foreground="{StaticResource TextSecondary}" FontSize="11" Visibility="{Binding HasNoInsights, Converter={StaticResource BoolToVisibility}}"/>
-                    </StackPanel>
+                        <!-- Insight Detail Popup -->
+                        <Border Background="{StaticResource BackgroundCard}" 
+                                CornerRadius="12" 
+                                Padding="20"
+                                BorderBrush="{DynamicResource AccentBrush}"
+                                BorderThickness="2"
+                                Visibility="{Binding IsInsightPopupOpen, Converter={StaticResource BoolToVisibility}}"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                MinWidth="300"
+                                MaxWidth="400"
+                                Effect="{StaticResource CardShadow}">
+                            <StackPanel>
+                                <Grid Margin="0 0 0 15">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding InsightPopupTitle}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" TextWrapping="Wrap"/>
+                                    <Button Grid.Column="1" Content="✕" Command="{Binding CloseInsightPopupCommand}" Style="{StaticResource QuickActionButton}" Width="28" Height="28" Padding="0"/>
+                                </Grid>
+                                <TextBlock Text="{Binding InsightPopupContent}" Foreground="{StaticResource TextSecondary}" FontSize="13" TextWrapping="Wrap" LineHeight="20"/>
+                                <Button Content="Close" Command="{Binding CloseInsightPopupCommand}" Style="{StaticResource ActionButton}" Margin="0 15 0 0" Height="32"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </Border>
             </Grid>
 

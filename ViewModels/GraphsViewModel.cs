@@ -113,9 +113,9 @@ namespace TaskCore.ViewModels
             _isInitialized = true;
         }
 
-        private async Task TearDownAsync()
+        private Task TearDownAsync()
         {
-            if (!_isInitialized) return;
+            if (!_isInitialized) return Task.CompletedTask;
 
             try
             {
@@ -148,6 +148,7 @@ namespace TaskCore.ViewModels
             }
 
             _isInitialized = false;
+            return Task.CompletedTask;
         }
 
         private void OnViewChanged(string viewName)
