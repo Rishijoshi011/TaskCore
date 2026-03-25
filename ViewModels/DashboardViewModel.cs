@@ -22,12 +22,11 @@ namespace TaskCore.ViewModels
         [ObservableProperty] private double impactScore;
         [ObservableProperty] private double barWidth;
         [ObservableProperty] private string barColor = "#9A4DFF";
-        [ObservableProperty] private string icon = "📱";
+        [ObservableProperty] private System.Windows.Media.SolidColorBrush barBrush = new(System.Windows.Media.Color.FromRgb(154, 77, 255));
         [ObservableProperty] private string cpuText = string.Empty;
         [ObservableProperty] private string ramText = string.Empty;
         [ObservableProperty] private double peakCpu;
         [ObservableProperty] private double peakRam;
-        [ObservableProperty] private string trendArrow = string.Empty;
         [ObservableProperty] private bool isTopRank;
     }
 
@@ -1373,8 +1372,23 @@ namespace TaskCore.ViewModels
 
             try
             {
-                var grouped = sessions
-                    .GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app)
+                // Debug: log what we're filtering
+                var filtered = sessions
+                    .Where(s => 
+                    {
+                        var appName = s.app?.Trim() ?? "Unknown";
+                        var isSystem = ProcessFilter.IsSystemAppName(appName);
+                        // Log for debugging
+                        if (appName.ToLowerInvariant().Contains("lsa") || appName.ToLowerInvariant().Contains("team"))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[Filter Debug] App: '{appName}', IsSystem: {isSystem}");
+                        }
+                        return !isSystem;
+                    })
+                    .ToList();
+
+                var grouped = filtered
+                    .GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app.Trim())
                     .Select(g => new
                     {
                         App = g.Key,
@@ -1390,10 +1404,6 @@ namespace TaskCore.ViewModels
 
                 if (grouped.Count == 0) return;
 
-                // Calculate max for progress bar scaling
-                var maxSeconds = grouped.Max(x => x.Seconds);
-                var maxBarWidth = 200; // max pixels
-
                 for (int i = 0; i < grouped.Count; i++)
                 {
                     var g = grouped[i];
@@ -1405,21 +1415,28 @@ namespace TaskCore.ViewModels
                     var memScore = Math.Min(g.PeakMem / 100.0, 25); // 2.5GB = 25pts max
                     var impactScore = Math.Min(durationScore + cpuScore + memScore, 100);
 
+                    // Calculate max impact for bar scaling
+                    var maxImpact = Math.Max(grouped.Max(x => 
+                    {
+                        var ds = Math.Min(x.Seconds / 3600.0 * 20, 40);
+                        var cs = Math.Min(x.PeakCpu * 0.4, 35);
+                        var ms = Math.Min(x.PeakMem / 100.0, 25);
+                        return Math.Min(ds + cs + ms, 100);
+                    }), 1); // avoid divide by zero
+                    var maxBarWidth = 200; // max pixels
+
                     // Determine color based on impact
                     string barColor;
                     if (impactScore >= 60) barColor = "#F87171"; // Red - high impact
                     else if (impactScore >= 35) barColor = "#FACC15"; // Yellow - medium
                     else barColor = "#4ADE80"; // Green - low impact
 
-                    // Top rank gets special treatment
+                    // Top rank gets special treatment - use accent color
                     bool isTopRank = rank == 1;
-                    if (isTopRank) barColor = "{DynamicResource AccentBrush}"; // Purple for #1
+                    if (isTopRank) barColor = "#9A4DFF"; // Purple accent for #1
 
-                    // Get icon based on process type
-                    var icon = GetProcessIcon(g.App);
-
-                    // Calculate trend (placeholder - would compare with yesterday)
-                    var trendArrow = rank <= 2 ? "🔥" : "";
+                    // Create brush from color
+                    var barBrush = CreateBrushFromHex(barColor);
 
                     // Format duration
                     var duration = TimeSpan.FromSeconds(g.Seconds);
@@ -1434,14 +1451,13 @@ namespace TaskCore.ViewModels
                         Rank = rank,
                         Duration = durationText,
                         ImpactScore = impactScore,
-                        BarWidth = (g.Seconds / maxSeconds) * maxBarWidth,
+                        BarWidth = (impactScore / maxImpact) * maxBarWidth,
                         BarColor = barColor,
-                        Icon = icon,
+                        BarBrush = barBrush,
                         CpuText = $"{g.PeakCpu:F0}%",
                         RamText = $"{g.PeakMem:F0}MB",
                         PeakCpu = g.PeakCpu,
                         PeakRam = g.PeakMem,
-                        TrendArrow = trendArrow,
                         IsTopRank = isTopRank
                     });
                 }
@@ -1453,26 +1469,25 @@ namespace TaskCore.ViewModels
             OnPropertyChanged(nameof(HasNoTopOffenders));
         }
 
-        private static string GetProcessIcon(string processName)
+        private static System.Windows.Media.SolidColorBrush CreateBrushFromHex(string hexColor)
         {
-            var name = processName.ToLowerInvariant();
-            
-            // Check against ProcessBehaviorClassifier categories
-            var behavior = ProcessBehaviorClassifier.GetExpectedBehavior(processName);
-            
-            return behavior switch
+            try
             {
-                ExpectedBehavior.Gaming => "🎮",
-                ExpectedBehavior.Creative => "🎨",
-                ExpectedBehavior.Interactive when name.Contains("chrome") || name.Contains("firefox") || 
-                    name.Contains("edge") || name.Contains("browser") => "🌐",
-                ExpectedBehavior.Interactive when name.Contains("discord") || name.Contains("teams") || 
-                    name.Contains("zoom") || name.Contains("slack") => "💬",
-                _ => name.Contains("code") || name.Contains("studio") || name.Contains("visual") ? "💻" :
-                     name.Contains("explorer") || name.Contains("shell") ? "📁" :
-                     name.Contains("msbuild") || name.Contains("dotnet") || name.Contains("compiler") ? "🔨" :
-                     "📱"
-            };
+                // Remove # if present
+                hexColor = hexColor.Replace("#", "");
+                
+                // Parse RGB
+                byte r = byte.Parse(hexColor.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+                byte g = byte.Parse(hexColor.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
+                byte b = byte.Parse(hexColor.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
+                
+                return new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+            }
+            catch
+            {
+                // Fallback to accent color
+                return new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(154, 77, 255));
+            }
         }
 
         private void BuildInsights(System.Collections.Generic.List<UsageTrackingService.SessionRecord> sessions)

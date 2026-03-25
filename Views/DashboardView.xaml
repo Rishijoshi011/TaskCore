@@ -302,7 +302,7 @@
 
                                             <!-- Rank -->
                                             <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14" 
-                                                    Background="{Binding BarColor}" 
+                                                    Background="{Binding BarBrush}" 
                                                     VerticalAlignment="Center" HorizontalAlignment="Center"
                                                     Margin="0 0 12 0">
                                                 <TextBlock Text="{Binding Rank}" FontSize="12" FontWeight="Bold" 
@@ -320,15 +320,14 @@
                                                                Foreground="{StaticResource TextPrimary}" 
                                                                FontSize="13" FontWeight="SemiBold" 
                                                                TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Grid.Column="1" Text="{Binding TrendArrow}" FontSize="12" Margin="4 0 0 0"/>
                                                 </Grid>
                                                 
                                                 <!-- Progress Bar -->
-                                                <Grid Height="4" Margin="0 8 0 0">
-                                                    <Border Background="{StaticResource BackgroundCard}" CornerRadius="2"/>
-                                                    <Border Width="{Binding BarWidth}" 
-                                                            Background="{Binding BarColor}" 
-                                                            CornerRadius="2" 
+                                                <Grid Height="6" Margin="0 8 0 0">
+                                                    <Border Background="{StaticResource BackgroundCard}" CornerRadius="3"/>
+                                                    <Border Width="{Binding BarWidth}" MinWidth="20"
+                                                            Background="{Binding BarBrush}" 
+                                                            CornerRadius="3" 
                                                             HorizontalAlignment="Left"/>
                                                 </Grid>
                                                 
@@ -348,7 +347,7 @@
                                             <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="12 0 0 0">
                                                 <TextBlock Text="{Binding ImpactScore, StringFormat='{}{0:F0}'}" 
                                                            FontSize="20" FontWeight="Bold" 
-                                                           Foreground="{Binding BarColor}"
+                                                           Foreground="{Binding BarBrush}"
                                                            HorizontalAlignment="Center"/>
                                                 <TextBlock Text="IMPACT" FontSize="9" Foreground="{StaticResource TextSecondary}" 
                                                            HorizontalAlignment="Center" Margin="0 2 0 0"/>

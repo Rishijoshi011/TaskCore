@@ -22,7 +22,38 @@ namespace TaskCore.Services
             "conhost", "sihost", "taskhost", "runtimebroker",
             "searchindexer", "fontdrvhost", "spoolsv",
             "wmi", "wmiprvse", "ctfmon",
-            "audiodg", "smsvchost"
+            "audiodg", "smsvchost",
+            "secure system", "wudfhost", "wudfsvc",
+            "intelcphdcpvc", "intelcphecisvc", "igfxcuisvc",
+            "arwsrvc", "bssiss", "bdssvc", 
+            "memory compression", "compressed memory",
+            "system interrupts", "system idle process",
+            "windows\u00ae installer", "msiexec",
+            "dllhost", "dllhst3g",
+            "werfault", "werfaultsecure",
+            "searchprotocolhost", "searchfilterhost",
+            "backgroundtaskhost", "backgroundtransferhost",
+            "wwahost", "shellexperiencehost",
+            "startmenuexperiencehost", "logonui",
+            "winstore.app", "applicationframehost",
+            "lsalso", "lsalgo",
+            "aggregatorhost", 
+            "midisrv", "midiservice", 
+            "accasrvc", 
+            "ipf_uf", "ipfuf", 
+            "asusservices", "asussoftwaremanager", 
+            "armourycrateservice", 
+            "textinputhost", "sihost",
+            "smartscreen", "wsappx",
+            "csrss", "smss", "wininit",
+            "fontdrvhost", "dwm",
+            "rdpudd", "rdpserver",
+            "searchhost", 
+            "wudfhost", 
+            "secure system", 
+            "lsass", 
+            "lsalso", "lsalgo",
+            "svchost" 
         };
 
         // Windows core services - background infrastructure
@@ -58,7 +89,7 @@ namespace TaskCore.Services
         // Microsoft background services
         private static readonly string[] MsBackgroundServices =
         {
-            "onlinent", "oninit", "widget", "experience", "lsalso"
+            "onlinent", "oninit", "widget", "experience", "lsalso", "lsalgo"
         };
 
         // Antivirus/Security products (specific names)
@@ -91,16 +122,34 @@ namespace TaskCore.Services
         {
             if (string.IsNullOrWhiteSpace(appName)) return false;
 
-            var name = appName.ToLowerInvariant();
+            var name = appName.ToLowerInvariant().Trim();
+
+            // Explicit check for known system processes that keep appearing
+            if (name == "lsalso" || name == "lsalgo" || name == "lsass" || name == "svchost" || 
+                name == "secure system" || name == "wudfhost" || name == "searchhost")
+                return true;
 
             // 1. Direct exact matches (O(1) HashSet lookup)
             if (CoreWindowsProcesses.Contains(name))
                 return true;
 
-            // 2. Check for services (by suffix or embedded)
+            // 2. Check for services (by suffix or embedded) - expanded patterns
             if (name.EndsWith("svc") || name.EndsWith("service") ||
                 name.EndsWith("serv") || name.EndsWith("nt") ||
-                name.Contains("svc") || name.Contains("service"))
+                name.EndsWith("srvc") || name.EndsWith("srv") ||
+                name.Contains("svc") || name.Contains("service") ||
+                name.Contains("srvc") || name.Contains("srv"))
+                return true;
+
+            // 2b. Intel/AMD/Platform services with underscores or specific patterns
+            if (name.StartsWith("ipf") || name.StartsWith("intel") ||
+                name.StartsWith("amd") || name.StartsWith("nvidia") ||
+                name.Contains("_") && (name.Contains("uf") || name.Contains("service")))
+                return true;
+
+            // 2c. Host and aggregator patterns (Windows infrastructure)
+            if (name.Contains("host") || name.Contains("aggregator") ||
+                name.EndsWith("host") || name.Contains("srv"))
                 return true;
 
             // 3. Check common Windows prefixes
