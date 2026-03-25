@@ -1249,7 +1249,7 @@
                                AllowsTransparency="True"
                                Focusable="False"
                                IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
-                            <Border Background="White" BorderThickness="0" Padding="0" Margin="0,4,0,0">
+                            <Border Background="{StaticResource BackgroundSecondary}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Padding="0" Margin="0,4,0,0">
                                 <Calendar x:Name="PART_Calendar"/>
                             </Border>
                         </Popup>
@@ -1264,7 +1264,122 @@
 
                 <Style TargetType="Calendar">
 
-                    <!-- Use default white calendar -->
+                    <Setter Property="Background" Value="{StaticResource BackgroundSecondary}"/>
+
+                    <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+
+                    <Setter Property="BorderThickness" Value="0"/>
+
+                    <Setter Property="FontFamily" Value="{StaticResource DefaultFont}"/>
+
+                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+
+                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+
+                    <Setter Property="CalendarButtonStyle">
+
+                        <Setter.Value>
+
+                            <Style TargetType="CalendarButton">
+
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+
+                                <Setter Property="Background" Value="Transparent"/>
+
+                                <Setter Property="BorderBrush" Value="Transparent"/>
+
+                                <Setter Property="BorderThickness" Value="0"/>
+
+                                <Style.Triggers>
+
+                                    <Trigger Property="IsMouseOver" Value="True">
+
+                                        <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+
+                                        <Setter Property="Foreground" Value="White"/>
+
+                                    </Trigger>
+
+                                    <Trigger Property="IsPressed" Value="True">
+
+                                        <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
+
+                                        <Setter Property="Foreground" Value="White"/>
+
+                                    </Trigger>
+
+                                    <Trigger Property="IsEnabled" Value="False">
+
+                                        <Setter Property="Opacity" Value="0.4"/>
+
+                                    </Trigger>
+
+                                </Style.Triggers>
+
+                            </Style>
+
+                        </Setter.Value>
+
+                    </Setter>
+
+                    <Setter Property="CalendarDayButtonStyle">
+
+                        <Setter.Value>
+
+                            <Style TargetType="CalendarDayButton">
+
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+
+                                <Setter Property="Background" Value="Transparent"/>
+
+                                <Setter Property="BorderBrush" Value="Transparent"/>
+
+                                <Setter Property="BorderThickness" Value="0"/>
+
+                                <Setter Property="Padding" Value="4"/>
+
+                                <Style.Triggers>
+
+                                    <Trigger Property="IsMouseOver" Value="True">
+
+                                        <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+
+                                        <Setter Property="Foreground" Value="White"/>
+
+                                    </Trigger>
+
+                                    <Trigger Property="IsSelected" Value="True">
+
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+
+                                        <Setter Property="Foreground" Value="White"/>
+
+                                    </Trigger>
+
+                                    <Trigger Property="IsToday" Value="True">
+
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+
+                                        <Setter Property="BorderThickness" Value="1"/>
+
+                                    </Trigger>
+
+
+                                    <Trigger Property="IsInactive" Value="True">
+
+                                        <Setter Property="Opacity" Value="0.55"/>
+
+                                    </Trigger>
+
+                                </Style.Triggers>
+
+                            </Style>
+
+                        </Setter.Value>
+
+                    </Setter>
 
                 </Style>
 
