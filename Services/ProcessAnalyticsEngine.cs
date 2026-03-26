@@ -11,6 +11,7 @@ namespace TaskCore.Services
     internal static class ProcessAnalyticsLogger
     {
         private const string LogName = "process-analytics";
+        private const int MinImpactToLog = 40; // Only log processes with significant impact
 
         public static void AnalysisStarted(int realtimeCount, int historicalCount)
         {
@@ -19,16 +20,24 @@ namespace TaskCore.Services
 
         public static void ProcessAnalyzed(string processName, double impactScore, BehaviorCategory category, bool isAnomaly)
         {
-            TaskCoreLogger.Info(LogName, $"PROCESS_ANALYZED: {processName}, impact={impactScore:F2}, category={category}, anomaly={isAnomaly}");
+            // Only log significant processes (high impact, anomalies, or unstable) to reduce log volume
+            if (isAnomaly || category == BehaviorCategory.Suspicious || category == BehaviorCategory.Unstable || impactScore >= MinImpactToLog)
+            {
+                TaskCoreLogger.Info(LogName, $"PROCESS_ANALYZED: {processName}, impact={impactScore:F2}, category={category}, anomaly={isAnomaly}");
+            }
+            // Normal low-impact processes are not logged to prevent log spam
         }
 
         public static void MlPredictionSuccess(string processName, string metricType, double predicted, int samplesUsed)
         {
-            TaskCoreLogger.Info(LogName, $"ML_PREDICTION: {processName}/{metricType} predicted={predicted:F2} using {samplesUsed} samples");
+            // ML predictions are very frequent - only log at DEBUG level
+            // This prevents the massive log growth from normal predictions
+            TaskCoreLogger.Debug(LogName, $"ML_PREDICTION: {processName}/{metricType} predicted={predicted:F2} using {samplesUsed} samples");
         }
 
         public static void MlPredictionFallback(string processName, string metricType, int samplesAvailable, string reason)
         {
+            // Fallbacks are worth knowing about - keep at WARN level
             TaskCoreLogger.Warn(LogName, $"ML_FALLBACK: {processName}/{metricType} samples={samplesAvailable}, reason={reason}");
         }
 
@@ -173,7 +182,7 @@ namespace TaskCore.Services
                 var predictionCpu = PredictWithCaching(histCpu, cpu, _options.PredictionMinutes, p.ProcessName, "CPU", useMlNet, out var cpuSlope);
                 var predictionMem = PredictWithCaching(histMem, p.MemoryUsage, _options.PredictionMinutes, p.ProcessName, "Memory", useMlNet, out var memSlope);
 
-                var category = Classify(cpu, memNorm, p.RestartCount, isAnomaly);
+                var category = Classify(cpu, memNorm, p.RestartCount, isAnomaly, p.ProcessName, p.RuntimeMinutes);
 
                 var recommendation = GenerateRecommendationText(
                     p.ProcessName,
@@ -192,7 +201,8 @@ namespace TaskCore.Services
                     IsAnomaly = isAnomaly,
                     PredictionCpu = Math.Round(predictionCpu, 2),
                     PredictionMemory = Math.Round(predictionMem, 2),
-                    RecommendationText = recommendation
+                    RecommendationText = recommendation,
+                    RestartCount = p.RestartCount
                 };
 
                 insights.Add(insight);
@@ -271,13 +281,18 @@ namespace TaskCore.Services
             };
         }
 
-        private BehaviorCategory Classify(double cpuPercent, double memNorm, int restartCount, bool isAnomaly)
+        private BehaviorCategory Classify(double cpuPercent, double memNorm, int restartCount, bool isAnomaly, string processName, double runtimeMinutes)
         {
             if (isAnomaly)
                 return BehaviorCategory.Suspicious;
 
+            // Improved instability detection with multiple factors
             if (restartCount >= _options.UnstableRestartThreshold)
-                return BehaviorCategory.Unstable;
+            {
+                var unstableScore = CalculateUnstableScore(restartCount, runtimeMinutes, processName);
+                if (unstableScore >= 60) // High confidence of actual instability
+                    return BehaviorCategory.Unstable;
+            }
 
             if (cpuPercent >= _options.HeavyCpuThreshold || memNorm >= _options.HeavyMemoryThresholdNormalized)
                 return BehaviorCategory.Heavy;
@@ -286,6 +301,64 @@ namespace TaskCore.Services
                 return BehaviorCategory.Idle;
 
             return BehaviorCategory.Normal;
+        }
+
+        /// <summary>
+        /// Calculates an instability score (0-100) based on multiple factors:
+        /// - Average session duration (longer = more stable)
+        /// - Restart frequency (restarts per hour)
+        /// - Process type patterns (background services are expected to restart)
+        /// </summary>
+        private double CalculateUnstableScore(int restartCount, double runtimeMinutes, string processName)
+        {
+            if (restartCount < 2 || runtimeMinutes <= 0)
+                return 0;
+
+            double score = 0;
+            var nameLower = processName?.ToLowerInvariant() ?? "";
+
+            // Factor 1: Average session duration (weight: 40%)
+            // Background services often have short sessions by design
+            double avgSessionMinutes = runtimeMinutes / restartCount;
+            double durationScore;
+            if (avgSessionMinutes < 1) // Less than 1 minute = very suspicious (crashing?)
+                durationScore = 100;
+            else if (avgSessionMinutes < 5) // 1-5 minutes = somewhat suspicious
+                durationScore = 70;
+            else if (avgSessionMinutes < 15) // 5-15 minutes = moderate
+                durationScore = 40;
+            else // More than 15 min average = normal for background services
+                durationScore = 10;
+            score += durationScore * 0.40;
+
+            // Factor 2: Restart density (weight: 35%)
+            // Restarts per hour of runtime
+            double restartsPerHour = restartCount / (runtimeMinutes / 60.0);
+            double densityScore;
+            if (restartsPerHour > 30) // More than 30 restarts/hour = very unstable
+                densityScore = 100;
+            else if (restartsPerHour > 10) // 10-30/hour = high
+                densityScore = 70;
+            else if (restartsPerHour > 5) // 5-10/hour = moderate
+                densityScore = 40;
+            else // Less than 5/hour = acceptable
+                densityScore = 10;
+            score += densityScore * 0.35;
+
+            // Factor 3: Process type pattern (weight: 25%)
+            // Background services and dev tools are expected to restart
+            double typeScore;
+            if (ProcessBehaviorClassifier.IsBackgroundServicePattern(nameLower))
+                typeScore = 10; // Very lenient for known background patterns
+            else if (nameLower.Contains("service") || nameLower.Contains("host"))
+                typeScore = 25; // Somewhat lenient
+            else if (nameLower.Contains("devenv") || nameLower.Contains("copilot"))
+                typeScore = 15; // Very lenient for dev tools
+            else
+                typeScore = 80; // Regular apps should not restart frequently
+            score += typeScore * 0.25;
+
+            return Math.Min(score, 100);
         }
 
         /// <summary>
@@ -384,10 +457,12 @@ namespace TaskCore.Services
             if (values == null || values.Count == 0 || maxCount <= 0)
                 return new List<double>();
 
+            // If within limit, return original list (no allocation)
             if (values.Count <= maxCount)
-                return values.ToList();
+                return values;
 
-            return values.Skip(values.Count - maxCount).ToList();
+            // Only allocate when we actually need to trim
+            return values.GetRange(values.Count - maxCount, maxCount);
         }
 
         private static (double mean, double stdDev) ComputeStats(List<double> values)

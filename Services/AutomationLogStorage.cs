@@ -10,7 +10,7 @@ namespace TaskCore.Services
     {
         private static readonly object _lock = new();
 
-        private static string LogDir => Path.Combine(AppSettingsService.BaseDirectory, "AutomationLogs");
+        private static string LogDir => Path.Combine(AppSettingsService.BaseDirectory, "Logs", "Automation");
 
         private static string GetDailyPath(DateTime localDate)
             => Path.Combine(LogDir, $"automation-{localDate:yyyy-MM-dd}.jsonl");

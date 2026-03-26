@@ -6,12 +6,13 @@ namespace TaskCore.Services
     /// <summary>
     /// Simple debug logger for usage tracking diagnostics.
     /// Only logs when DEBUG compilation symbol is defined.
+    /// All methods are no-ops in release builds via Conditional attribute.
     /// </summary>
     internal static class UsageDebugLogger
     {
+        [System.Diagnostics.Conditional("DEBUG")]
         public static void LogFilter(string message)
         {
-#if DEBUG
             try
             {
                 File.AppendAllText(
@@ -19,12 +20,11 @@ namespace TaskCore.Services
                     $"[{DateTime.Now:HH:mm:ss}] {message}\n");
             }
             catch { }
-#endif
         }
 
+        [System.Diagnostics.Conditional("DEBUG")]
         public static void LogTick(string message)
         {
-#if DEBUG
             try
             {
                 File.AppendAllText(
@@ -32,12 +32,11 @@ namespace TaskCore.Services
                     $"[{DateTime.Now:HH:mm:ss}] {message}\n");
             }
             catch { }
-#endif
         }
 
+        [System.Diagnostics.Conditional("DEBUG")]
         public static void LogTrack(string message)
         {
-#if DEBUG
             try
             {
                 File.AppendAllText(
@@ -45,7 +44,6 @@ namespace TaskCore.Services
                     $"[{DateTime.Now:HH:mm:ss}] {message}\n");
             }
             catch { }
-#endif
         }
     }
 }

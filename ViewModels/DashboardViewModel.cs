@@ -40,6 +40,7 @@ namespace TaskCore.ViewModels
         [ObservableProperty] private double predictedCpu;
         [ObservableProperty] private double predictedMemory;
         [ObservableProperty] private bool isAnomaly;
+        [ObservableProperty] private int restartCount;
         [ObservableProperty] private string icon = "📊";
         [ObservableProperty] private string colorBrush = "#9A4DFF";
 
@@ -81,6 +82,21 @@ namespace TaskCore.ViewModels
         private double _peakDiskReadMb;
         private double _peakDiskWriteMb;
         private double _peakGpuUtil;
+
+        // Cached brushes for common colors to avoid repeated allocations
+        private static readonly System.Windows.Media.SolidColorBrush _redBrush = new(System.Windows.Media.Color.FromRgb(0xF8, 0x71, 0x71));
+        private static readonly System.Windows.Media.SolidColorBrush _yellowBrush = new(System.Windows.Media.Color.FromRgb(0xFA, 0xCC, 0x15));
+        private static readonly System.Windows.Media.SolidColorBrush _greenBrush = new(System.Windows.Media.Color.FromRgb(0x4A, 0xDE, 0x80));
+        private static readonly System.Windows.Media.SolidColorBrush _purpleBrush = new(System.Windows.Media.Color.FromRgb(0x9A, 0x4D, 0xFF));
+
+        static DashboardViewModel()
+        {
+            // Freeze brushes for better performance (immutable, can be shared across threads)
+            _redBrush.Freeze();
+            _yellowBrush.Freeze();
+            _greenBrush.Freeze();
+            _purpleBrush.Freeze();
+        }
 
         [ObservableProperty] private bool isEmpty = true;
         public bool IsNotEmpty => !IsEmpty;
@@ -844,6 +860,7 @@ namespace TaskCore.ViewModels
             sb.AppendLine($"📊 Impact Score: {insight.ImpactScore:F1}/100");
             sb.AppendLine($"🔮 Predicted CPU (5min): {insight.PredictedCpu:F1}%");
             sb.AppendLine($"🔮 Predicted Memory (5min): {insight.PredictedMemory:F1} MB");
+            sb.AppendLine($"🔄 Restarts: {insight.RestartCount}");
             sb.AppendLine();
             
             if (insight.IsAnomaly)
@@ -1344,7 +1361,7 @@ namespace TaskCore.ViewModels
 
             try
             {
-                var logDir = Path.Combine(AppSettingsService.BaseDirectory, "RulesLogs");
+                var logDir = Path.Combine(AppSettingsService.BaseDirectory, "Logs", "Rules");
                 var logFile = Path.Combine(logDir, $"{SelectedDate:yyyy-MM-dd}.log");
                 if (!File.Exists(logFile))
                 {
@@ -1398,45 +1415,56 @@ namespace TaskCore.ViewModels
                         AvgCpu = g.Average(x => x.averageCpuPercent),
                         SessionCount = g.Count()
                     })
-                    .OrderByDescending(x => x.Seconds)
-                    .Take(6)
                     .ToList();
 
-                if (grouped.Count == 0) return;
-
-                for (int i = 0; i < grouped.Count; i++)
+                // Calculate impact score for each and sort by impact (highest first)
+                var ranked = grouped.Select(g =>
                 {
-                    var g = grouped[i];
+                    var durationScore = Math.Min(g.Seconds / 3600.0 * 20, 40);
+                    var cpuScore = Math.Min(g.PeakCpu * 0.4, 35);
+                    var memScore = Math.Min(g.PeakMem / 100.0, 25);
+                    var impact = Math.Min(durationScore + cpuScore + memScore, 100);
+                    return new
+                    {
+                        g.App,
+                        g.Seconds,
+                        g.PeakCpu,
+                        g.PeakMem,
+                        g.AvgCpu,
+                        g.SessionCount,
+                        ImpactScore = impact
+                    };
+                })
+                .OrderByDescending(x => x.ImpactScore)
+                .Take(6)
+                .ToList();
+
+                if (ranked.Count == 0) return;
+
+                // Calculate max impact once for bar scaling
+                var maxImpact = Math.Max(ranked.Max(x => x.ImpactScore), 1); // avoid divide by zero
+                const int maxBarWidth = 200; // max pixels
+
+                for (int i = 0; i < ranked.Count; i++)
+                {
+                    var g = ranked[i];
                     var rank = i + 1;
                     
-                    // Calculate impact score (0-100) based on duration + resource usage
-                    var durationScore = Math.Min(g.Seconds / 3600.0 * 20, 40); // 1hr = 20pts, max 40
-                    var cpuScore = Math.Min(g.PeakCpu * 0.4, 35); // peak CPU % * 0.4, max 35
-                    var memScore = Math.Min(g.PeakMem / 100.0, 25); // 2.5GB = 25pts max
-                    var impactScore = Math.Min(durationScore + cpuScore + memScore, 100);
+                    // Use pre-calculated impact score
+                    var impactScore = g.ImpactScore;
 
-                    // Calculate max impact for bar scaling
-                    var maxImpact = Math.Max(grouped.Max(x => 
-                    {
-                        var ds = Math.Min(x.Seconds / 3600.0 * 20, 40);
-                        var cs = Math.Min(x.PeakCpu * 0.4, 35);
-                        var ms = Math.Min(x.PeakMem / 100.0, 25);
-                        return Math.Min(ds + cs + ms, 100);
-                    }), 1); // avoid divide by zero
-                    var maxBarWidth = 200; // max pixels
-
-                    // Determine color based on impact
-                    string barColor;
-                    if (impactScore >= 60) barColor = "#F87171"; // Red - high impact
-                    else if (impactScore >= 35) barColor = "#FACC15"; // Yellow - medium
-                    else barColor = "#4ADE80"; // Green - low impact
-
-                    // Top rank gets special treatment - use accent color
+                    // Determine color and get cached brush
                     bool isTopRank = rank == 1;
-                    if (isTopRank) barColor = "#9A4DFF"; // Purple accent for #1
+                    System.Windows.Media.SolidColorBrush barBrush;
+                    if (isTopRank) barBrush = _purpleBrush;
+                    else if (impactScore >= 60) barBrush = _redBrush;
+                    else if (impactScore >= 35) barBrush = _yellowBrush;
+                    else barBrush = _greenBrush;
 
-                    // Create brush from color
-                    var barBrush = CreateBrushFromHex(barColor);
+                    // BarColor hex for XAML binding
+                    string barColor = isTopRank ? "#9A4DFF" :
+                                      impactScore >= 60 ? "#F87171" :
+                                      impactScore >= 35 ? "#FACC15" : "#4ADE80";
 
                     // Format duration
                     var duration = TimeSpan.FromSeconds(g.Seconds);
@@ -1467,27 +1495,6 @@ namespace TaskCore.ViewModels
             }
 
             OnPropertyChanged(nameof(HasNoTopOffenders));
-        }
-
-        private static System.Windows.Media.SolidColorBrush CreateBrushFromHex(string hexColor)
-        {
-            try
-            {
-                // Remove # if present
-                hexColor = hexColor.Replace("#", "");
-                
-                // Parse RGB
-                byte r = byte.Parse(hexColor.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
-                byte g = byte.Parse(hexColor.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
-                byte b = byte.Parse(hexColor.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
-                
-                return new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
-            }
-            catch
-            {
-                // Fallback to accent color
-                return new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(154, 77, 255));
-            }
         }
 
         private void BuildInsights(System.Collections.Generic.List<UsageTrackingService.SessionRecord> sessions)
@@ -1525,14 +1532,15 @@ namespace TaskCore.ViewModels
                     {
                         Title = insight.IsAnomaly ? "Anomaly detected" : insight.BehaviorCategory.ToString(),
                         Detail = string.IsNullOrEmpty(insight.RecommendationText)
-                            ? $"{insight.ProcessName}: Impact {insight.ImpactScore:F0}, Predicted CPU {insight.PredictionCpu:F1}%"
-                            : insight.RecommendationText,
+                            ? $"Impact {insight.ImpactScore:F0}, Predicted CPU {insight.PredictionCpu:F1}%"
+                            : insight.RecommendationText.Replace($"Process {insight.ProcessName} ", "").Replace($" for {insight.ProcessName}", "").Replace($" {insight.ProcessName} ", " "),
                         ProcessName = insight.ProcessName,
                         ImpactScore = insight.ImpactScore,
                         Category = insight.BehaviorCategory.ToString(),
                         PredictedCpu = insight.PredictionCpu,
                         PredictedMemory = insight.PredictionMemory,
                         IsAnomaly = insight.IsAnomaly,
+                        RestartCount = insight.RestartCount,
                         Icon = icon,
                         ColorBrush = color
                     };

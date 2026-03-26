@@ -12,9 +12,10 @@ namespace TaskCore.Services
         private static readonly string _dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TaskCore",
-            "SessionLogs");
+            "Logs",
+            "Sessions");
 
-        public static string LogDirectory => _dir;
+        public static string LogsDirectoryPath => System.IO.Path.Combine(AppSettingsService.BaseDirectory, "Logs", "Sessions");
 
         public static string GetDayLogPath(DateOnly dateLocal)
         {

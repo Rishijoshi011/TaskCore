@@ -12,7 +12,19 @@ namespace TaskCore.Services
         Standard,    // Normal apps - use default thresholds
         Gaming,      // Games - expect high CPU/GPU
         Creative,    // Video editors, 3D software - expect high usage during work
-        Interactive  // Browsers, video calls - moderate usage expected
+        Interactive, // Browsers, video calls - moderate usage expected
+        Development  // IDEs, compilers - bursts of high usage during builds
+    }
+
+    /// <summary>
+    /// Expected typical resource usage level for better anomaly context
+    /// </summary>
+    public enum ResourceUsageLevel
+    {
+        Light,      // < 5% CPU typical (notepad, system tray apps)
+        Moderate,   // 5-20% CPU typical (browsers, office apps)
+        Heavy,      // 20-60% CPU typical (games, video editors)
+        Variable    // Usage varies significantly (IDEs, build tools)
     }
 
     internal static class ProcessBehaviorClassifier
@@ -528,6 +540,73 @@ namespace TaskCore.Services
 
         #endregion
 
+        #region Security and Antivirus (System critical, expected background activity)
+
+        private static readonly HashSet<string> SecurityApps = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "windowsdefender", "msmpeng", "securityhealthservice", "smartscreen",
+            "waappagent", "wsc_proxy", "wscproxystub",
+            "avast", "avastui", "avastsvc", "avastbrowser", "avastnm",
+            "avira", "avirawsc", "avira_svc", "avg", "avgcefrender",
+            "norton", "nortonsecurity", "ns", "nortonlicensingservice",
+            "mcafee", "mcshield", "mcsvhost", "mcafeeui", "mcafeedatasend",
+            "kaspersky", "avp", "avpui", "avpservice",
+            "bitdefender", "bdagent", "bdredline", "bdservicehost",
+            "eset", "egui", "ekrn",
+            "sophos", "sophosui", "sophossps",
+            "malwarebytes", "mbamservice", "mbamtray", "mbam",
+            "ccleaner", "ccleaner64", "ccleanerhealthcheck",
+            "nordvpn", "expressvpn", "protonvpn", "surfshark", "cyberghost",
+            "windscribe", "privateinternetaccess", "pia", "tunnelbear",
+            "tor", "torservice", "orfox"
+        };
+
+        #endregion
+
+        #region Virtualization and Emulation
+
+        private static readonly HashSet<string> VirtualizationApps = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "vmware", "vmware-vmx", "vmware-authd", "vmware-usbarbitrator",
+            "virtualbox", "vboxheadless", "vboxservice", "vboxtray",
+            "parallels", "pdrunner", "hyper-v", "vmcompute", "vmwp", "vmconnect",
+            "qemu", "qemu-system", "kvm", "virt-manager",
+            "xen", "xenservice",
+            "bluestacks", "bluestacksagent", "hd-player",
+            "nox", "noxvmhandle", "nox_adb",
+            "memu", "memuhyperv", "memuservice",
+            "ldplayer", "ldvm", "ldservice",
+            "genymotion", "genymotionplayer",
+            "androidemulator", "emulator", "qemu-android",
+            "cemu", "yuzu", "ryujinx", "dolphin", "pcsx2", "rpcs3",
+            "retroarch", "mame", "mameui", "fbneo",
+            "desmume", "melonDS", "citra", "xemu"
+        };
+
+        #endregion
+
+        #region Database and Server Applications
+
+        private static readonly HashSet<string> DatabaseApps = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "sqlservr", "sqlserver", "sqlwriter", "sqlbrowser", "sqlagent",
+            "mysql", "mysqld", "mariadb", "mariadbd",
+            "postgres", "postgresql", "pg_ctl", "pgadmin",
+            "mongod", "mongo", "mongos", "mongodb-compass",
+            "redis-server", "redis-cli", "redis-benchmark",
+            "cassandra", "cqlsh",
+            "sqlite", "sqlite3",
+            "oracle", "oraclese", "tnslsnr",
+            "firebird", "fbserver",
+            "elasticsearch", "kibana", "logstash", "beats",
+            "couchdb", "couchbase", "memcached", "memcache",
+            "influxdb", "influxd", "prometheus", "grafana-server",
+            "apache", "httpd", "nginx", "iis", "w3wp", "php-cgi",
+            "tomcat", "catalina", "java", "jar"
+        };
+
+        #endregion
+
         /// <summary>
         /// Determines the expected behavior category for a process based on its name.
         /// Games and creative apps are expected to use high resources.
@@ -556,7 +635,7 @@ namespace TaskCore.Services
                 PopularIndieGames.Contains(name))
                 return ExpectedBehavior.Gaming;
 
-            // Check creative/production apps
+            // Check creative/production apps (includes Development)
             if (AdobeApps.Contains(name) ||
                 ModelingApps.Contains(name) ||
                 RenderingEngines.Contains(name) ||
@@ -571,6 +650,18 @@ namespace TaskCore.Services
                 StreamingApps.Contains(name))
                 return ExpectedBehavior.Interactive;
 
+            // Check security apps
+            if (SecurityApps.Contains(name))
+                return ExpectedBehavior.Standard;
+
+            // Check virtualization apps
+            if (VirtualizationApps.Contains(name))
+                return ExpectedBehavior.Creative;
+
+            // Check database apps
+            if (DatabaseApps.Contains(name))
+                return ExpectedBehavior.Standard;
+
             // Contains checks for patterns not in exact sets
             if (ContainsGamingPattern(name))
                 return ExpectedBehavior.Gaming;
@@ -579,6 +670,77 @@ namespace TaskCore.Services
                 return ExpectedBehavior.Creative;
 
             return ExpectedBehavior.Standard;
+        }
+
+        /// <summary>
+        /// Determines the expected resource usage level for a process.
+        /// Used to set appropriate anomaly detection thresholds.
+        /// </summary>
+        public static ResourceUsageLevel GetResourceUsageLevel(string processName)
+        {
+            if (string.IsNullOrWhiteSpace(processName))
+                return ResourceUsageLevel.Moderate;
+
+            var name = processName.ToLowerInvariant();
+
+            // Heavy resource usage apps
+            if (FpsGames.Contains(name) ||
+                BattleRoyaleGames.Contains(name) ||
+                RpgGames.Contains(name) ||
+                SoulsGames.Contains(name) ||
+                MmoGames.Contains(name) ||
+                RacingGames.Contains(name) ||
+                SimulationGames.Contains(name) ||
+                RenderingEngines.Contains(name) ||
+                VideoEditingApps.Contains(name) ||
+                ModelingApps.Contains(name))
+                return ResourceUsageLevel.Heavy;
+
+            // Variable usage (bursty) apps
+            if (DevBuildApps.Contains(name) ||
+                VirtualizationApps.Contains(name) ||
+                GameLaunchers.Contains(name))
+                return ResourceUsageLevel.Variable;
+
+            // Light usage apps
+            if (SecurityApps.Contains(name) ||
+                name.Contains("tray") ||
+                name.Contains("notifier") ||
+                name.Contains("update") ||
+                name.Contains("sync"))
+                return ResourceUsageLevel.Light;
+
+            // Moderate usage (default for most apps)
+            return ResourceUsageLevel.Moderate;
+        }
+
+        /// <summary>
+        /// Gets comprehensive classification info for a process.
+        /// Combines behavior, resource level, and background service detection.
+        /// </summary>
+        public static ProcessClassificationInfo GetClassificationInfo(string processName)
+        {
+            return new ProcessClassificationInfo
+            {
+                ProcessName = processName,
+                ExpectedBehavior = GetExpectedBehavior(processName),
+                ResourceUsage = GetResourceUsageLevel(processName),
+                IsBackgroundService = IsBackgroundServicePattern(processName)
+            };
+        }
+
+        /// <summary>
+        /// Comprehensive classification information for a process.
+        /// </summary>
+        public sealed class ProcessClassificationInfo
+        {
+            public string ProcessName { get; set; } = string.Empty;
+            public ExpectedBehavior ExpectedBehavior { get; set; }
+            public ResourceUsageLevel ResourceUsage { get; set; }
+            public bool IsBackgroundService { get; set; }
+
+            public override string ToString() =>
+                $"{ProcessName}: {ExpectedBehavior}, {ResourceUsage}, Background={IsBackgroundService}";
         }
 
         /// <summary>
@@ -630,6 +792,143 @@ namespace TaskCore.Services
                 if (name.Contains(pattern))
                     return true;
             }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Detects known background service patterns that restart by design.
+        /// These processes are expected to have short lifecycles and frequent restarts.
+        /// </summary>
+        public static bool IsBackgroundServicePattern(string processName)
+        {
+            if (string.IsNullOrWhiteSpace(processName))
+                return false;
+
+            var name = processName.ToLowerInvariant();
+
+            // Visual Studio / VS Code ServiceHub patterns
+            if (name.Contains("servicehub") ||
+                name.Contains("vsdetouredhost") ||
+                name.Contains("identityhost") ||
+                name.Contains("dotnet.x64") ||
+                name.Contains("threadedwaitdialog") ||
+                name.Contains("intellicodemodel") ||
+                name.Contains("roslyncodeanalysis") ||
+                name.Contains("indexingservice") ||
+                name.Contains("datawarehouse") ||
+                name.Contains("testwindowstore") ||
+                name.Contains("perfwatson") ||
+                name.Contains("standardcollector") ||
+                name.Contains("servicehub.controller") ||
+                name.Contains("servicehub.host") ||
+                name.Contains("vbcscompiler") ||
+                name.Contains("msbuild.worker") ||
+                name.Contains("csi") ||
+                name.Contains("csi.exe"))
+                return true;
+
+            // GitHub Copilot patterns
+            if (name.Contains("copilot") ||
+                name.Contains("copilot-language-server") ||
+                name.Contains("github.copilot") ||
+                name.Contains("copilot-chat"))
+                return true;
+
+            // Windows background services
+            if (name.Contains("svchost") ||
+                name.Contains("runtimebroker") ||
+                name.Contains("backgroundtask") ||
+                name.Contains("backgroundtransfer") ||
+                name.Contains("broker") ||
+                name.Contains("wudfhost") ||
+                name.Contains("taskhost") ||
+                name.Contains("dllhost") ||
+                name.Contains("com surrogate") ||
+                name.Contains("textinputhost") ||
+                name.Contains("sihost") ||
+                name.Contains("dwm") ||
+                name.Contains("csrss") ||
+                name.Contains("smss") ||
+                name.Contains("wininit") ||
+                name.Contains("fontdrvhost"))
+                return true;
+
+            // Windows Update / Store services
+            if (name.Contains("wuauclt") ||
+                name.Contains("usoclient") ||
+                name.Contains("trustedinstaller") ||
+                name.Contains("tiworker") ||
+                name.Contains("storeexperiencehost") ||
+                name.Contains("winstore.app") ||
+                name.Contains("pikobrowser") ||
+                name.Contains("shellexperiencehost"))
+                return true;
+
+            // Dev tools and build systems
+            if (name.Contains("msbuild") ||
+                name.Contains("dotnet") ||
+                name.Contains("node") ||
+                name.Contains("npm") ||
+                name.Contains("npx") ||
+                name.Contains("yarn") ||
+                name.Contains("webpack") ||
+                name.Contains("vite") ||
+                name.Contains("esbuild") ||
+                name.Contains("rollup") ||
+                name.Contains("parcel") ||
+                name.Contains("gulp") ||
+                name.Contains("grunt") ||
+                name.Contains("jest") ||
+                name.Contains("mocha") ||
+                name.Contains("karma") ||
+                name.Contains("cypress") ||
+                name.Contains("playwright") ||
+                name.Contains("puppeteer") ||
+                name.Contains("chromedriver") ||
+                name.Contains("geckodriver") ||
+                name.Contains("webdriver"))
+                return true;
+
+            // Container / Cloud tools
+            if (name.Contains("docker") ||
+                name.Contains("containerd") ||
+                name.Contains("kubectl") ||
+                name.Contains("minikube") ||
+                name.Contains("kind") ||
+                name.Contains("helm") ||
+                name.Contains("terraform") ||
+                name.Contains("packer") ||
+                name.Contains("vagrant") ||
+                name.Contains("vault"))
+                return true;
+
+            // IDE helper processes
+            if (name.Contains("jetbrains") ||
+                name.Contains("resharper") ||
+                name.Contains("rider") ||
+                name.Contains("teamcity") ||
+                name.Contains("youtrack") ||
+                name.Contains("upsource") ||
+                name.Contains("hub"))
+                return true;
+
+            // Editor helper processes
+            if (name.Contains("vscode") ||
+                name.Contains("code.exe") ||
+                name.Contains("electron") ||
+                name.Contains("atom") ||
+                name.Contains("sublime"))
+                return true;
+
+            // Common helper patterns
+            if (name.Contains("helper") ||
+                name.Contains("renderer") ||
+                name.Contains("gpu-process") ||
+                name.Contains("crashpad") ||
+                name.Contains("watcher") ||
+                name.Contains("agent"))
+                return true;
 
             return false;
         }

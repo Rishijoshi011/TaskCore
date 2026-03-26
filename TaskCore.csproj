@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>5.0.1</Version>
-    <AssemblyVersion>5.0.1.1</AssemblyVersion>
-    <FileVersion>5.0.1.1</FileVersion>
+    <Version>5.0.2</Version>
+    <AssemblyVersion>5.0.2.2</AssemblyVersion>
+    <FileVersion>5.0.2.2</FileVersion>
     <ApplicationIcon>Resources\AppIcon\TaskCore_icon.ico</ApplicationIcon>
   </PropertyGroup>
 

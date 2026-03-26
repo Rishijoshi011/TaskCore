@@ -46,7 +46,7 @@ namespace TaskCore.ViewModels
 
         public bool CanBrowseCustomSound => SoundAlertEnabled && SelectedSoundMode == "Custom";
 
-        public string LogsDirectoryPath => System.IO.Path.Combine(AppSettingsService.BaseDirectory, "RulesLogs");
+        public string LogsDirectoryPath => System.IO.Path.Combine(AppSettingsService.BaseDirectory, "Logs", "Rules");
 
         [ObservableProperty]
         private Rule? selectedRule;

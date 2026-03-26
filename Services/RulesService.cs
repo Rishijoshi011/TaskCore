@@ -644,7 +644,7 @@ namespace TaskCore.Services
         {
             try
             {
-                var logDir = Path.Combine(AppSettingsService.BaseDirectory, "RulesLogs");
+                var logDir = Path.Combine(AppSettingsService.BaseDirectory, "Logs", "Rules");
                 Directory.CreateDirectory(logDir);
                 var logFile = Path.Combine(logDir, $"{DateTime.Now:yyyy-MM-dd}.log");
                 var line = $"[{evt.TriggeredAt:HH:mm:ss}] {evt.RuleName} | {evt.Description} | Action: {evt.ActionType} | Result: {evt.ActionResult}";

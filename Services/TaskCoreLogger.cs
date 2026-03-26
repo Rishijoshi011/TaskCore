@@ -11,12 +11,15 @@ namespace TaskCore.Services
     /// </summary>
     internal static class TaskCoreLogger
     {
-        private static readonly string LogDirectory = Path.Combine(
+        private static readonly string _baseDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TaskCore", "Logs");
+            "TaskCore",
+            "Logs");
 
         private static readonly ReaderWriterLockSlim _lock = new();
         private const int MaxLogDays = 7;
+        private const long MaxLogFileSizeBytes = 30 * 1024 * 1024; // 30MB per file
+        private const int MaxRotatedFiles = 3; // Keep up to 3 rotated files per day
 
         static TaskCoreLogger()
         {
@@ -27,36 +30,127 @@ namespace TaskCore.Services
         {
             try
             {
-                Directory.CreateDirectory(LogDirectory);
+                Directory.CreateDirectory(_baseDir);
+                Directory.CreateDirectory(Path.Combine(_baseDir, "Application"));
+                Directory.CreateDirectory(Path.Combine(_baseDir, "Sessions"));
+                Directory.CreateDirectory(Path.Combine(_baseDir, "Automation"));
+                Directory.CreateDirectory(Path.Combine(_baseDir, "Rules"));
             }
             catch { }
         }
 
         /// <summary>
-        /// Log a message to the specified log file.
+        /// Log a message to the specified log file with automatic size-based rotation.
         /// </summary>
         /// <param name="logName">Name of the log file (without extension)</param>
         /// <param name="message">Message to log</param>
         /// <param name="level">Log level: INFO, WARN, ERROR, DEBUG</param>
-        public static void Log(string logName, string message, string level = "INFO")
+        /// <param name="logType">Type of log (Application, Sessions, Automation, Rules)</param>
+        public static void Log(string logName, string message, string level = "INFO", string logType = "Application")
         {
             try
             {
                 EnsureDirectory();
                 var date = DateTime.Now;
-                var logFile = Path.Combine(LogDirectory, $"{logName}-{date:yyyy-MM-dd}.txt");
+                var logFile = GetLogFilePath(logName, date, logType);
                 var timestamp = date.ToString("HH:mm:ss.fff");
                 var logLine = $"[{timestamp}] [{level}] {message}{Environment.NewLine}";
 
                 _lock.EnterWriteLock();
                 try
                 {
+                    // Check file size and rotate if needed
+                    RotateIfNeeded(logFile);
                     File.AppendAllText(logFile, logLine);
                 }
                 finally
                 {
                     _lock.ExitWriteLock();
                 }
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Gets the log file path for a given date, using rotation if file is too large.
+        /// </summary>
+        private static string GetLogFilePath(string logName, DateTime date, string logType)
+        {
+            var logDir = Path.Combine(_baseDir, logType);
+            var baseFile = Path.Combine(logDir, $"{logName}-{date:yyyy-MM-dd}.txt");
+            
+            // If base file doesn't exist or is under size limit, use it
+            if (!File.Exists(baseFile))
+                return baseFile;
+                
+            var info = new FileInfo(baseFile);
+            if (info.Length < MaxLogFileSizeBytes)
+                return baseFile;
+            
+            // Find available rotated file
+            for (int i = 1; i <= MaxRotatedFiles; i++)
+            {
+                var rotatedFile = Path.Combine(logDir, $"{logName}-{date:yyyy-MM-dd}.{i}.txt");
+                if (!File.Exists(rotatedFile))
+                    return rotatedFile;
+                    
+                var rotatedInfo = new FileInfo(rotatedFile);
+                if (rotatedInfo.Length < MaxLogFileSizeBytes)
+                    return rotatedFile;
+            }
+            
+            // All rotated files are full - overwrite the oldest one (highest number)
+            return Path.Combine(logDir, $"{logName}-{date:yyyy-MM-dd}.{MaxRotatedFiles}.txt");
+        }
+
+        /// <summary>
+        /// Checks if the log file needs rotation and performs rotation if necessary.
+        /// </summary>
+        private static void RotateIfNeeded(string logFile)
+        {
+            try
+            {
+                if (!File.Exists(logFile))
+                    return;
+                    
+                var info = new FileInfo(logFile);
+                if (info.Length < MaxLogFileSizeBytes)
+                    return;
+                
+                // File is too large - extract rotation number from filename
+                var fileName = Path.GetFileNameWithoutExtension(logFile);
+                var parts = fileName.Split('.');
+                var datePart = parts[0]; // e.g., "process-analytics-2026-03-26"
+                
+                // Find next available rotation slot
+                for (int i = 1; i <= MaxRotatedFiles; i++)
+                {
+                    var rotatedFile = $"{datePart}.{i}.txt";
+                    if (!File.Exists(rotatedFile))
+                        return; // Next write will go to this file
+                        
+                    var rotatedInfo = new FileInfo(rotatedFile);
+                    if (rotatedInfo.Length < MaxLogFileSizeBytes)
+                        return; // Has space
+                }
+                
+                // All rotations full - delete oldest and shift
+                var basePath = Path.Combine(Path.GetDirectoryName(logFile), datePart);
+                var oldestFile = $"{basePath}.{MaxRotatedFiles}.txt";
+                if (File.Exists(oldestFile))
+                    File.Delete(oldestFile);
+                
+                // Shift files down
+                for (int i = MaxRotatedFiles - 1; i >= 1; i--)
+                {
+                    var srcFile = $"{basePath}.{i}.txt";
+                    var dstFile = $"{basePath}.{i + 1}.txt";
+                    if (File.Exists(srcFile))
+                        File.Move(srcFile, dstFile);
+                }
+                
+                // Move current to .1
+                File.Move(logFile, $"{basePath}.1.txt");
             }
             catch { }
         }
@@ -141,7 +235,7 @@ namespace TaskCore.Services
         {
             try
             {
-                if (!Directory.Exists(LogDirectory)) return;
+                if (!Directory.Exists(_baseDir)) return;
 
                 // Only clean up legacy scattered log files, keep date-based logs indefinitely
                 CleanupLegacyLogFiles();
@@ -165,7 +259,7 @@ namespace TaskCore.Services
                 {
                     try
                     {
-                        var path = Path.Combine(LogDirectory, file);
+                        var path = Path.Combine(_baseDir, file);
                         if (File.Exists(path))
                         {
                             File.Delete(path);
@@ -184,9 +278,9 @@ namespace TaskCore.Services
         {
             try
             {
-                if (!Directory.Exists(LogDirectory)) return;
+                if (!Directory.Exists(_baseDir)) return;
 
-                var files = Directory.GetFiles(LogDirectory, "*.txt");
+                var files = Directory.GetFiles(_baseDir, "*.txt");
                 foreach (var file in files)
                 {
                     try
@@ -202,7 +296,7 @@ namespace TaskCore.Services
         /// <summary>
         /// Get the full path to the log directory.
         /// </summary>
-        public static string GetLogDirectory() => LogDirectory;
+        public static string Get_baseDir() => _baseDir;
 
         /// <summary>
         /// List all log files with their sizes and last write times.
@@ -211,10 +305,10 @@ namespace TaskCore.Services
         {
             try
             {
-                if (!Directory.Exists(LogDirectory))
+                if (!Directory.Exists(_baseDir))
                     return Array.Empty<(string, long, DateTime)>();
 
-                return Directory.GetFiles(LogDirectory, "*.txt")
+                return Directory.GetFiles(_baseDir, "*.txt")
                     .Select(f =>
                     {
                         var info = new FileInfo(f);

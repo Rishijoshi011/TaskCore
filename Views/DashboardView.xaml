@@ -393,7 +393,11 @@
                                                     <TextBlock Text="{Binding Icon}" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <StackPanel Grid.Column="1">
-                                                    <TextBlock Text="{Binding Title}" Foreground="{Binding ColorBrush, TargetNullValue={StaticResource TextPrimary}}" FontSize="12" FontWeight="SemiBold"/>
+                                                    <TextBlock Foreground="{Binding ColorBrush, TargetNullValue={StaticResource TextPrimary}}" FontSize="12" FontWeight="SemiBold">
+                                                        <Run Text="{Binding Title}"/>
+                                                        <Run Text=" - "/>
+                                                        <Run Text="{Binding ProcessName}" FontWeight="Bold"/>
+                                                    </TextBlock>
                                                     <TextBlock Text="{Binding Detail}" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="0 4 0 0"/>
                                                     <TextBlock Text="Click for details →" Foreground="{DynamicResource AccentBrush}" FontSize="10" Margin="0 4 0 0" Opacity="0.8"/>
                                                 </StackPanel>

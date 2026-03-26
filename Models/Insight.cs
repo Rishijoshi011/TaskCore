@@ -15,5 +15,7 @@ namespace TaskCore.Models
         public double PredictionMemory { get; set; }
 
         public string RecommendationText { get; set; } = string.Empty;
+
+        public int RestartCount { get; set; }
     }
 }
