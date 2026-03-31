@@ -12,6 +12,12 @@ namespace TaskCore
 {
     public partial class MainWindow : Window
     {
+        // Track history for back/forward navigation with mouse side buttons
+        private readonly List<string> _viewHistory = new();
+        private int _historyIndex = -1;
+        private bool _isNavigating = false;
+
+        // Window state
         private bool _isSidebarCollapsed = false;
         private readonly bool _watchdogMode;
         private FrameworkElement? _currentView;
@@ -63,13 +69,18 @@ namespace TaskCore
                 Sidebar.SelectedIndex = 0;
                 ContentArea.Content = _rulesView;
                 AppViewStateService.SetView("Rules");
+                AddToHistory("Rules");
             }
             else
             {
                 Sidebar.SelectedIndex = 0;
                 ContentArea.Content = _dashboardView;
                 AppViewStateService.SetView("Dashboard");
+                AddToHistory("Dashboard");
             }
+
+            // Subscribe to mouse side button events for back/forward navigation
+            PreviewMouseDown += OnPreviewMouseDown;
         }
 
         private void ConfigureSidebarForMode()
@@ -214,6 +225,7 @@ namespace TaskCore
 
                 ContentArea.Content = _currentView;
                 AppViewStateService.SetView(viewName);
+                AddToHistory(viewName);
             }
             else
             {
@@ -242,6 +254,7 @@ namespace TaskCore
 
                 ContentArea.Content = _currentView;
                 AppViewStateService.SetView(viewName);
+                AddToHistory(viewName);
             }
 
             // Activate new view after switching
@@ -289,6 +302,12 @@ namespace TaskCore
 
         private void DragWindow(object sender, MouseButtonEventArgs e)
         {
+            if (e.ClickCount == 2 && e.LeftButton == MouseButtonState.Pressed)
+            {
+                // Double-click on title bar toggles maximize/restore
+                Maximize_Click(sender, e);
+                return;
+            }
             if (e.LeftButton == MouseButtonState.Pressed)
                 DragMove();
         }
@@ -331,6 +350,87 @@ namespace TaskCore
             catch
             {
                 return false;
+            }
+        }
+
+        private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            // Handle mouse side buttons (MB4/XButton1 = Back, MB5/XButton2 = Forward)
+            if (e.XButton1 == MouseButtonState.Pressed)
+            {
+                e.Handled = true;
+                NavigateBack();
+            }
+            else if (e.XButton2 == MouseButtonState.Pressed)
+            {
+                e.Handled = true;
+                NavigateForward();
+            }
+        }
+
+        private void AddToHistory(string viewName)
+        {
+            if (_isNavigating) return;
+
+            // Remove any forward history if we're adding a new entry
+            if (_historyIndex < _viewHistory.Count - 1)
+            {
+                _viewHistory.RemoveRange(_historyIndex + 1, _viewHistory.Count - _historyIndex - 1);
+            }
+
+            _viewHistory.Add(viewName);
+            _historyIndex = _viewHistory.Count - 1;
+
+            // Limit history size
+            if (_viewHistory.Count > 50)
+            {
+                _viewHistory.RemoveAt(0);
+                _historyIndex--;
+            }
+        }
+
+        private void NavigateBack()
+        {
+            if (_historyIndex > 0)
+            {
+                _isNavigating = true;
+                _historyIndex--;
+                var viewName = _viewHistory[_historyIndex];
+                SwitchToView(viewName);
+                _isNavigating = false;
+            }
+        }
+
+        private void NavigateForward()
+        {
+            if (_historyIndex < _viewHistory.Count - 1)
+            {
+                _isNavigating = true;
+                _historyIndex++;
+                var viewName = _viewHistory[_historyIndex];
+                SwitchToView(viewName);
+                _isNavigating = false;
+            }
+        }
+
+        private void SwitchToView(string viewName)
+        {
+            // Update sidebar selection without triggering navigation
+            int targetIndex = viewName switch
+            {
+                "Dashboard" => 0,
+                "Processes" => 1,
+                "Graphs" => 2,
+                "Session Tracker" or "Details" => 3,
+                "Rules" => _watchdogMode ? 0 : 4,
+                "Settings" => _watchdogMode ? 1 : 5,
+                _ => 0
+            };
+
+            if (targetIndex >= 0 && targetIndex < Sidebar.Items.Count)
+            {
+                Sidebar.SelectedIndex = targetIndex;
+                // Sidebar_SelectionChanged will handle the actual view switch
             }
         }
     }
