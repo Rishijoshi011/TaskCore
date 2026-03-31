@@ -54,6 +54,14 @@ namespace TaskCore.ViewModels
     {
         [ObservableProperty] private System.Windows.Media.Brush brush = System.Windows.Media.Brushes.Transparent;
         [ObservableProperty] private string toolTip = string.Empty;
+        [ObservableProperty] private string hourLabel = string.Empty;
+        [ObservableProperty] private string topAppName = string.Empty;
+        [ObservableProperty] private int sessionCount;
+        [ObservableProperty] private double peakCpuPercent;
+        [ObservableProperty] private double peakMemoryMB;
+        [ObservableProperty] private double minutesActive;
+        [ObservableProperty] private bool isCurrentHour;
+        [ObservableProperty] private int intensityLevel; // 0-4 for color mapping
     }
 
     public sealed partial class WeeklyOverviewItem : ObservableObject
@@ -646,6 +654,17 @@ namespace TaskCore.ViewModels
             catch { }
         }
 
+        public void ShowDetailsForHour(string hourLabel)
+        {
+            if (string.IsNullOrWhiteSpace(hourLabel)) return;
+            
+            // Navigate to Details view with hour filter context
+            AppViewStateService.SetView("Details");
+            
+            // Could emit an event or store the selected hour for DetailsViewModel to consume
+            // For now, just showing the navigation works
+        }
+
         private void OnViewChanged(string viewName)
         {
             try
@@ -1196,81 +1215,167 @@ namespace TaskCore.ViewModels
 
         private void BuildHeatmap(System.Collections.Generic.List<UsageTrackingService.SessionRecord> sessions)
         {
-            // Calculate unique minutes per hour (wall-clock time, not summed durations)
-            var minutesPerHour = new double[24];
             var today = DateTime.Today;
             var tomorrow = today.AddDays(1);
+            var currentHour = DateTime.Now.Hour;
 
-            // Pre-allocate a reusable array for intervals (max 1 per session)
-            var maxIntervals = sessions.Count;
-            var intervals = new (DateTime start, DateTime end)[maxIntervals];
+            // Data structures for each hour
+            var minutesPerHour = new double[24];
+            var sessionsPerHour = new List<UsageTrackingService.SessionRecord>[24];
+            var topAppPerHour = new string[24];
+            var peakCpuPerHour = new double[24];
+            var peakMemPerHour = new double[24];
 
-            // Group sessions by hour and calculate unique coverage per hour
+            for (int i = 0; i < 24; i++)
+                sessionsPerHour[i] = new List<UsageTrackingService.SessionRecord>();
+
+            // Group sessions into hours
+            foreach (var s in sessions)
+            {
+                var start = s.startTimeUtc.ToLocalTime();
+                var end = s.endTimeUtc.ToLocalTime();
+
+                // Clamp to today
+                if (start < today) start = today;
+                if (end > tomorrow) end = tomorrow;
+
+                // Find which hours this session covers
+                int startHour = start.Hour;
+                int endHour = end.Hour;
+
+                for (int h = startHour; h <= endHour && h < 24; h++)
+                {
+                    sessionsPerHour[h].Add(s);
+                    peakCpuPerHour[h] = Math.Max(peakCpuPerHour[h], s.peakCpuPercent);
+                    peakMemPerHour[h] = Math.Max(peakMemPerHour[h], s.peakMemoryMB);
+                }
+            }
+
+            // Calculate unique minutes per hour using interval merging
             for (int hour = 0; hour < 24; hour++)
             {
+                var hourSessions = sessionsPerHour[hour];
+                if (hourSessions.Count == 0) continue;
+
                 var hourStart = today.AddHours(hour);
                 var hourEnd = hourStart.AddHours(1);
 
-                // Find all intervals that intersect with this hour
-                int intervalCount = 0;
-                for (int i = 0; i < sessions.Count; i++)
+                var intervals = hourSessions.Select(s =>
                 {
-                    var s = sessions[i];
                     var start = s.startTimeUtc.ToLocalTime();
                     var end = s.endTimeUtc.ToLocalTime();
+                    if (start < hourStart) start = hourStart;
+                    if (end > hourEnd) end = hourEnd;
+                    return (start, end);
+                }).OrderBy(i => i.start).ToList();
 
-                    // Clamp to today
-                    if (start < today) start = today;
-                    if (end > tomorrow) end = tomorrow;
-
-                    // Check if intersects with this hour
-                    if (end > hourStart && start < hourEnd)
-                    {
-                        // Clamp interval to this hour
-                        if (start < hourStart) start = hourStart;
-                        if (end > hourEnd) end = hourEnd;
-                        intervals[intervalCount++] = (start, end);
-                    }
-                }
-
-                if (intervalCount == 0) continue;
-
-                // Sort intervals by start time
-                Array.Sort(intervals, 0, intervalCount, IntervalComparer.Instance);
-
-                // Merge overlapping intervals and sum unique minutes
-                var currentStart = intervals[0].start;
-                var currentEnd = intervals[0].end;
+                // Merge overlapping intervals
                 double uniqueMinutes = 0;
-
-                for (int i = 1; i < intervalCount; i++)
+                if (intervals.Count > 0)
                 {
-                    if (intervals[i].start <= currentEnd) // Overlaps
+                    var currentStart = intervals[0].start;
+                    var currentEnd = intervals[0].end;
+
+                    for (int i = 1; i < intervals.Count; i++)
                     {
-                        if (intervals[i].end > currentEnd)
+                        if (intervals[i].start <= currentEnd)
+                        {
+                            currentEnd = intervals[i].end > currentEnd ? intervals[i].end : currentEnd;
+                        }
+                        else
+                        {
+                            uniqueMinutes += (currentEnd - currentStart).TotalMinutes;
+                            currentStart = intervals[i].start;
                             currentEnd = intervals[i].end;
+                        }
                     }
-                    else
-                    {
-                        uniqueMinutes += (currentEnd - currentStart).TotalMinutes;
-                        currentStart = intervals[i].start;
-                        currentEnd = intervals[i].end;
-                    }
+                    uniqueMinutes += (currentEnd - currentStart).TotalMinutes;
                 }
-                uniqueMinutes += (currentEnd - currentStart).TotalMinutes;
-                minutesPerHour[hour] = Math.Min(60, uniqueMinutes); // Cap at 60 minutes
+
+                minutesPerHour[hour] = Math.Min(60, uniqueMinutes);
+
+                // Find top app for this hour
+                topAppPerHour[hour] = hourSessions
+                    .GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app)
+                    .Select(g => new { App = g.Key, Duration = g.Sum(s => s.durationSeconds) })
+                    .OrderByDescending(x => x.Duration)
+                    .FirstOrDefault()?.App ?? "-";
             }
 
-            var max = minutesPerHour.Max();
+            // Calculate max for normalization
+            var maxMinutes = minutesPerHour.Max();
+            if (maxMinutes < 1) maxMinutes = 1;
+
             if (HourlyHeatmap.Count != 24) BuildHeatmapSkeleton();
+
+            // Color palette for gradient (low to high intensity)
+            var colors = new System.Windows.Media.Color[]
+            {
+                System.Windows.Media.Color.FromRgb(0x22, 0xC5, 0x5E), // Green (0-20%)
+                System.Windows.Media.Color.FromRgb(0x4A, 0xDE, 0x80), // Light green (20-40%)
+                System.Windows.Media.Color.FromRgb(0xFA, 0xCC, 0x15), // Yellow (40-60%)
+                System.Windows.Media.Color.FromRgb(0xF8, 0x71, 0x71), // Red (60-80%)
+                System.Windows.Media.Color.FromRgb(0x9A, 0x4D, 0xFF), // Purple (80-100%)
+            };
 
             for (int i = 0; i < 24; i++)
             {
-                var ratio = max <= 0 ? 0 : minutesPerHour[i] / max;
-                var alpha = (byte)(30 + (ratio * 180));
-                HourlyHeatmap[i].Brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(alpha, 154, 77, 255));
-                HourlyHeatmap[i].ToolTip = $"{i:00}:00 - {minutesPerHour[i]:F0} min";
+                var ratio = minutesPerHour[i] / maxMinutes;
+                var intensityLevel = ratio switch
+                {
+                    < 0.2 => 0,
+                    < 0.4 => 1,
+                    < 0.6 => 2,
+                    < 0.8 => 3,
+                    _ => 4
+                };
+
+                // Interpolate color for smoother gradient
+                var color = GetGradientColor(ratio, colors);
+                var brush = new System.Windows.Media.SolidColorBrush(color);
+
+                // Build rich tooltip
+                var tooltip = $"{i:00}:00 - {minutesPerHour[i]:F0} min active\n" +
+                              $"Top: {topAppPerHour[i]}\n" +
+                              $"Peak: {peakCpuPerHour[i]:F0}% CPU, {peakMemPerHour[i]:F0} MB\n" +
+                              $"Sessions: {sessionsPerHour[i].Count}";
+
+                HourlyHeatmap[i].Brush = brush;
+                HourlyHeatmap[i].ToolTip = tooltip;
+                HourlyHeatmap[i].HourLabel = $"{i:00}";
+                HourlyHeatmap[i].TopAppName = topAppPerHour[i];
+                HourlyHeatmap[i].SessionCount = sessionsPerHour[i].Count;
+                HourlyHeatmap[i].PeakCpuPercent = peakCpuPerHour[i];
+                HourlyHeatmap[i].PeakMemoryMB = peakMemPerHour[i];
+                HourlyHeatmap[i].MinutesActive = minutesPerHour[i];
+                HourlyHeatmap[i].IsCurrentHour = i == currentHour;
+                HourlyHeatmap[i].IntensityLevel = intensityLevel;
             }
+        }
+
+        private static System.Windows.Media.Color GetGradientColor(double ratio, System.Windows.Media.Color[] colors)
+        {
+            if (ratio <= 0) return colors[0];
+            if (ratio >= 1) return colors[^1];
+
+            // Map ratio to color index
+            double scaled = ratio * (colors.Length - 1);
+            int index = (int)scaled;
+            double remainder = scaled - index;
+
+            if (index >= colors.Length - 1) return colors[^1];
+
+            // Linear interpolation between two colors
+            var c1 = colors[index];
+            var c2 = colors[index + 1];
+
+            byte Lerp(byte a, byte b, double t) => (byte)(a + (b - a) * t);
+
+            return System.Windows.Media.Color.FromRgb(
+                Lerp(c1.R, c2.R, remainder),
+                Lerp(c1.G, c2.G, remainder),
+                Lerp(c1.B, c2.B, remainder)
+            );
         }
 
         private void BuildWeeklyOverview()

@@ -2,11 +2,14 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:TaskCore.ViewModels"
+             xmlns:converters="clr-namespace:TaskCore.Converters"
              Background="{StaticResource BackgroundPrimary}"
              Padding="20">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <converters:BoolToBorderBrushConverter x:Key="BoolToBorderBrushConverter"/>
+        <converters:BoolToBorderThicknessConverter x:Key="BoolToBorderThicknessConverter"/>
     </UserControl.Resources>
 
     <UserControl.DataContext>
@@ -450,12 +453,27 @@
                 <!-- Hourly Heatmap -->
                 <Border Grid.Row="0" Style="{StaticResource CardPanel}" Padding="14" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 8">
                             <TextBlock Text="Hourly Heatmap" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
                             <Control Style="{StaticResource InfoIcon}" Margin="8 0 0 0" VerticalAlignment="Center"
-                                     ToolTip="Total tracked runtime per hour (today). Darker blocks = more activity."/>
+                                     ToolTip="Total tracked runtime per hour.&#10;Colors: Green (low) → Yellow (med) → Red (high) → Purple (peak).&#10;Click any hour to view detailed process activity."/>
                         </StackPanel>
 
+                        <!-- Legend -->
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 8" Opacity="0.8">
+                            <Ellipse Width="10" Height="10" Fill="#22C55E" Margin="0 0 4 0"/>
+                            <TextBlock Text="Low" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0"/>
+                            <Ellipse Width="10" Height="10" Fill="#4ADE80" Margin="0 0 4 0"/>
+                            <TextBlock Text="Light" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0"/>
+                            <Ellipse Width="10" Height="10" Fill="#FACC15" Margin="0 0 4 0"/>
+                            <TextBlock Text="Med" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0"/>
+                            <Ellipse Width="10" Height="10" Fill="#F87171" Margin="0 0 4 0"/>
+                            <TextBlock Text="High" FontSize="9" Foreground="{StaticResource TextSecondary}" Margin="0 0 10 0"/>
+                            <Ellipse Width="10" Height="10" Fill="#9A4DFF" Margin="0 0 4 0"/>
+                            <TextBlock Text="Peak" FontSize="9" Foreground="{StaticResource TextSecondary}"/>
+                        </StackPanel>
+
+                        <!-- Heatmap Grid -->
                         <ItemsControl ItemsSource="{Binding HourlyHeatmap}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -464,10 +482,57 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="{Binding Brush}" Height="22" Margin="1" CornerRadius="4" ToolTip="{Binding ToolTip}"/>
+                                    <Border Background="{Binding Brush}" 
+                                            Height="28" 
+                                            Margin="1" 
+                                            CornerRadius="3"
+                                            BorderBrush="{Binding IsCurrentHour, Converter={StaticResource BoolToBorderBrushConverter}}"
+                                            BorderThickness="{Binding IsCurrentHour, Converter={StaticResource BoolToBorderThicknessConverter}}"
+                                            ToolTip="{Binding ToolTip}"
+                                            Cursor="Hand"
+                                            MouseLeftButtonDown="OnHeatmapCellClick">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="RenderTransform">
+                                                    <Setter.Value>
+                                                        <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="RenderTransform">
+                                                            <Setter.Value>
+                                                                <ScaleTransform ScaleX="1.15" ScaleY="1.15"/>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Setter Property="Panel.ZIndex" Value="10"/>
+                                                        <Setter Property="Effect">
+                                                            <Setter.Value>
+                                                                <DropShadowEffect ShadowDepth="0" BlurRadius="8" Opacity="0.5"/>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+
+                        <!-- Time Labels -->
+                        <Grid Margin="0 4 0 0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="00:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Column="1" Text="06:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="12:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Text="18:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Right"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
 

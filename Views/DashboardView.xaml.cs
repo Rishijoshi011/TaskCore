@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Controls;
+using System.Windows.Input;
 using TaskCore.ViewModels;
 
 namespace TaskCore.Views
@@ -21,6 +22,15 @@ namespace TaskCore.Views
             {
                 _viewModel = new DashboardViewModel();
                 DataContext = _viewModel;
+            }
+        }
+
+        private void OnHeatmapCellClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is Border border && border.DataContext is HeatmapHourCell cell)
+            {
+                // Navigate to Processes view filtered by the selected hour
+                _viewModel?.ShowDetailsForHour(cell.HourLabel);
             }
         }
 
