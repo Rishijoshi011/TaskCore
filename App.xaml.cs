@@ -55,7 +55,11 @@ namespace TaskCore
             var settings = AppSettingsService.Load();
             var watchdogMode = settings.WatchdogMode || e.Args.Contains("--watchdog");
             var isElevatedRelaunch = e.Args.Contains("--elevated");
-            
+
+            // Note: AlwaysRunAsAdministrator is now handled by Windows Registry (AppCompatFlags\Layers)
+            // The RUNASADMIN flag is automatically applied via AdminRegistryService when enabled.
+            // Windows will prompt for UAC elevation on every launch - no manual restart needed.
+
             // Use different mutex for watchdog mode to allow it running alongside regular mode
             var mutexName = watchdogMode ? "TaskCore_Watchdog_Instance" : MutexName;
             

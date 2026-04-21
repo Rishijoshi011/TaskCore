@@ -1,9 +1,11 @@
 ﻿using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
+using System.Windows.Interop;
 using TaskCore.Views;
 using TaskCore.Services;
 using System.Windows.Media.Imaging;
@@ -32,6 +34,24 @@ namespace TaskCore
         private RulesView? _rulesView;
         private SettingsView? _settingsView;
 
+        // Windows shutdown notification constants
+        private const int WM_QUERYENDSESSION = 0x0011;
+        private const int WM_ENDSESSION = 0x0016;
+        private const uint ENDSESSION_CLOSEAPP = 0x00000001;
+        private const uint ENDSESSION_CRITICAL = 0x40000000;
+        private const uint ENDSESSION_LOGOFF = 0x80000000;
+
+        [DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
+
+        [DllImport("user32.dll")]
+        private static extern bool ShutdownBlockReasonCreate(IntPtr hWnd, [MarshalAs(UnmanagedType.LPWStr)] string pwszReason);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShutdownBlockReasonDestroy(IntPtr hWnd);
+
+        private bool _shutdownDetected = false;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -59,6 +79,9 @@ namespace TaskCore
             // Handle window closing to dispose all resources
             Closing += OnWindowClosing;
 
+            // Hook window messages for shutdown detection
+            SourceInitialized += OnSourceInitialized;
+
             // Configure sidebar based on mode
             ConfigureSidebarForMode();
 
@@ -81,6 +104,58 @@ namespace TaskCore
 
             // Subscribe to mouse side button events for back/forward navigation
             PreviewMouseDown += OnPreviewMouseDown;
+        }
+
+        private void OnSourceInitialized(object? sender, EventArgs e)
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            var source = HwndSource.FromHwnd(hwnd);
+            source?.AddHook(WndProcHook);
+        }
+
+        private IntPtr WndProcHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            switch (msg)
+            {
+                case WM_QUERYENDSESSION:
+                    // Windows is asking if we can shut down - save sessions immediately
+                    TaskCoreLogger.Info("shutdown", "WM_QUERYENDSESSION received - saving sessions");
+                    _shutdownDetected = true;
+                    try
+                    {
+                        // Block shutdown briefly to save data
+                        ShutdownBlockReasonCreate(hwnd, "TaskCore is saving session data...");
+                        // Save all active sessions synchronously
+                        UsageTrackingService.Instance?.SaveRunningSessionsOnShutdown();
+                        TaskCoreLogger.Info("shutdown", "Sessions saved for WM_QUERYENDSESSION");
+                    }
+                    catch (Exception ex)
+                    {
+                        TaskCoreLogger.Error("shutdown", $"Error saving on WM_QUERYENDSESSION: {ex.Message}");
+                    }
+                    finally
+                    {
+                        ShutdownBlockReasonDestroy(hwnd);
+                    }
+                    // Return TRUE to allow shutdown
+                    handled = false;
+                    return IntPtr.Zero;
+
+                case WM_ENDSESSION:
+                    // Windows is ending the session - save if not already saved
+                    if (wParam.ToInt32() != 0 && !_shutdownDetected)
+                    {
+                        TaskCoreLogger.Info("shutdown", "WM_ENDSESSION received - emergency save");
+                        try
+                        {
+                            UsageTrackingService.Instance?.SaveRunningSessionsOnShutdown();
+                        }
+                        catch { }
+                    }
+                    handled = false;
+                    return IntPtr.Zero;
+            }
+            return IntPtr.Zero;
         }
 
         private void ConfigureSidebarForMode()

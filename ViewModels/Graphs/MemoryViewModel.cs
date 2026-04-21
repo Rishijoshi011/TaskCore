@@ -187,8 +187,29 @@ namespace TaskCore.ViewModels.Graphs
                 
                 if (memoryDevices.Any())
                 {
-                    // Calculate total memory
-                    double totalMemoryBytes = memoryDevices.Sum(device => Convert.ToInt64(device["Capacity"] ?? 0));
+                    // Calculate total memory - sum all physical memory device capacities
+                    long totalMemoryBytes = 0;
+                    foreach (var device in memoryDevices)
+                    {
+                        try
+                        {
+                            var capacityValue = device["Capacity"];
+                            long capacity = capacityValue switch
+                            {
+                                long l => l,
+                                ulong ul => (long)ul,
+                                uint ui => (long)ui,
+                                int i => i,
+                                string s when long.TryParse(s, out var parsed) => parsed,
+                                _ => Convert.ToInt64(capacityValue)
+                            };
+                            totalMemoryBytes += capacity;
+                        }
+                        catch
+                        {
+                            // Skip devices that can't be read
+                        }
+                    }
                     TotalMemoryGB = totalMemoryBytes / (1024.0 * 1024.0 * 1024.0);
 
                     // Get memory details from first device

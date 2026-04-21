@@ -23,11 +23,11 @@ namespace TaskCore.Views.Graphs
             Log("OnActivated BEGIN");
             try
             {
-                if (DataContext is not GpuAdapterViewModel)
+                if (DataContext is not GpuGraphViewModel)
                 {
-                    Log("Creating new GpuAdapterViewModel");
-                    DataContext = new GpuAdapterViewModel(null, null);
-                    Log("GpuAdapterViewModel created successfully");
+                    Log("Creating new GpuGraphViewModel");
+                    DataContext = new GpuGraphViewModel();
+                    Log("GpuGraphViewModel created successfully");
                 }
                 else
                 {

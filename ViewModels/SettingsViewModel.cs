@@ -35,6 +35,9 @@ namespace TaskCore.ViewModels
         private bool minimizeToTray;
 
         [ObservableProperty]
+        private bool alwaysRunAsAdministrator;
+
+        [ObservableProperty]
         private bool watchdogMode;
 
         private bool _watchdogModeChanging = false;
@@ -112,6 +115,9 @@ namespace TaskCore.ViewModels
 
             AutoStartWithWindows = _settings.AutoStartWithWindows;
             PreferAdminForProtectedActions = _settings.PreferAdminForProtectedActions;
+            // Sync AlwaysRunAsAdministrator with actual registry state (in case user manually changed it)
+            AlwaysRunAsAdministrator = AdminRegistryService.IsEnabled();
+            _settings.AlwaysRunAsAdministrator = AlwaysRunAsAdministrator;
             RefreshIntervalMs = _settings.RefreshIntervalMs;
             MinimizeToTray = _settings.MinimizeToTray;
             WatchdogMode = _settings.WatchdogMode;
@@ -222,6 +228,43 @@ namespace TaskCore.ViewModels
             AppSettingsService.Save(_settings);
         }
 
+        partial void OnAlwaysRunAsAdministratorChanged(bool value)
+        {
+            _settings.AlwaysRunAsAdministrator = value;
+            AppSettingsService.Save(_settings);
+
+            // Set/clear registry RUNASADMIN flag - this persists across reboots
+            AdminRegistryService.SetEnabled(value);
+
+            // If enabling and not currently admin, we need one restart to apply
+            // After that, registry will handle it automatically
+            if (value && !ElevationService.IsRunningAsAdmin())
+            {
+                var result = MessageBox.Show(
+                    "Always run as administrator is now enabled.\n\n" +
+                    "TaskCore will now always start as administrator (UAC prompt on launch).\n\n" +
+                    "Restart now to apply?",
+                    "Restart Required",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    ElevationService.TryRelaunchAsAdminAndExit();
+                }
+            }
+            else if (!value && ElevationService.IsRunningAsAdmin())
+            {
+                // Disabling while running as admin - inform user it takes effect next launch
+                MessageBox.Show(
+                    "Always run as administrator has been disabled.\n\n" +
+                    "This will take effect the next time you start TaskCore.",
+                    "Setting Saved",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
+
         partial void OnRefreshIntervalMsChanged(int value)
         {
             _settings.RefreshIntervalMs = value;
@@ -324,9 +367,50 @@ namespace TaskCore.ViewModels
 
         partial void OnAccentColorChanged(string value)
         {
-            _settings.AccentColor = value;
+            // Normalize hex color to 8-digit format (#AARRGGBB)
+            var normalized = NormalizeHexColor(value);
+            if (normalized != value)
+            {
+                AccentColor = normalized;
+                return; // Setter will be called again with normalized value
+            }
+
+            _settings.AccentColor = normalized;
             AppSettingsService.Save(_settings);
-            ThemeService.ApplyAccentColor(value);
+            ThemeService.ApplyAccentColor(normalized);
+        }
+
+        /// <summary>
+        /// Normalizes hex color to #AARRGGBB format. Returns original if invalid.
+        /// </summary>
+        private static string NormalizeHexColor(string hex)
+        {
+            if (string.IsNullOrWhiteSpace(hex))
+                return "#FF9A4DFF"; // Default purple
+
+            hex = hex.Trim();
+
+            // Handle # prefix
+            if (hex.StartsWith("#"))
+                hex = hex.Substring(1);
+
+            // Handle 3-digit hex (RGB) - expand to 6-digit
+            if (hex.Length == 3)
+            {
+                hex = $"{hex[0]}{hex[0]}{hex[1]}{hex[1]}{hex[2]}{hex[2]}";
+            }
+
+            // Handle 6-digit hex (RRGGBB) - add FF alpha
+            if (hex.Length == 6)
+            {
+                hex = "FF" + hex;
+            }
+
+            // Validate 8-digit hex
+            if (hex.Length != 8 || !hex.All(c => "0123456789ABCDEFabcdef".Contains(c)))
+                return "#FF9A4DFF"; // Default purple if invalid
+
+            return "#" + hex.ToUpperInvariant();
         }
 
         [ObservableProperty]

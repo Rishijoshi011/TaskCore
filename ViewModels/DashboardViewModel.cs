@@ -1215,8 +1215,9 @@ namespace TaskCore.ViewModels
 
         private void BuildHeatmap(System.Collections.Generic.List<UsageTrackingService.SessionRecord> sessions)
         {
-            var today = DateTime.Today;
-            var tomorrow = today.AddDays(1);
+            var viewDate = SelectedDate.ToDateTime(TimeOnly.MinValue);
+            var nextDay = viewDate.AddDays(1);
+            var isToday = viewDate.Date == DateTime.Today;
             var currentHour = DateTime.Now.Hour;
 
             // Data structures for each hour
@@ -1235,9 +1236,9 @@ namespace TaskCore.ViewModels
                 var start = s.startTimeUtc.ToLocalTime();
                 var end = s.endTimeUtc.ToLocalTime();
 
-                // Clamp to today
-                if (start < today) start = today;
-                if (end > tomorrow) end = tomorrow;
+                // Clamp to view date
+                if (start < viewDate) start = viewDate;
+                if (end > nextDay) end = nextDay;
 
                 // Find which hours this session covers
                 int startHour = start.Hour;
@@ -1257,7 +1258,7 @@ namespace TaskCore.ViewModels
                 var hourSessions = sessionsPerHour[hour];
                 if (hourSessions.Count == 0) continue;
 
-                var hourStart = today.AddHours(hour);
+                var hourStart = viewDate.AddHours(hour);
                 var hourEnd = hourStart.AddHours(1);
 
                 var intervals = hourSessions.Select(s =>
@@ -1348,7 +1349,7 @@ namespace TaskCore.ViewModels
                 HourlyHeatmap[i].PeakCpuPercent = peakCpuPerHour[i];
                 HourlyHeatmap[i].PeakMemoryMB = peakMemPerHour[i];
                 HourlyHeatmap[i].MinutesActive = minutesPerHour[i];
-                HourlyHeatmap[i].IsCurrentHour = i == currentHour;
+                HourlyHeatmap[i].IsCurrentHour = isToday && i == currentHour;
                 HourlyHeatmap[i].IntensityLevel = intensityLevel;
             }
         }

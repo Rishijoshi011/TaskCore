@@ -584,7 +584,7 @@ namespace TaskCore.Services
             SystemEvents.SessionSwitch -= OnSessionSwitch;
         }
 
-        private void SaveRunningSessionsOnShutdown()
+        internal void SaveRunningSessionsOnShutdown()
         {
             try
             {

@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace TaskCore.ViewModels.Graphs
 {
-    public partial class GpuGraphViewModel : ObservableObject
+    public partial class GpuGraphViewModel : ObservableObject, IDisposable
     {
         [ObservableProperty]
         private ObservableCollection<GpuAdapterViewModel> gpus;
@@ -14,6 +14,15 @@ namespace TaskCore.ViewModels.Graphs
         {
             Gpus = new ObservableCollection<GpuAdapterViewModel>();
             InitializeAdapters();
+        }
+
+        public void Dispose()
+        {
+            foreach (var gpu in Gpus)
+            {
+                try { gpu?.Dispose(); } catch { }
+            }
+            Gpus.Clear();
         }
 
         private void InitializeAdapters()

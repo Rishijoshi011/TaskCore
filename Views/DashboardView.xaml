@@ -520,19 +520,33 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <!-- Time Labels -->
-                        <Grid Margin="0 4 0 0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="00:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Column="1" Text="06:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
-                            <TextBlock Grid.Column="2" Text="12:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
-                            <TextBlock Grid.Column="3" Text="18:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Right"/>
-                        </Grid>
+                        <!-- Time Labels - 24 columns to align with heatmap cells -->
+                        <UniformGrid Columns="24" Margin="0 4 0 0">
+                            <TextBlock Text="00:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Left" Grid.Column="0"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="1"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="2"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="3"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="4"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="5"/>
+                            <TextBlock Text="06:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="6"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="7"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="8"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="9"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="10"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="11"/>
+                            <TextBlock Text="12:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="12"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="13"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="14"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="15"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="16"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="17"/>
+                            <TextBlock Text="18:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="18"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="19"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="20"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="21"/>
+                            <TextBlock Text="" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" Grid.Column="22"/>
+                            <TextBlock Text="24:00" FontSize="9" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Right" Grid.Column="23"/>
+                        </UniformGrid>
                     </StackPanel>
                 </Border>
 

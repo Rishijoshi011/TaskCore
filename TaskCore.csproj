@@ -6,10 +6,17 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>5.0.4</Version>
-    <AssemblyVersion>5.0.4.4</AssemblyVersion>
-    <FileVersion>5.0.4.4</FileVersion>
+    <Version>5.0.5</Version>
+    <AssemblyVersion>5.0.5.5</AssemblyVersion>
+    <FileVersion>5.0.5.5</FileVersion>
     <ApplicationIcon>Resources\AppIcon\TaskCore_icon.ico</ApplicationIcon>
+    <Company>TaskCore</Company>
+    <Product>TaskCore System Monitor</Product>
+    <Description>TaskCore - Smart system monitoring and task management analytics platform</Description>
+    <Copyright>Copyright © 2024 TaskCore</Copyright>
+    <Authors>RIAUHAS</Authors>
+    <Title>TaskCore</Title>
+    <NeutralLanguage>en-US</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup>

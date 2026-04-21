@@ -137,6 +137,24 @@
 
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Always Run as Administrator" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="Automatically restart TaskCore as administrator on startup.&#10;Requires UAC approval on first launch."/>
+                            </StackPanel>
+                            <TextBlock Text="Automatically relaunch as admin on startup (prompts for UAC on first run)" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding AlwaysRunAsAdministrator}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Minimal Watchdog Mode" Foreground="{DynamicResource AccentBrush}" FontSize="13" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                 <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
                                            ToolTip="Reduces memory usage by disabling Dashboard, Processes, Graphs, and Session Tracker.&#10;Only Rules and Settings tabs remain available.&#10;Use this mode if you only need the Rules Engine functionality."/>
@@ -310,9 +328,10 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Custom Hex:" Foreground="{StaticResource TextSecondary}" FontSize="12" VerticalAlignment="Center" Margin="0 0 10 0"/>
-                            <TextBox Grid.Column="1" Text="{Binding AccentColor, UpdateSourceTrigger=PropertyChanged}" 
+                            <TextBox Grid.Column="1" Text="{Binding AccentColor, UpdateSourceTrigger=LostFocus}" 
                                      Background="{StaticResource BackgroundSecondary}" Foreground="{StaticResource TextPrimary}" 
-                                     BorderBrush="{StaticResource BackgroundCard}" Padding="8 4" FontSize="12"/>
+                                     BorderBrush="{StaticResource BackgroundCard}" Padding="8 4" FontSize="12"
+                                     ToolTip="Enter hex color: #RRGGBB (e.g., #FF5733) or #AARRGGBB"/>
                         </Grid>
                     </StackPanel>
 
