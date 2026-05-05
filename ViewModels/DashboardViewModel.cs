@@ -424,6 +424,12 @@ namespace TaskCore.ViewModels
         [ObservableProperty] private string totalUsageVsYesterdayText = string.Empty;
         [ObservableProperty] private string lastUpdatedText = "Updated: --";
         [ObservableProperty] private string sessionCountText = "0 sessions";
+        [ObservableProperty] private string avgSessionText = "-";
+        [ObservableProperty] private string longestSessionText = "-";
+        [ObservableProperty] private string uniqueAppsText = "-";
+        [ObservableProperty] private string peakHourText = "-";
+        [ObservableProperty] private string avgCpuText = "-";
+        [ObservableProperty] private string avgRamText = "-";
 
         // Date picker for viewing past data
         [ObservableProperty] private DateOnly selectedDate = DateOnly.FromDateTime(DateTime.Today);
@@ -465,6 +471,13 @@ namespace TaskCore.ViewModels
 
         [ObservableProperty] private ObservableCollection<HeatmapHourCell> hourlyHeatmap = new();
         [ObservableProperty] private ObservableCollection<WeeklyOverviewItem> weeklyOverview = new();
+
+        // Weekly summary stats
+        [ObservableProperty] private string weeklyAvgText = "-";
+        [ObservableProperty] private string weeklyTotalText = "-";
+        [ObservableProperty] private string weeklyPeakDayText = "-";
+        [ObservableProperty] private string weeklyTopAppText = "-";
+        [ObservableProperty] private string weeklyDateRangeText = "-";
 
         [ObservableProperty] private string actionStatusText = string.Empty;
 
@@ -1036,15 +1049,18 @@ namespace TaskCore.ViewModels
         {
             if (sessions == null || sessions.Count == 0) return 0;
 
-            // Filter and collect valid intervals without LINQ overhead
+            // Filter and collect valid intervals, normalizing to UTC for correct comparison
+            // (historical data may contain mixed Local/UTC timestamps)
             int validCount = 0;
             var tempIntervals = new (DateTime start, DateTime end)[sessions.Count];
             for (int i = 0; i < sessions.Count; i++)
             {
                 var s = sessions[i];
-                if (s.durationSeconds > 0 && s.endTimeUtc > s.startTimeUtc)
+                var start = s.startTimeUtc.Kind == DateTimeKind.Local ? s.startTimeUtc.ToUniversalTime() : s.startTimeUtc;
+                var end = s.endTimeUtc.Kind == DateTimeKind.Local ? s.endTimeUtc.ToUniversalTime() : s.endTimeUtc;
+                if (s.durationSeconds > 0 && end > start)
                 {
-                    tempIntervals[validCount++] = (s.startTimeUtc, s.endTimeUtc);
+                    tempIntervals[validCount++] = (start, end);
                 }
             }
 
@@ -1116,6 +1132,47 @@ namespace TaskCore.ViewModels
                     var idleText = idleSeconds > 0 ? $" | {idleTime.Hours}h {idleTime.Minutes}m idle/locked" : "";
                     TotalUsageVsYesterdayText = activeText + idleText;
 
+                    // Session statistics
+                    var avgSessionSec = sessions.Count > 0 ? sessions.Average(s => s.durationSeconds) : 0;
+                    var avgTs = TimeSpan.FromSeconds(avgSessionSec);
+                    AvgSessionText = avgTs.TotalHours >= 1 ? $"{avgTs.Hours}h {avgTs.Minutes}m {avgTs.Seconds}s" : $"{avgTs.Minutes}m {avgTs.Seconds}s";
+
+                    var longestSession = sessions.MaxBy(s => s.durationSeconds);
+                    if (longestSession != null)
+                    {
+                        var longTs = TimeSpan.FromSeconds(longestSession.durationSeconds);
+                        LongestSessionText = longTs.TotalHours >= 1 ? $"{longTs.Hours}h {longTs.Minutes}m" : $"{longTs.Minutes}m {longTs.Seconds}s";
+                    }
+                    else
+                    {
+                        LongestSessionText = "-";
+                    }
+
+                    var uniqueApps = sessions.Select(s => s.app).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+                    UniqueAppsText = uniqueApps.ToString();
+
+                    // Peak hour: find the hour with most unique usage seconds
+                    var peakHourGroup = sessions
+                        .SelectMany(s =>
+                        {
+                            var start = s.startTimeUtc.Kind == DateTimeKind.Local ? s.startTimeUtc.ToUniversalTime() : s.startTimeUtc;
+                            return Enumerable.Range(0, Math.Max(1, s.durationSeconds / 900 + 1)).Select(offset =>
+                            {
+                                var t = start.AddSeconds(offset * 900);
+                                return t.Hour;
+                            });
+                        })
+                        .GroupBy(h => h)
+                        .OrderByDescending(g => g.Count())
+                        .FirstOrDefault();
+                    PeakHourText = peakHourGroup != null ? $"{peakHourGroup.Key:D2}:00" : "-";
+
+                    // Average CPU/RAM across all sessions
+                    var avgCpu = sessions.Count > 0 ? sessions.Average(s => s.averageCpuPercent) : 0;
+                    var avgRam = sessions.Count > 0 ? sessions.Average(s => s.averageMemoryMB) : 0;
+                    AvgCpuText = $"{avgCpu:F1}%";
+                    AvgRamText = $"{avgRam:F0} MB";
+
                     var top = sessions
                         .GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app)
                         .Select(g => new { App = g.Key, Seconds = g.Sum(x => Math.Max(0, x.durationSeconds)), PeakCpu = g.Max(x => x.peakCpuPercent), PeakMem = g.Max(x => x.peakMemoryMB) })
@@ -1155,6 +1212,12 @@ namespace TaskCore.ViewModels
                     // keep perf peaks as-is; they are live and not tied to sessions
                     TopOffenderName = "-";
                     TopOffenderDetail = "-";
+                    AvgSessionText = "-";
+                    LongestSessionText = "-";
+                    UniqueAppsText = "-";
+                    PeakHourText = "-";
+                    AvgCpuText = "-";
+                    AvgRamText = "-";
                     RecentAlerts.Clear();
                     TopOffenders.Clear();
                     Insights.Clear();
@@ -1459,6 +1522,22 @@ namespace TaskCore.ViewModels
                     AverageLinePosition = avgPosition
                 });
             }
+
+            // Weekly summary stats below the bars
+            var totalWeekSec = dayData.Sum(d => d.TotalSeconds);
+            var avgWeekSec = dayData.Count > 0 ? dayData.Average(d => d.TotalSeconds) : 0;
+            var peakDay = dayData.MaxBy(d => d.TotalSeconds);
+            var topWeekApp = dayData
+                .GroupBy(d => d.PeakApp)
+                .OrderByDescending(g => g.Count())
+                .FirstOrDefault()?.Key ?? "-";
+
+            var totalTs = TimeSpan.FromSeconds(totalWeekSec);
+            WeeklyTotalText = totalTs.TotalHours >= 24 ? $"{(int)totalTs.TotalHours}h {totalTs.Minutes}m" : totalTs.ToString(@"h\:mm");
+            WeeklyAvgText = TimeSpan.FromSeconds(avgWeekSec).ToString(@"h\:mm");
+            WeeklyPeakDayText = peakDay != null ? $"{peakDay.Date.ToDateTime(TimeOnly.MinValue):ddd} ({TimeSpan.FromSeconds(peakDay.TotalSeconds).ToString(@"h\:mm")})" : "-";
+            WeeklyTopAppText = topWeekApp;
+            WeeklyDateRangeText = $"{days.First().ToDateTime(TimeOnly.MinValue):dd MMM} – {days.Last().ToDateTime(TimeOnly.MinValue):dd MMM yyyy}";
         }
 
         private void LoadRecentAlerts()

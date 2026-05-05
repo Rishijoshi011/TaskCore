@@ -42,7 +42,11 @@ namespace TaskCore.Services
 
         public static void AppendSession(string name, int pid, string? path, DateTime start, DateTime end, double peakCpu = 0, double avgCpu = 0, double peakMem = 0, double avgMem = 0, bool isIdle = false)
         {
-            var date = DateOnly.FromDateTime(start);
+            // Always store UTC timestamps — callers may pass DateTime.Now (Local kind)
+            var startUtc = start.Kind == DateTimeKind.Local ? start.ToUniversalTime() : start;
+            var endUtc = end.Kind == DateTimeKind.Local ? end.ToUniversalTime() : end;
+
+            var date = DateOnly.FromDateTime(startUtc);
             var file = Path.Combine(BaseDirectory, $"sessions-{date:yyyy-MM-dd}.jsonl");
 
             try
@@ -52,9 +56,9 @@ namespace TaskCore.Services
                     app = name,
                     processId = pid,
                     processPath = path ?? string.Empty,
-                    startTimeUtc = start,
-                    endTimeUtc = end,
-                    durationSeconds = (int)(end - start).TotalSeconds,
+                    startTimeUtc = startUtc,
+                    endTimeUtc = endUtc,
+                    durationSeconds = (int)(endUtc - startUtc).TotalSeconds,
                     peakCpuPercent = Math.Round(peakCpu, 2),
                     averageCpuPercent = Math.Round(avgCpu, 2),
                     peakMemoryMB = Math.Round(peakMem, 2),
@@ -235,6 +239,15 @@ namespace TaskCore.Services
             if (sessions.Count == 0) 
             {
                 return sessions;
+            }
+
+            // Normalize all timestamps to UTC upfront (historical data may contain mixed Local/UTC)
+            foreach (var s in sessions)
+            {
+                if (s.startTimeUtc.Kind == DateTimeKind.Local)
+                    s.startTimeUtc = s.startTimeUtc.ToUniversalTime();
+                if (s.endTimeUtc.Kind == DateTimeKind.Local)
+                    s.endTimeUtc = s.endTimeUtc.ToUniversalTime();
             }
 
             // Filter out only core Windows system processes (be conservative)
