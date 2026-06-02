@@ -7,3 +7,6 @@ obj/
 *.log
 publish/
 *.Publish.xml
+.gitignore
+/installer
+/properties
