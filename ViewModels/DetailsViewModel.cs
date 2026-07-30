@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,7 +27,7 @@ namespace TaskCore.ViewModels
         private List<SessionRecordItem> _allSessions = new();
 
         [ObservableProperty]
-        private ObservableCollection<CurrentlyRunningItem> currentlyRunning = new();
+        private TaskCore.Helpers.BulkObservableCollection<CurrentlyRunningItem> currentlyRunning = new();
 
         [ObservableProperty]
         private DateTime selectedDate = DateTime.Today;
@@ -42,16 +42,16 @@ namespace TaskCore.ViewModels
         private string searchQuery = string.Empty;
 
         [ObservableProperty]
-        private ObservableCollection<SessionSummaryItem> appSummaries = new();
+        private TaskCore.Helpers.BulkObservableCollection<SessionSummaryItem> appSummaries = new();
 
         [ObservableProperty]
-        private ObservableCollection<SessionRecordItem> sessions = new();
+        private TaskCore.Helpers.BulkObservableCollection<SessionRecordItem> sessions = new();
 
         [ObservableProperty]
-        private ObservableCollection<SessionSummaryItem> pagedAppSummaries = new();
+        private TaskCore.Helpers.BulkObservableCollection<SessionSummaryItem> pagedAppSummaries = new();
 
         [ObservableProperty]
-        private ObservableCollection<SessionRecordItem> pagedSessions = new();
+        private TaskCore.Helpers.BulkObservableCollection<SessionRecordItem> pagedSessions = new();
 
         [ObservableProperty]
         private int summaryPageIndex;
@@ -202,16 +202,18 @@ namespace TaskCore.ViewModels
                 var summarySkip = SummaryPageIndex * SummaryPageSize;
                 var sessionsSkip = SessionsPageIndex * SessionsPageSize;
 
-                PagedAppSummaries = new ObservableCollection<SessionSummaryItem>(
-                    _allAppSummaries.Skip(summarySkip).Take(SummaryPageSize));
-
-                PagedSessions = new ObservableCollection<SessionRecordItem>(
-                    _allSessions.Skip(sessionsSkip).Take(SessionsPageSize));
+                PagedAppSummaries.ReplaceAll(_allAppSummaries.Skip(summarySkip).Take(SummaryPageSize));
+                PagedSessions.ReplaceAll(_allSessions.Skip(sessionsSkip).Take(SessionsPageSize));
 
                 OnPropertyChanged(nameof(SummaryTotalPages));
                 OnPropertyChanged(nameof(SessionsTotalPages));
                 OnPropertyChanged(nameof(SummaryPageText));
                 OnPropertyChanged(nameof(SessionsPageText));
+
+                SummaryPrevPageCommand.NotifyCanExecuteChanged();
+                SummaryNextPageCommand.NotifyCanExecuteChanged();
+                SessionsPrevPageCommand.NotifyCanExecuteChanged();
+                SessionsNextPageCommand.NotifyCanExecuteChanged();
             }
             catch
             {
@@ -242,28 +244,34 @@ namespace TaskCore.ViewModels
             }
         }
 
-        [RelayCommand]
+        public bool CanSummaryPrevPage => SummaryPageIndex > 0;
+        public bool CanSummaryNextPage => SummaryPageIndex < (SummaryTotalPages - 1);
+
+        public bool CanSessionsPrevPage => SessionsPageIndex > 0;
+        public bool CanSessionsNextPage => SessionsPageIndex < (SessionsTotalPages - 1);
+
+        [RelayCommand(CanExecute = nameof(CanSummaryPrevPage))]
         private void SummaryPrevPage()
         {
-            if (SummaryPageIndex > 0) SummaryPageIndex--;
+            if (CanSummaryPrevPage) SummaryPageIndex--;
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanSummaryNextPage))]
         private void SummaryNextPage()
         {
-            if (SummaryPageIndex < (SummaryTotalPages - 1)) SummaryPageIndex++;
+            if (CanSummaryNextPage) SummaryPageIndex++;
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanSessionsPrevPage))]
         private void SessionsPrevPage()
         {
-            if (SessionsPageIndex > 0) SessionsPageIndex--;
+            if (CanSessionsPrevPage) SessionsPageIndex--;
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanSessionsNextPage))]
         private void SessionsNextPage()
         {
-            if (SessionsPageIndex < (SessionsTotalPages - 1)) SessionsPageIndex++;
+            if (CanSessionsNextPage) SessionsPageIndex++;
         }
 
         private void ShowCopyStatus(string msg)
@@ -539,15 +547,16 @@ namespace TaskCore.ViewModels
         [RelayCommand]
         private void Refresh()
         {
-            try
+            _ = Task.Run(() =>
             {
-                var date = DateOnly.FromDateTime(SelectedDate);
-                var sessions = UsageTrackingService.GetDailySessions(date);
+                try
+                {
+                    var date = DateOnly.FromDateTime(SelectedDate);
+                    var rawSessions = UsageTrackingService.GetDailySessions(date);
 
-                // Update currently running apps (real-time)
-                var running = UsageTrackingService.Instance.GetCurrentlyRunning();
-                CurrentlyRunning = new ObservableCollection<CurrentlyRunningItem>(
-                    running.Select(r => new CurrentlyRunningItem
+                    // Update currently running apps (real-time)
+                    var runningData = UsageTrackingService.Instance.GetCurrentlyRunning();
+                    var runningItems = runningData.Select(r => new CurrentlyRunningItem
                     {
                         AppName = r.appName,
                         ProcessId = r.firstPid,
@@ -555,131 +564,110 @@ namespace TaskCore.ViewModels
                         CurrentCpuPercent = r.avgCpu,
                         CurrentMemoryMb = r.avgMem,
                         ProcessPath = r.path
-                    }).OrderBy(x => x.AppName)
-                );
+                    }).OrderBy(x => x.AppName).ToList();
 
-                // DEBUG: write session count and first entry to a debug file
-                try
-                {
-                    var debugFile = Path.Combine(UsageTrackingService.GetBaseDirectory(), "debug-refresh.txt");
-                    var lines = new List<string>
+                    // Apply search filter
+                    var q = SearchQuery ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(q))
                     {
-                        $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Refresh for date {date:yyyy-MM-dd}",
-                        $"Sessions count: {sessions.Count}"
-                    };
-                    if (sessions.Count > 0)
-                    {
-                        var first = sessions.First();
-                        lines.Add($"First session sample: app={first.app}, pid={first.processId}");
+                        rawSessions = rawSessions.Where(s => 
+                            (s.app ?? string.Empty).Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
                     }
-                    File.AppendAllLines(debugFile, lines);
-                }
-                catch { }
 
-                // Apply search filter
-                var q = SearchQuery ?? string.Empty;
-                if (!string.IsNullOrWhiteSpace(q))
-                {
-                    sessions = sessions.Where(s => 
-                        (s.app ?? string.Empty).Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
-                }
+                    // Apply ProcessFilterMode to App Summary
+                    var settings = AppSettingsService.Load();
+                    var filterMode = settings.ProcessFilterMode;
+                    var selectedProcesses = settings.SelectedProcesses ?? new List<string>();
 
-                // Apply ProcessFilterMode to App Summary (same logic as Currently Running)
-                var settings = AppSettingsService.Load();
-                var filterMode = settings.ProcessFilterMode;
-                var selectedProcesses = settings.SelectedProcesses ?? new List<string>();
-
-                // Update FilterModeText for UI display
-                FilterModeText = filterMode switch
-                {
-                    0 => "All Processes",
-                    1 => "Exclude Windows",
-                    2 => $"Selected Only ({selectedProcesses.Count} apps)",
-                    _ => "Exclude Windows"
-                };
-
-                if (filterMode == 2) // SelectedOnly
-                {
-                    sessions = sessions.Where(s => 
-                        selectedProcesses.Contains(s.app ?? string.Empty, StringComparer.OrdinalIgnoreCase)).ToList();
-                }
-                else if (filterMode == 1) // ExcludeWindows (default)
-                {
-                    sessions = sessions.Where(s => 
-                        !ProcessFilter.IsSystemAppName(s.app ?? string.Empty)).ToList();
-                }
-                // mode 0 (All) - no filtering
-
-                // Group sessions by app for summaries
-                var appGroups = sessions.GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app)
-                                       .ToDictionary(g => g.Key, g => g.ToList());
-
-                // Update app summaries
-                _allAppSummaries = appGroups.Select(kvp => new SessionSummaryItem
+                    var filterText = filterMode switch
                     {
-                        AppName = kvp.Key,
-                        ProcessPath = kvp.Value.FirstOrDefault()?.processPath,
-                        SessionCount = kvp.Value.Count,
-                        LongestSessionSeconds = kvp.Value.Count > 0 ? kvp.Value.Max(s => s.durationSeconds) : 0,
-                        PeakCpuPercent = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.peakCpuPercent) : 0,
-                        AverageCpuPercent = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.averageCpuPercent) : 0,
-                        PeakMemoryMb = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.peakMemoryMB) : 0,
-                        AverageMemoryMb = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.averageMemoryMB) : 0
-                    })
-                    .OrderByDescending(s => s.LongestSessionSeconds)
-                    .ToList();
+                        0 => "All Processes",
+                        1 => "Exclude Windows",
+                        2 => $"Selected Only ({selectedProcesses.Count} apps)",
+                        _ => "Exclude Windows"
+                    };
 
-                AppSummaries = new ObservableCollection<SessionSummaryItem>(_allAppSummaries);
+                    if (filterMode == 2) // SelectedOnly
+                    {
+                        rawSessions = rawSessions.Where(s => 
+                            selectedProcesses.Contains(s.app ?? string.Empty, StringComparer.OrdinalIgnoreCase)).ToList();
+                    }
+                    else if (filterMode == 1) // ExcludeWindows (default)
+                    {
+                        rawSessions = rawSessions.Where(s => 
+                            !ProcessFilter.IsSystemAppName(s.app ?? string.Empty)).ToList();
+                    }
 
-                // Update sessions list (all sessions, ordered by start time)
-                _allSessions = sessions
-                        .OrderByDescending(s => s.startTimeUtc)
-                        .Select(s => new SessionRecordItem
+                    // Group sessions by app for summaries
+                    var appGroups = rawSessions.GroupBy(s => string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app)
+                                           .ToDictionary(g => g.Key, g => g.ToList());
+
+                    // Update app summaries
+                    var newAppSummaries = appGroups.Select(kvp => new SessionSummaryItem
                         {
-                            AppName = string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app,
-                            ProcessId = s.processId,
-                            ProcessPath = s.processPath,
-                            StartTimeLocal = s.startTimeUtc.ToLocalTime(),
-                            EndTimeLocal = s.endTimeUtc.ToLocalTime(),
-                            DurationSeconds = s.durationSeconds,
-                            PeakCpuPercent = s.peakCpuPercent,
-                            AverageCpuPercent = s.averageCpuPercent,
-                            PeakMemoryMb = s.peakMemoryMB,
-                            AverageMemoryMb = s.averageMemoryMB
+                            AppName = kvp.Key,
+                            ProcessPath = kvp.Value.FirstOrDefault()?.processPath,
+                            SessionCount = kvp.Value.Count,
+                            LongestSessionSeconds = kvp.Value.Count > 0 ? kvp.Value.Max(s => s.durationSeconds) : 0,
+                            PeakCpuPercent = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.peakCpuPercent) : 0,
+                            AverageCpuPercent = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.averageCpuPercent) : 0,
+                            PeakMemoryMb = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.peakMemoryMB) : 0,
+                            AverageMemoryMb = kvp.Value.Count > 0 ? kvp.Value.Average(s => s.averageMemoryMB) : 0
                         })
+                        .OrderByDescending(s => s.LongestSessionSeconds)
                         .ToList();
 
-                Sessions = new ObservableCollection<SessionRecordItem>(_allSessions);
+                    // Update sessions list (all sessions, ordered by start time)
+                    var newSessions = rawSessions
+                            .OrderByDescending(s => s.startTimeUtc)
+                            .Select(s => new SessionRecordItem
+                            {
+                                AppName = string.IsNullOrWhiteSpace(s.app) ? "Unknown" : s.app,
+                                ProcessId = s.processId,
+                                ProcessPath = s.processPath,
+                                StartTimeLocal = s.startTimeUtc.ToLocalTime(),
+                                EndTimeLocal = s.endTimeUtc.ToLocalTime(),
+                                DurationSeconds = s.durationSeconds,
+                                PeakCpuPercent = s.peakCpuPercent,
+                                AverageCpuPercent = s.averageCpuPercent,
+                                PeakMemoryMb = s.peakMemoryMB,
+                                AverageMemoryMb = s.averageMemoryMB
+                            })
+                            .ToList();
 
-                CoercePageIndexes();
-                ApplyPaging();
+                    Application.Current?.Dispatcher?.BeginInvoke(() =>
+                    {
+                        FilterModeText = filterText;
+                        CurrentlyRunning.ReplaceAll(runningItems);
+                        _allAppSummaries = newAppSummaries;
+                        AppSummaries.ReplaceAll(_allAppSummaries);
+                        _allSessions = newSessions;
+                        Sessions.ReplaceAll(_allSessions);
 
-                // Update summary stats
-                UpdateSummaryStats(appGroups);
-            }
-            catch (Exception ex)
-            {
-                // Clear data on error
-                AppSummaries.Clear();
-                Sessions.Clear();
-                PagedAppSummaries.Clear();
-                PagedSessions.Clear();
-                _allAppSummaries = new List<SessionSummaryItem>();
-                _allSessions = new List<SessionRecordItem>();
-                OnPropertyChanged(nameof(SummaryTotalPages));
-                OnPropertyChanged(nameof(SessionsTotalPages));
-                OnPropertyChanged(nameof(SummaryPageText));
-                OnPropertyChanged(nameof(SessionsPageText));
-                UpdateSummaryStats(new Dictionary<string, List<UsageTrackingService.SessionRecord>>());
-                
-                // Log error
-                try
-                {
-                    var errorFile = Path.Combine(UsageTrackingService.GetBaseDirectory(), "errors.txt");
-                    File.AppendAllText(errorFile, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] UI Refresh error: {ex.Message}\n");
+                        CoercePageIndexes();
+                        ApplyPaging();
+                        UpdateSummaryStats(appGroups);
+                    });
                 }
-                catch { }
-            }
+                catch
+                {
+                    Application.Current?.Dispatcher?.BeginInvoke(() =>
+                    {
+                        AppSummaries.Clear();
+                        Sessions.Clear();
+                        PagedAppSummaries.Clear();
+                        PagedSessions.Clear();
+                        CurrentlyRunning.Clear();
+                        _allAppSummaries = new List<SessionSummaryItem>();
+                        _allSessions = new List<SessionRecordItem>();
+                        OnPropertyChanged(nameof(SummaryTotalPages));
+                        OnPropertyChanged(nameof(SessionsTotalPages));
+                        OnPropertyChanged(nameof(SummaryPageText));
+                        OnPropertyChanged(nameof(SessionsPageText));
+                        UpdateSummaryStats(new Dictionary<string, List<UsageTrackingService.SessionRecord>>());
+                    });
+                }
+            });
         }
 
         private void UpdateSummaryStats(Dictionary<string, List<UsageTrackingService.SessionRecord>> appGroups)

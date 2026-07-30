@@ -12,23 +12,49 @@ namespace TaskCore.Services
             List<string> selectedProcesses,
             Func<Process, bool> isSystemProcess)
         {
-            var allProcesses = Process.GetProcesses();
+            Process[] allProcesses;
+            try
+            {
+                allProcesses = Process.GetProcesses();
+            }
+            catch
+            {
+                allProcesses = Array.Empty<Process>();
+            }
 
-            // Filter based on mode - if SelectedOnly, include selected processes even if they look like system processes
-            var current = allProcesses
-                .Where(p =>
+            var current = new Dictionary<int, string>();
+
+            try
+            {
+                foreach (var p in allProcesses)
                 {
-                    var isSystem = isSystemProcess(p);
-                    var name = p.ProcessName;
+                    try
+                    {
+                        var isSystem = isSystemProcess(p);
+                        var name = p.ProcessName;
 
-                    // In SelectedOnly mode, always track processes in the user's selected list
-                    if (filterMode == 2 && selectedProcesses.Contains(name, StringComparer.OrdinalIgnoreCase))
-                        return true;
-
-                    // Otherwise use standard filtering
-                    return !isSystem;
-                })
-                .ToDictionary(p => p.Id, p => p.ProcessName);
+                        if (filterMode == 2 && selectedProcesses.Contains(name, StringComparer.OrdinalIgnoreCase))
+                        {
+                            current[p.Id] = name;
+                        }
+                        else if (!isSystem)
+                        {
+                            current[p.Id] = name;
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+            finally
+            {
+                // CRITICAL: Always dispose Process wrapper handles to prevent handle leaks
+                foreach (var p in allProcesses)
+                {
+                    try { p.Dispose(); } catch { }
+                }
+            }
 
             return (allProcesses, current);
         }

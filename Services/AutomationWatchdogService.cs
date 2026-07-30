@@ -57,20 +57,22 @@ namespace TaskCore.Services
         {
             try
             {
-                using var searcher = new ManagementObjectSearcher(
-                    "root\\CIMV2",
-                    $"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {pid}");
+                using var searcher = new ManagementObjectSearcher("root\\CIMV2", $"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {pid}");
 
-                foreach (var obj in searcher.Get())
+                using var collection = searcher.Get();
+                foreach (ManagementObject obj in collection)
                 {
-                    try
+                    using (obj)
                     {
-                        var ppidObj = obj["ParentProcessId"];
-                        if (ppidObj == null) continue;
-                        return Convert.ToInt32(ppidObj);
-                    }
-                    catch
-                    {
+                        try
+                        {
+                            var ppidObj = obj["ParentProcessId"];
+                            if (ppidObj == null) continue;
+                            return Convert.ToInt32(ppidObj);
+                        }
+                        catch
+                        {
+                        }
                     }
                 }
 
@@ -87,11 +89,11 @@ namespace TaskCore.Services
             if (Interlocked.Exchange(ref _tickRunning, 1) == 1)
                 return;
 
-            _ = Task.Run(() =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
-                    TickCore();
+                    await TickCoreAsync().ConfigureAwait(false);
                 }
                 finally
                 {
@@ -100,7 +102,7 @@ namespace TaskCore.Services
             });
         }
 
-        private void TickCore()
+        private async Task TickCoreAsync()
         {
             var settings = AppSettingsService.Load();
             if (!settings.AutomationWatchdogEnabled)
@@ -113,7 +115,7 @@ namespace TaskCore.Services
                 TryCleanupEdgeWebView(settings);
 
             if (settings.AutomationCpuMitigationEnabled)
-                TryMitigateCpu(settings);
+                await TryMitigateCpuAsync(settings).ConfigureAwait(false);
         }
 
         private void TryRestartExplorerIfFrozen(AppSettings settings)
@@ -124,40 +126,56 @@ namespace TaskCore.Services
                 if ((nowUtc - _lastExplorerRestartUtc) < TimeSpan.FromSeconds(Math.Max(10, settings.AutomationExplorerRestartCooldownSeconds)))
                     return;
 
-                var explorers = Process.GetProcessesByName("explorer");
-                if (explorers == null || explorers.Length == 0)
-                    return;
-
-                var frozen = explorers.Any(p => !IsRespondingSafe(p));
-                if (!frozen)
-                    return;
-
-                var evt = new AutomationLogStorage.AutomationLogEvent
+                Process[] explorers = Array.Empty<Process>();
+                try
                 {
-                    category = "explorer",
-                    name = "explorer_freeze",
-                    decision = "explorer.exe not responding",
-                    action = "restart_explorer"
-                };
-                AutomationLogStorage.Append(evt);
-
-                foreach (var p in explorers)
-                {
-                    try { p.Kill(); } catch { }
+                    explorers = Process.GetProcessesByName("explorer");
                 }
+                catch { }
 
-                try { Process.Start(new ProcessStartInfo("explorer.exe") { UseShellExecute = true }); } catch { }
-
-                _lastExplorerRestartUtc = nowUtc;
-
-                AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
+                try
                 {
-                    category = "explorer",
-                    name = "explorer_restart",
-                    decision = "restart issued",
-                    action = "start_explorer",
-                    success = true
-                });
+                    if (explorers.Length == 0)
+                        return;
+
+                    var frozen = explorers.Any(p => !IsRespondingSafe(p));
+                    if (!frozen)
+                        return;
+
+                    var evt = new AutomationLogStorage.AutomationLogEvent
+                    {
+                        category = "explorer",
+                        name = "explorer_freeze",
+                        decision = "explorer.exe not responding",
+                        action = "restart_explorer"
+                    };
+                    AutomationLogStorage.Append(evt);
+
+                    foreach (var p in explorers)
+                    {
+                        try { p.Kill(); } catch { }
+                    }
+
+                    try { Process.Start(new ProcessStartInfo("explorer.exe") { UseShellExecute = true }); } catch { }
+
+                    _lastExplorerRestartUtc = nowUtc;
+
+                    AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
+                    {
+                        category = "explorer",
+                        name = "explorer_restart",
+                        decision = "restart issued",
+                        action = "start_explorer",
+                        success = true
+                    });
+                }
+                finally
+                {
+                    foreach (var p in explorers)
+                    {
+                        try { p.Dispose(); } catch { }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -181,172 +199,188 @@ namespace TaskCore.Services
                 if ((nowUtc - _lastEdgeWebViewCleanupUtc) < TimeSpan.FromSeconds(Math.Max(10, settings.AutomationEdgeWebViewCleanupCooldownSeconds)))
                     return;
 
-                var procs = Process.GetProcessesByName("msedgewebview2");
-                if (procs == null || procs.Length == 0)
-                    return;
-
-                var soft = Math.Max(1, settings.AutomationEdgeWebViewSoftLimitInstances);
-                var hard = Math.Max(soft + 1, settings.AutomationEdgeWebViewHardLimitInstances);
-                var panic = Math.Max(hard + 1, settings.AutomationEdgeWebViewPanicLimitInstances);
-
-                var count = procs.Length;
-
-                if (count >= soft)
+                Process[] procs = Array.Empty<Process>();
+                try
                 {
-                    AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
-                    {
-                        category = "webview2",
-                        name = "webview2_limit_check",
-                        decision = $"instances={count} soft={soft} hard={hard} panic={panic}",
-                        action = count >= hard ? "evaluate_heal" : "log_only",
-                        tags = new Dictionary<string, string>
-                        {
-                            ["instances"] = count.ToString(),
-                            ["soft"] = soft.ToString(),
-                            ["hard"] = hard.ToString(),
-                            ["panic"] = panic.ToString()
-                        }
-                    });
+                    procs = Process.GetProcessesByName("msedgewebview2");
                 }
+                catch { }
 
-                if (count < hard)
-                    return;
-
-                var parentGroups = new Dictionary<int, List<Process>>();
-                foreach (var p in procs)
+                try
                 {
-                    try
-                    {
-                        var parentPid = TryGetParentPid(p.Id);
-                        if (!parentPid.HasValue || parentPid.Value <= 0)
-                            continue;
+                    if (procs.Length == 0)
+                        return;
 
-                        if (!parentGroups.TryGetValue(parentPid.Value, out var list))
+                    var soft = Math.Max(1, settings.AutomationEdgeWebViewSoftLimitInstances);
+                    var hard = Math.Max(soft + 1, settings.AutomationEdgeWebViewHardLimitInstances);
+                    var panic = Math.Max(hard + 1, settings.AutomationEdgeWebViewPanicLimitInstances);
+
+                    var count = procs.Length;
+
+                    if (count >= soft)
+                    {
+                        AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
                         {
-                            list = new List<Process>();
-                            parentGroups[parentPid.Value] = list;
+                            category = "webview2",
+                            name = "webview2_limit_check",
+                            decision = $"instances={count} soft={soft} hard={hard} panic={panic}",
+                            action = count >= hard ? "evaluate_heal" : "log_only",
+                            tags = new Dictionary<string, string>
+                            {
+                                ["instances"] = count.ToString(),
+                                ["soft"] = soft.ToString(),
+                                ["hard"] = hard.ToString(),
+                                ["panic"] = panic.ToString()
+                            }
+                        });
+                    }
+
+                    if (count < hard)
+                        return;
+
+                    var parentGroups = new Dictionary<int, List<Process>>();
+                    foreach (var p in procs)
+                    {
+                        try
+                        {
+                            var parentPid = TryGetParentPid(p.Id);
+                            if (!parentPid.HasValue || parentPid.Value <= 0)
+                                continue;
+
+                            if (!parentGroups.TryGetValue(parentPid.Value, out var list))
+                            {
+                                list = new List<Process>();
+                                parentGroups[parentPid.Value] = list;
+                            }
+
+                            list.Add(p);
                         }
-
-                        list.Add(p);
-                    }
-                    catch
-                    {
-                    }
-                }
-
-                var topParent = parentGroups
-                    .Select(kvp => new { ParentPid = kvp.Key, Count = kvp.Value.Count })
-                    .OrderByDescending(x => x.Count)
-                    .FirstOrDefault();
-
-                if (topParent != null && topParent.Count > 0)
-                {
-                    try
-                    {
-                        var parent = Process.GetProcessById(topParent.ParentPid);
-                        if (!IsNeverTouch(parent.ProcessName) && !string.Equals(parent.ProcessName, "explorer", StringComparison.OrdinalIgnoreCase))
+                        catch
                         {
-                            var parentSnap = AutomationLogStorage.TrySnapshot(parent);
+                        }
+                    }
+
+                    var topParent = parentGroups
+                        .Select(kvp => new { ParentPid = kvp.Key, Count = kvp.Value.Count })
+                        .OrderByDescending(x => x.Count)
+                        .FirstOrDefault();
+
+                    if (topParent != null && topParent.Count > 0)
+                    {
+                        try
+                        {
+                            using var parent = Process.GetProcessById(topParent.ParentPid);
+                            if (!IsNeverTouch(parent.ProcessName) && !string.Equals(parent.ProcessName, "explorer", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var parentSnap = AutomationLogStorage.TrySnapshot(parent);
+                                AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
+                                {
+                                    category = "webview2",
+                                    name = count >= panic ? "webview2_panic_heal_parent_kill" : "webview2_hard_heal_parent_kill",
+                                    decision = $"instances={count} parentPid={topParent.ParentPid} parentChildren={topParent.Count}",
+                                    action = "kill_parent",
+                                    process = parentSnap,
+                                    tags = new Dictionary<string, string>
+                                    {
+                                        ["instances"] = count.ToString(),
+                                        ["parentChildren"] = topParent.Count.ToString()
+                                    }
+                                });
+
+                                parent.Kill();
+                                _lastEdgeWebViewCleanupUtc = nowUtc;
+                                return;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
                             AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
                             {
                                 category = "webview2",
-                                name = count >= panic ? "webview2_panic_heal_parent_kill" : "webview2_hard_heal_parent_kill",
-                                decision = $"instances={count} parentPid={topParent.ParentPid} parentChildren={topParent.Count}",
+                                name = "webview2_heal_parent_kill_error",
+                                decision = "exception",
                                 action = "kill_parent",
-                                process = parentSnap,
-                                tags = new Dictionary<string, string>
-                                {
-                                    ["instances"] = count.ToString(),
-                                    ["parentChildren"] = topParent.Count.ToString()
-                                }
+                                success = false,
+                                error = ex.Message
                             });
-
-                            parent.Kill();
-                            _lastEdgeWebViewCleanupUtc = nowUtc;
-                            return;
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
-                        {
-                            category = "webview2",
-                            name = "webview2_heal_parent_kill_error",
-                            decision = "exception",
-                            action = "kill_parent",
-                            success = false,
-                            error = ex.Message
-                        });
-                    }
-                }
 
-                if (count < panic)
-                {
+                    if (count < panic)
+                    {
+                        _lastEdgeWebViewCleanupUtc = nowUtc;
+                        return;
+                    }
+
+                    var maxKills = Math.Max(1, settings.AutomationEdgeWebViewMaxKillsPerRun);
+                    var ordered = procs
+                        .Select(p => new
+                        {
+                            P = p,
+                            Ws = SafeWorkingSet(p),
+                            Start = SafeStartTimeUtc(p)
+                        })
+                        .OrderByDescending(x => x.Ws)
+                        .ThenBy(x => x.Start)
+                        .ToList();
+
+                    var extras = ordered.Skip(settings.AutomationEdgeWebViewMaxInstances).Take(maxKills).ToList();
+                    if (extras.Count == 0)
+                        return;
+
+                    AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
+                    {
+                        category = "webview2",
+                        name = "webview2_cleanup_trigger",
+                        decision = $"instances={procs.Length} limit={settings.AutomationEdgeWebViewMaxInstances}",
+                        action = "kill_extras",
+                        tags = new Dictionary<string, string>
+                        {
+                            ["count"] = procs.Length.ToString(),
+                            ["limit"] = settings.AutomationEdgeWebViewMaxInstances.ToString(),
+                            ["killing"] = extras.Count.ToString()
+                        }
+                    });
+
+                    foreach (var x in extras)
+                    {
+                        try
+                        {
+                            var snap = AutomationLogStorage.TrySnapshot(x.P);
+                            AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
+                            {
+                                category = "webview2",
+                                name = "webview2_kill",
+                                decision = "killing extra instance",
+                                action = "kill",
+                                process = snap
+                            });
+
+                            x.P.Kill();
+                        }
+                        catch (Exception ex)
+                        {
+                            AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
+                            {
+                                category = "webview2",
+                                name = "webview2_kill_error",
+                                decision = "exception",
+                                action = "kill",
+                                success = false,
+                                error = ex.Message
+                            });
+                        }
+                    }
+
                     _lastEdgeWebViewCleanupUtc = nowUtc;
-                    return;
                 }
-
-                var maxKills = Math.Max(1, settings.AutomationEdgeWebViewMaxKillsPerRun);
-                var ordered = procs
-                    .Select(p => new
-                    {
-                        P = p,
-                        Ws = SafeWorkingSet(p),
-                        Start = SafeStartTimeUtc(p)
-                    })
-                    .OrderByDescending(x => x.Ws)
-                    .ThenBy(x => x.Start)
-                    .ToList();
-
-                var extras = ordered.Skip(settings.AutomationEdgeWebViewMaxInstances).Take(maxKills).ToList();
-                if (extras.Count == 0)
-                    return;
-
-                AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
+                finally
                 {
-                    category = "webview2",
-                    name = "webview2_cleanup_trigger",
-                    decision = $"instances={procs.Length} limit={settings.AutomationEdgeWebViewMaxInstances}",
-                    action = "kill_extras",
-                    tags = new Dictionary<string, string>
+                    foreach (var p in procs)
                     {
-                        ["count"] = procs.Length.ToString(),
-                        ["limit"] = settings.AutomationEdgeWebViewMaxInstances.ToString(),
-                        ["killing"] = extras.Count.ToString()
-                    }
-                });
-
-                foreach (var x in extras)
-                {
-                    try
-                    {
-                        var snap = AutomationLogStorage.TrySnapshot(x.P);
-                        AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
-                        {
-                            category = "webview2",
-                            name = "webview2_kill",
-                            decision = "killing extra instance",
-                            action = "kill",
-                            process = snap
-                        });
-
-                        x.P.Kill();
-                    }
-                    catch (Exception ex)
-                    {
-                        AutomationLogStorage.Append(new AutomationLogStorage.AutomationLogEvent
-                        {
-                            category = "webview2",
-                            name = "webview2_kill_error",
-                            decision = "exception",
-                            action = "kill",
-                            success = false,
-                            error = ex.Message
-                        });
+                        try { p.Dispose(); } catch { }
                     }
                 }
-
-                _lastEdgeWebViewCleanupUtc = nowUtc;
             }
             catch (Exception ex)
             {
@@ -362,7 +396,7 @@ namespace TaskCore.Services
             }
         }
 
-        private void TryMitigateCpu(AppSettings settings)
+        private async Task TryMitigateCpuAsync(AppSettings settings)
         {
             try
             {
@@ -370,34 +404,54 @@ namespace TaskCore.Services
                 if ((nowUtc - _lastCpuActionUtc) < TimeSpan.FromSeconds(Math.Max(5, settings.AutomationCpuActionCooldownSeconds)))
                     return;
 
-                var processes = Process.GetProcesses();
-                var samples = new List<(Process P, TimeSpan Cpu, long Ws)>();
-
-                foreach (var p in processes)
+                Process[] processes = Array.Empty<Process>();
+                try
                 {
-                    try
+                    processes = Process.GetProcesses();
+                }
+                catch { }
+
+                var samples = new List<(int Pid, string Name, TimeSpan Cpu, long Ws)>();
+
+                try
+                {
+                    foreach (var p in processes)
                     {
-                        if (p.HasExited) continue;
-                        if (IsNeverTouch(p.ProcessName)) continue;
-                        samples.Add((p, p.TotalProcessorTime, p.WorkingSet64));
+                        try
+                        {
+                            if (p.HasExited) continue;
+                            if (IsNeverTouch(p.ProcessName)) continue;
+                            samples.Add((p.Id, p.ProcessName, p.TotalProcessorTime, p.WorkingSet64));
+                        }
+                        catch
+                        {
+                        }
                     }
-                    catch
+                }
+                finally
+                {
+                    foreach (var p in processes)
                     {
+                        try { p.Dispose(); } catch { }
                     }
                 }
 
-                Thread.Sleep(600);
+                if (samples.Count == 0) return;
 
-                var deltas = new List<(Process P, double CpuPct, long Ws)>();
+                // Non-blocking async delay instead of Thread.Sleep
+                await Task.Delay(600).ConfigureAwait(false);
+
+                var deltas = new List<(int Pid, string Name, double CpuPct, long Ws)>();
                 foreach (var s in samples)
                 {
                     try
                     {
-                        if (s.P.HasExited) continue;
-                        var cpu2 = s.P.TotalProcessorTime;
+                        using var p = Process.GetProcessById(s.Pid);
+                        if (p.HasExited) continue;
+                        var cpu2 = p.TotalProcessorTime;
                         var deltaMs = (cpu2 - s.Cpu).TotalMilliseconds;
                         var cpuPct = (deltaMs / 600.0) * 100.0 / Environment.ProcessorCount;
-                        deltas.Add((s.P, cpuPct, s.Ws));
+                        deltas.Add((s.Pid, s.Name, cpuPct, s.Ws));
                     }
                     catch
                     {
@@ -405,12 +459,12 @@ namespace TaskCore.Services
                 }
 
                 var offender = deltas.OrderByDescending(d => d.CpuPct).FirstOrDefault();
-                if (offender.P == null)
+                if (offender.Pid == 0)
                     return;
 
                 if (offender.CpuPct < settings.AutomationCpuOffenderThresholdPercent)
                 {
-                    lock (_lock) _cpuOffenders.Remove(offender.P.Id);
+                    lock (_lock) _cpuOffenders.Remove(offender.Pid);
                     return;
                 }
 
@@ -421,13 +475,13 @@ namespace TaskCore.Services
 
                 lock (_lock)
                 {
-                    if (!_cpuOffenders.TryGetValue(offender.P.Id, out var state))
+                    if (!_cpuOffenders.TryGetValue(offender.Pid, out var state))
                     {
-                        _cpuOffenders[offender.P.Id] = (nowUtc, nowUtc);
+                        _cpuOffenders[offender.Pid] = (nowUtc, nowUtc);
                     }
                     else
                     {
-                        _cpuOffenders[offender.P.Id] = (state.firstSeenUtc, nowUtc);
+                        _cpuOffenders[offender.Pid] = (state.firstSeenUtc, nowUtc);
                         if ((nowUtc - state.firstSeenUtc) >= TimeSpan.FromSeconds(sustain))
                             shouldLowerPriority = true;
 
@@ -439,19 +493,25 @@ namespace TaskCore.Services
                 if (!shouldLowerPriority && !shouldKill)
                     return;
 
-                if (shouldLowerPriority)
+                try
                 {
-                    TryLowerPriority(offender.P, offender.CpuPct);
-                    _lastCpuActionUtc = nowUtc;
-                }
+                    using var proc = Process.GetProcessById(offender.Pid);
 
-                if (shouldKill)
-                {
-                    TryKillOffender(offender.P, offender.CpuPct);
-                    _lastCpuActionUtc = nowUtc;
+                    if (shouldLowerPriority)
+                    {
+                        TryLowerPriority(proc, offender.CpuPct);
+                        _lastCpuActionUtc = nowUtc;
+                    }
 
-                    lock (_lock) _cpuOffenders.Remove(offender.P.Id);
+                    if (shouldKill)
+                    {
+                        TryKillOffender(proc, offender.CpuPct);
+                        _lastCpuActionUtc = nowUtc;
+
+                        lock (_lock) _cpuOffenders.Remove(offender.Pid);
+                    }
                 }
+                catch { }
             }
             catch (Exception ex)
             {

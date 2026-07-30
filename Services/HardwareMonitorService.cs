@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Management;
 using System.Text;
 using System.Windows.Threading;
 using LibreHardwareMonitor.Hardware;
@@ -230,13 +231,8 @@ namespace TaskCore.Services
 
         private void ProcessHardwareRecursive(IHardware hw)
         {
-            try
-            {
-                hw.Update();
-            }
-            catch
-            {
-            }
+            // Note: hw.Update() was already called via UpdateVisitor during _computer.Accept(_updateVisitor).
+            // Do NOT call hw.Update() again here to avoid 2x redundant sensor polling per tick.
 
             try
             {
@@ -328,13 +324,17 @@ namespace TaskCore.Services
         {
             try
             {
-                using var searcher = new System.Management.ManagementObjectSearcher(
+                using var searcher = new ManagementObjectSearcher(
                     "SELECT * FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation");
-                foreach (var obj in searcher.Get())
+                using var collection = searcher.Get();
+                foreach (ManagementObject obj in collection)
                 {
-                    var temp = obj["Temperature"] as uint?;
-                    if (temp.HasValue && temp.Value > 0)
-                        return temp.Value - 273.15f; // Convert from Kelvin to Celsius
+                    using (obj)
+                    {
+                        var temp = obj["Temperature"] as uint?;
+                        if (temp.HasValue && temp.Value > 0)
+                            return temp.Value - 273.15f; // Convert from Kelvin to Celsius
+                    }
                 }
             }
             catch { }
@@ -342,14 +342,18 @@ namespace TaskCore.Services
             try
             {
                 // Try MS ACPI thermal zones
-                using var searcher = new System.Management.ManagementObjectSearcher(
+                using var searcher = new ManagementObjectSearcher(
                     "root\\WMI", 
                     "SELECT * FROM MSAcpi_ThermalZoneTemperature");
-                foreach (var obj in searcher.Get())
+                using var collection = searcher.Get();
+                foreach (ManagementObject obj in collection)
                 {
-                    var temp = obj["CurrentTemperature"] as uint?;
-                    if (temp.HasValue && temp.Value > 0)
-                        return (temp.Value - 2732) / 10.0f; // Convert from tenths of Kelvin
+                    using (obj)
+                    {
+                        var temp = obj["CurrentTemperature"] as uint?;
+                        if (temp.HasValue && temp.Value > 0)
+                            return (temp.Value - 2732) / 10.0f; // Convert from tenths of Kelvin
+                    }
                 }
             }
             catch { }

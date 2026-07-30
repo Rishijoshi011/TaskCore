@@ -1,17 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using TaskCore.Helpers;
 using TaskCore.Models;
 
 namespace TaskCore.Services
 {
     public class ProcessService
     {
-        // CPU counters per PID
-        private readonly Dictionary<int, PerformanceCounter> cpuCounters = new();
+        // CPU deltas per PID: (lastTotalProcessorTime, lastSampleTimeUtc)
+        private readonly Dictionary<int, (TimeSpan lastCpuTime, DateTime lastSampleUtc)> _cpuSamples = new();
 
         private static bool IsProcessAccessible(Process proc)
         {
@@ -33,15 +34,28 @@ namespace TaskCore.Services
         public List<ProcessGroup> GetGroupedProcesses()
         {
             var groups = new Dictionary<string, ProcessGroup>(StringComparer.OrdinalIgnoreCase);
+            var activePids = new HashSet<int>();
 
-            foreach (var proc in Process.GetProcesses())
+            Process[] processes;
+            try
             {
-                // Skip inaccessible processes early to avoid exceptions
-                if (!IsProcessAccessible(proc))
-                    continue;
+                processes = Process.GetProcesses();
+            }
+            catch
+            {
+                processes = Array.Empty<Process>();
+            }
 
+            foreach (var proc in processes)
+            {
                 try
                 {
+                    activePids.Add(proc.Id);
+
+                    // Skip inaccessible processes early to avoid exceptions
+                    if (!IsProcessAccessible(proc))
+                        continue;
+
                     // Name
                     string name = proc.ProcessName + ".exe";
 
@@ -77,7 +91,7 @@ namespace TaskCore.Services
                         group = new ProcessGroup
                         {
                             GroupName = groupDisplayName,
-                            Items = new ObservableCollection<ProcessItem>(),
+                            Items = new BulkObservableCollection<ProcessItem>(),
                             Icon = item.Icon
                         };
                         groups[groupKey] = group;
@@ -87,11 +101,16 @@ namespace TaskCore.Services
                 }
                 catch (Win32Exception)
                 {
-                    continue;   
+                    continue;
                 }
                 catch
                 {
                     // Inaccessible system processes → ignore
+                }
+                finally
+                {
+                    // CRITICAL: Always dispose Process handle to prevent kernel handle leaks
+                    try { proc.Dispose(); } catch { }
                 }
             }
 
@@ -102,7 +121,7 @@ namespace TaskCore.Services
                 g.TotalMemory = Math.Round(g.Items.Sum(p => p.MemoryMB), 1);
             }
 
-            CleanupDeadCounters();
+            CleanupDeadCpuSamples(activePids);
 
             // Sort by CPU first, then RAM
             return groups.Values
@@ -127,47 +146,45 @@ namespace TaskCore.Services
             }
         }
 
-
         private double GetCpuUsage(Process proc)
         {
             try
             {
-                if (!cpuCounters.TryGetValue(proc.Id, out var counter))
+                var now = DateTime.UtcNow;
+                var currentCpuTime = proc.TotalProcessorTime;
+
+                if (_cpuSamples.TryGetValue(proc.Id, out var prevSample))
                 {
-                    counter = new PerformanceCounter("Process", "% Processor Time", proc.ProcessName, true);
-                    counter.NextValue(); // warm-up
-                    cpuCounters[proc.Id] = counter;
-                    // Return 0 for newly created counters (warm-up call)
-                    return 0;
+                    var timeDeltaMs = (now - prevSample.lastSampleUtc).TotalMilliseconds;
+                    var cpuDeltaMs = (currentCpuTime - prevSample.lastCpuTime).TotalMilliseconds;
+
+                    _cpuSamples[proc.Id] = (currentCpuTime, now);
+
+                    if (timeDeltaMs <= 0) return 0.0;
+
+                    var pct = (cpuDeltaMs / timeDeltaMs) * 100.0 / Environment.ProcessorCount;
+                    return Math.Clamp(pct, 0.0, 100.0);
                 }
 
-                return counter.NextValue() / Environment.ProcessorCount;
+                _cpuSamples[proc.Id] = (currentCpuTime, now);
+                return 0.0;
             }
             catch (Win32Exception)
             {
-                return 0;
+                return 0.0;
             }
             catch
             {
-                return 0;
+                return 0.0;
             }
         }
 
-
-        private void CleanupDeadCounters()
+        private void CleanupDeadCpuSamples(HashSet<int> activePids)
         {
-            var dead = cpuCounters.Keys
-                .Where(pid =>
-                {
-                    try { _ = Process.GetProcessById(pid); return false; }
-                    catch { return true; }
-                })
-                .ToList();
-
-            foreach (var pid in dead)
+            var deadPids = _cpuSamples.Keys.Where(pid => !activePids.Contains(pid)).ToList();
+            foreach (var pid in deadPids)
             {
-                try { cpuCounters[pid]?.Dispose(); } catch { }
-                cpuCounters.Remove(pid);
+                _cpuSamples.Remove(pid);
             }
         }
     }

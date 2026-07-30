@@ -1,11 +1,14 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using TaskCore.Helpers;
 using TaskCore.Models;
 using TaskCore.Services;
 
@@ -32,7 +35,7 @@ namespace TaskCore.ViewModels
 
         // FILTERED, UI-BOUND LIST
         [ObservableProperty]
-        private ObservableCollection<ProcessGroup> processGroups = new();
+        private BulkObservableCollection<ProcessGroup> processGroups = new();
 
         // FILTER PROPERTIES
         partial void OnSearchQueryChanged(string value) => DebouncedApplyFilters();
@@ -119,7 +122,6 @@ namespace TaskCore.ViewModels
             EndTaskCommand.NotifyCanExecuteChanged();
         }
 
-        // 🔥 NEW: LOADING SPINNER BINDING
         [ObservableProperty]
         public bool isLoading = false;
 
@@ -200,9 +202,9 @@ namespace TaskCore.ViewModels
             }
         }
 
-        private System.Collections.Generic.IEnumerable<ProcessGroup> ApplySorting(System.Collections.Generic.IEnumerable<ProcessGroup> groups)
+        private List<ProcessGroup> ApplySorting(IEnumerable<ProcessGroup> groups)
         {
-            System.Collections.Generic.IEnumerable<ProcessGroup> orderedGroups = _sortField switch
+            IEnumerable<ProcessGroup> orderedGroups = _sortField switch
             {
                 SortField.Name => _sortDescending
                     ? groups.OrderByDescending(g => g.GroupName)
@@ -219,11 +221,13 @@ namespace TaskCore.ViewModels
                 _ => groups
             };
 
-            foreach (var g in orderedGroups)
+            var result = orderedGroups.ToList();
+
+            foreach (var g in result)
             {
                 try
                 {
-                    System.Collections.Generic.IEnumerable<ProcessItem> orderedItems = _sortField switch
+                    IEnumerable<ProcessItem> orderedItems = _sortField switch
                     {
                         SortField.Name => _sortDescending
                             ? g.Items.OrderByDescending(p => p.Name)
@@ -240,17 +244,14 @@ namespace TaskCore.ViewModels
                         _ => g.Items.AsEnumerable()
                     };
 
-                    var snapshot = orderedItems.ToList();
-                    g.Items.Clear();
-                    foreach (var it in snapshot)
-                        g.Items.Add(it);
+                    g.Items.ReplaceAll(orderedItems);
                 }
                 catch
                 {
                 }
-
-                yield return g;
             }
+
+            return result;
         }
 
         private void OnViewChanged(string viewName)
@@ -258,9 +259,15 @@ namespace TaskCore.ViewModels
             try
             {
                 if (viewName == "Processes")
-                    _timer.Start();
+                {
+                    if (!_timer.IsEnabled)
+                        _timer.Start();
+                }
                 else
-                    _timer.Stop();
+                {
+                    if (_timer.IsEnabled)
+                        _timer.Stop();
+                }
             }
             catch
             {
@@ -273,7 +280,6 @@ namespace TaskCore.ViewModels
                 .GetIsInDesignMode(new DependencyObject());
         }
 
-        // 🔥 MAIN REFRESH LOGIC (with loading + async task-run)
         private async Task LoadProcessListAsync()
         {
             if (_isRefreshing) return;
@@ -309,14 +315,13 @@ namespace TaskCore.ViewModels
             }
         }
 
-        // FILTER ONLY — does NOT call process service
         private void ApplyFilters()
         {
             // preserve old selection BEFORE filtering
             var oldSelected = SelectedProcess;
 
             // preserve expand state BEFORE refresh/filter
-            var expandState = new System.Collections.Generic.Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            var expandState = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
             try
             {
                 foreach (var g in ProcessGroups)
@@ -342,20 +347,29 @@ namespace TaskCore.ViewModels
             }
 
             // ↕ Sorting (groups + items)
-            filtered = ApplySorting(filtered);
+            var sortedList = ApplySorting(filtered);
 
-            // Update UI list safely
-            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            // Update UI list safely using BulkObservableCollection ReplaceAll (1 Reset event)
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
             {
-                ProcessGroups.Clear();
-                foreach (var grp in filtered)
-                {
-                    if (expandState.TryGetValue(grp.GroupName, out var isExpanded))
-                        grp.IsExpanded = isExpanded;
+                dispatcher.BeginInvoke(new Action(() => UpdateGroupsUi(sortedList, expandState, oldSelected)));
+            }
+            else
+            {
+                UpdateGroupsUi(sortedList, expandState, oldSelected);
+            }
+        }
 
-                    ProcessGroups.Add(grp);
-                }
-            }));
+        private void UpdateGroupsUi(List<ProcessGroup> sortedList, Dictionary<string, bool> expandState, ProcessItem? oldSelected)
+        {
+            foreach (var grp in sortedList)
+            {
+                if (expandState.TryGetValue(grp.GroupName, out var isExpanded))
+                    grp.IsExpanded = isExpanded;
+            }
+
+            ProcessGroups.ReplaceAll(sortedList);
 
             // 🔄 Restore selected process if it still exists
             if (oldSelected != null)
@@ -384,12 +398,15 @@ namespace TaskCore.ViewModels
                 {
                     await Task.Delay(300, token);
                     if (!token.IsCancellationRequested)
-                        ApplyFilters();
+                    {
+                        var dispatcher = Application.Current?.Dispatcher;
+                        if (dispatcher != null)
+                            dispatcher.BeginInvoke(new Action(ApplyFilters));
+                    }
                 }
                 catch { /* ignored */ }
             }, token);
         }
-
 
         [RelayCommand]
         private void EndTask()
@@ -403,7 +420,7 @@ namespace TaskCore.ViewModels
                 {
                     try
                     {
-                        var proc = System.Diagnostics.Process.GetProcessById(item.PID);
+                        using var proc = System.Diagnostics.Process.GetProcessById(item.PID);
                         if (!proc.HasExited)
                         {
                             proc.Kill();
@@ -436,7 +453,7 @@ namespace TaskCore.ViewModels
 
             try
             {
-                var proc = System.Diagnostics.Process.GetProcessById(pid);
+                using var proc = System.Diagnostics.Process.GetProcessById(pid);
                 if (proc.HasExited)
                 {
                     TaskCoreLogger.Warn("endtask", $"Process {pid} already exited");

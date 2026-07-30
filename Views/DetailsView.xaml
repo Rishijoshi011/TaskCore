@@ -16,8 +16,8 @@
         <vm:DetailsViewModel/>
     </UserControl.DataContext>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-        <StackPanel>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="0 0 24 0">
             <!-- Header -->
             <StackPanel Orientation="Horizontal" Margin="0 0 0 0">
                 <TextBlock Text="Session Tracker"
@@ -225,17 +225,15 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <DataGrid
-                              ItemsSource="{Binding PagedAppSummaries}"
+                    <DataGrid ItemsSource="{Binding PagedAppSummaries}"
                               Style="{StaticResource DarkDataGrid}"
                               AutoGenerateColumns="False"
                               HeadersVisibility="Column"
-                              ColumnWidth="*"
                               HorizontalAlignment="Stretch"
                               HorizontalContentAlignment="Stretch"
                               VerticalAlignment="Center"
                               VerticalContentAlignment="Center"
-                              x:Name="AppSummaryGrid" Width="auto" >
+                              x:Name="AppSummaryGrid">
                         <DataGrid.ContextMenu>
                             <ContextMenu Style="{StaticResource DarkContextMenu}">
                                 <MenuItem Header="Application" IsCheckable="True" IsChecked="{Binding PlacementTarget.DataContext.ShowSummaryApp, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Style="{StaticResource DarkMenuItem}"/>
@@ -248,7 +246,7 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="Application" Width="Auto" MinWidth="120" Visibility="{Binding Data.ShowSummaryApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTemplateColumn Header="Application" Width="*" MinWidth="150" Visibility="{Binding Data.ShowSummaryApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,6">
@@ -258,7 +256,7 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Sessions" Binding="{Binding SessionCount}" Width="Auto" MinWidth="70" Visibility="{Binding Data.ShowSummarySessions, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Sessions" Binding="{Binding SessionCount}" Width="Auto" MinWidth="80" Visibility="{Binding Data.ShowSummarySessions, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -266,7 +264,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Longest" Binding="{Binding LongestSessionDisplay}" Width="Auto" MinWidth="80" Visibility="{Binding Data.ShowSummaryLongest, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Longest" Binding="{Binding LongestSessionDisplay}" Width="Auto" MinWidth="95" Visibility="{Binding Data.ShowSummaryLongest, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -274,7 +272,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Peak CPU %" Binding="{Binding PeakCpuPercent, StringFormat={}{0:F1}}" Width="Auto" MinWidth="85" Visibility="{Binding Data.ShowSummaryPeakCpu, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Peak CPU %" Binding="{Binding PeakCpuPercent, StringFormat={}{0:F1}}" Width="Auto" MinWidth="100" Visibility="{Binding Data.ShowSummaryPeakCpu, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -282,7 +280,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Avg CPU %" Binding="{Binding AverageCpuPercent, StringFormat={}{0:F1}}" Width="Auto" MinWidth="80" Visibility="{Binding Data.ShowSummaryAvgCpu, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Avg CPU %" Binding="{Binding AverageCpuPercent, StringFormat={}{0:F1}}" Width="Auto" MinWidth="100" Visibility="{Binding Data.ShowSummaryAvgCpu, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -290,7 +288,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Peak Memory" Binding="{Binding PeakMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto" MinWidth="95" Visibility="{Binding Data.ShowSummaryPeakMem, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Peak Memory" Binding="{Binding PeakMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto" MinWidth="115" Visibility="{Binding Data.ShowSummaryPeakMem, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -298,7 +296,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Avg Memory" Binding="{Binding AverageMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto" MinWidth="90" Visibility="{Binding Data.ShowSummaryAvgMem, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Avg Memory" Binding="{Binding AverageMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto" MinWidth="115" Visibility="{Binding Data.ShowSummaryAvgMem, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -361,7 +359,7 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="Application" Width="Auto" MinWidth="120" Visibility="{Binding Data.ShowRunningApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTemplateColumn Header="Application" Width="*" MinWidth="150" Visibility="{Binding Data.ShowRunningApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,6">
@@ -371,7 +369,7 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto" MinWidth="60" Visibility="{Binding Data.ShowRunningPid, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto" MinWidth="75" Visibility="{Binding Data.ShowRunningPid, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -379,7 +377,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Started" Binding="{Binding StartTimeLocal, StringFormat={}{0:HH:mm:ss}}" Width="Auto" MinWidth="70" Visibility="{Binding Data.ShowRunningStart, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Started" Binding="{Binding StartTimeLocal, StringFormat={}{0:HH:mm:ss}}" Width="Auto" MinWidth="95" Visibility="{Binding Data.ShowRunningStart, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -387,7 +385,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Duration" Binding="{Binding DurationDisplay}" Width="Auto" MinWidth="70" Visibility="{Binding Data.ShowRunningDuration, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Duration" Binding="{Binding DurationDisplay}" Width="Auto" MinWidth="95" Visibility="{Binding Data.ShowRunningDuration, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -395,7 +393,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="CPU %" Binding="{Binding CurrentCpuPercent, StringFormat={}{0:F1}}" Width="Auto" MinWidth="60" Visibility="{Binding Data.ShowRunningCpu, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="CPU %" Binding="{Binding CurrentCpuPercent, StringFormat={}{0:F1}}" Width="Auto" MinWidth="85" Visibility="{Binding Data.ShowRunningCpu, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -403,7 +401,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Memory" Binding="{Binding CurrentMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto" MinWidth="80" Visibility="{Binding Data.ShowRunningMem, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Memory" Binding="{Binding CurrentMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto" MinWidth="105" Visibility="{Binding Data.ShowRunningMem, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -469,7 +467,7 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="Application" Width="Auto" MinWidth="120" Visibility="{Binding Data.ShowSessionApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTemplateColumn Header="Application" Width="*" MinWidth="150" Visibility="{Binding Data.ShowSessionApp, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,6">
@@ -479,7 +477,7 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto" MinWidth="60" Visibility="{Binding Data.ShowSessionPid, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto" MinWidth="75" Visibility="{Binding Data.ShowSessionPid, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -487,7 +485,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Start" Binding="{Binding StartDisplay}" Width="Auto" MinWidth="70" Visibility="{Binding Data.ShowSessionStart, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Start" Binding="{Binding StartDisplay}" Width="Auto" MinWidth="95" Visibility="{Binding Data.ShowSessionStart, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -495,7 +493,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="End" Binding="{Binding EndDisplay}" Width="Auto" MinWidth="70" Visibility="{Binding Data.ShowSessionEnd, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="End" Binding="{Binding EndDisplay}" Width="Auto" MinWidth="95" Visibility="{Binding Data.ShowSessionEnd, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -503,7 +501,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Duration" Binding="{Binding DurationDisplay}" Width="Auto" MinWidth="70" Visibility="{Binding Data.ShowSessionDuration, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Duration" Binding="{Binding DurationDisplay}" Width="Auto" MinWidth="95" Visibility="{Binding Data.ShowSessionDuration, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -511,7 +509,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Peak CPU %" Binding="{Binding PeakCpuPercent, StringFormat={}{0:F1}}" Width="Auto" MinWidth="85" Visibility="{Binding Data.ShowSessionPeakCpu, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Peak CPU %" Binding="{Binding PeakCpuPercent, StringFormat={}{0:F1}}" Width="Auto" MinWidth="100" Visibility="{Binding Data.ShowSessionPeakCpu, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -519,7 +517,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Avg CPU %" Binding="{Binding AverageCpuPercent, StringFormat={}{0:F1}}" Width="Auto" MinWidth="80" Visibility="{Binding Data.ShowSessionAvgCpu, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Avg CPU %" Binding="{Binding AverageCpuPercent, StringFormat={}{0:F1}}" Width="Auto" MinWidth="100" Visibility="{Binding Data.ShowSessionAvgCpu, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -527,7 +525,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Peak Memory" Binding="{Binding PeakMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto" MinWidth="95" Visibility="{Binding Data.ShowSessionPeakMem, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Peak Memory" Binding="{Binding PeakMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto" MinWidth="115" Visibility="{Binding Data.ShowSessionPeakMem, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -535,7 +533,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="Avg Memory" Binding="{Binding AverageMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto" MinWidth="90" Visibility="{Binding Data.ShowSessionAvgMem, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTextColumn Header="Avg Memory" Binding="{Binding AverageMemoryMb, StringFormat={}{0:F0} MB}" Width="Auto" MinWidth="115" Visibility="{Binding Data.ShowSessionAvgMem, Source={StaticResource VmProxy}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Left"/>

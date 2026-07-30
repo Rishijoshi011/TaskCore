@@ -1,7 +1,8 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
+using TaskCore.Helpers;
 
 namespace TaskCore.Models
 {
@@ -19,7 +20,7 @@ namespace TaskCore.Models
             set => SetProperty(ref _isExpanded, value);
         }
 
-        public ObservableCollection<ProcessItem> Items { get; init; } = new();
+        public BulkObservableCollection<ProcessItem> Items { get; init; } = new();
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
