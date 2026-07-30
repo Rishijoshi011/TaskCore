@@ -28,6 +28,7 @@ namespace TaskCore
         private DashboardView? _dashboardView;
         private ProcessesView? _processesView;
         private GraphsView? _graphsView;
+        private TaskCore.Views.Graphs.SystemSensorsView? _sensorsView;
         private DetailsView? _detailsView;
 
         // Light views - always available
@@ -188,6 +189,7 @@ namespace TaskCore
                 AddSidebarItem("Dashboard", "pack://application:,,,/TaskCore;component/Resources/Icons/Dashboard.png");
                 AddSidebarItem("Processes", "pack://application:,,,/TaskCore;component/Resources/Icons/Processes.png");
                 AddSidebarItem("Graphs", "pack://application:,,,/TaskCore;component/Resources/Icons/Graphs.png");
+                AddSidebarItem("Sensors", "pack://application:,,,/TaskCore;component/Resources/Icons/Dashboard.png");
                 AddSidebarItem("Session Tracker", "pack://application:,,,/TaskCore;component/Resources/Icons/Session.png");
                 AddSidebarItem("Rules", "pack://application:,,,/TaskCore;component/Resources/Icons/Rules.png");
                 AddSidebarItem("Settings", "pack://application:,,,/TaskCore;component/Resources/Icons/Settings.png");
@@ -237,6 +239,12 @@ namespace TaskCore
                 _graphsView = new GraphsView();
             return _graphsView;
         }
+        private TaskCore.Views.Graphs.SystemSensorsView GetSensorsView()
+        {
+            if (_sensorsView == null)
+                _sensorsView = new TaskCore.Views.Graphs.SystemSensorsView();
+            return _sensorsView;
+        }
         private DetailsView GetDetailsView()
         {
             if (_detailsView == null)
@@ -262,6 +270,7 @@ namespace TaskCore
             DisposeView(_dashboardView);
             DisposeView(_processesView);
             DisposeView(_graphsView);
+            DisposeView(_sensorsView);
             DisposeView(_detailsView);
             DisposeView(_rulesView);
             DisposeView(_settingsView);
@@ -313,15 +322,16 @@ namespace TaskCore
             }
             else
             {
-                // Normal Mode: All 6 tabs
+                // Normal Mode: All 7 tabs
                 string viewName = Sidebar.SelectedIndex switch
                 {
                     0 => "Dashboard",
                     1 => "Processes",
                     2 => "Graphs",
-                    3 => "Details",
-                    4 => "Rules",
-                    5 => "Settings",
+                    3 => "Sensors",
+                    4 => "Details",
+                    5 => "Rules",
+                    6 => "Settings",
                     _ => "Dashboard"
                 };
 
@@ -330,6 +340,7 @@ namespace TaskCore
                     "Dashboard" => GetDashboardView(),
                     "Processes" => GetProcessesView(),
                     "Graphs" => GetGraphsView(),
+                    "Sensors" => GetSensorsView(),
                     "Details" => GetDetailsView(),
                     "Rules" => GetRulesView(),
                     "Settings" => GetSettingsView(),
@@ -505,9 +516,10 @@ namespace TaskCore
                 "Dashboard" => 0,
                 "Processes" => 1,
                 "Graphs" => 2,
-                "Session Tracker" or "Details" => 3,
-                "Rules" => _watchdogMode ? 0 : 4,
-                "Settings" => _watchdogMode ? 1 : 5,
+                "Sensors" => 3,
+                "Session Tracker" or "Details" => 4,
+                "Rules" => _watchdogMode ? 0 : 5,
+                "Settings" => _watchdogMode ? 1 : 6,
                 _ => 0
             };
 

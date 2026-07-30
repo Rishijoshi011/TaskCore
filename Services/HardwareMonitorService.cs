@@ -26,6 +26,8 @@ namespace TaskCore.Services
         private float? _anyTemp;
         private DateTime _lastDebugLogUtc = DateTime.MinValue;
 
+        private readonly List<RawSensorSnapshot> _sensorSnapshots = new();
+
         private HardwareMonitorService()
         {
             _computer = new Computer
@@ -33,10 +35,14 @@ namespace TaskCore.Services
                 IsCpuEnabled = true,
                 IsGpuEnabled = true,
                 IsMemoryEnabled = true,
-                IsMotherboardEnabled = true
+                IsMotherboardEnabled = true,
+                IsStorageEnabled = true,
+                IsControllerEnabled = true,
+                IsPsuEnabled = true,
+                IsBatteryEnabled = true
             };
 
-            _computer.Open();
+            try { _computer.Open(); } catch { }
 
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.CurrentMs) };
             _timer.Tick += (_, __) => Refresh();
@@ -68,7 +74,8 @@ namespace TaskCore.Services
             {
                 // Only refresh temps when these views are visible.
                 if (string.Equals(viewName, "Dashboard", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(viewName, "Graphs", StringComparison.OrdinalIgnoreCase))
+                    || string.Equals(viewName, "Graphs", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(viewName, "Sensors", StringComparison.OrdinalIgnoreCase))
                 {
                     if (!_timer.IsEnabled)
                         _timer.Start();
@@ -107,6 +114,7 @@ namespace TaskCore.Services
 
                         _gpuTempsByName.Clear();
                         _storageTempsByName.Clear();
+                        _sensorSnapshots.Clear();
                         _cpuPackageTemp = null;
                         _memoryTemp = null;
                         _anyTemp = null;
@@ -245,6 +253,25 @@ namespace TaskCore.Services
         {
             // Note: hw.Update() was already called via UpdateVisitor during _computer.Accept(_updateVisitor).
             // Do NOT call hw.Update() again here to avoid 2x redundant sensor polling per tick.
+
+            try
+            {
+                foreach (var s in hw.Sensors)
+                {
+                    _sensorSnapshots.Add(new RawSensorSnapshot
+                    {
+                        HardwareName = hw.Name,
+                        HardwareType = hw.HardwareType,
+                        SensorName = s.Name,
+                        SensorType = s.SensorType,
+                        Identifier = s.Identifier.ToString(),
+                        Value = s.Value
+                    });
+                }
+            }
+            catch
+            {
+            }
 
             try
             {
@@ -408,6 +435,14 @@ namespace TaskCore.Services
             }
         }
 
+        public List<RawSensorSnapshot> GetAllSensorsSnapshot()
+        {
+            lock (_lock)
+            {
+                return new List<RawSensorSnapshot>(_sensorSnapshots);
+            }
+        }
+
         public void Dispose()
         {
             try
@@ -426,5 +461,15 @@ namespace TaskCore.Services
             {
             }
         }
+    }
+
+    public sealed class RawSensorSnapshot
+    {
+        public required string HardwareName { get; init; }
+        public required HardwareType HardwareType { get; init; }
+        public required string SensorName { get; init; }
+        public required SensorType SensorType { get; init; }
+        public required string Identifier { get; init; }
+        public float? Value { get; init; }
     }
 }

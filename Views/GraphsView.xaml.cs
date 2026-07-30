@@ -12,6 +12,7 @@ namespace TaskCore.Views
         private Graphs.GpuGraphView? _gpuView;
         private Graphs.DiskGraphView? _diskView;
         private Graphs.NetworkGraphView? _networkView;
+        private Graphs.SystemSensorsView? _sensorsView;
         private bool _disposed;
 
         private static void Log(string msg)
@@ -85,6 +86,7 @@ namespace TaskCore.Views
             DisposeView(_gpuView);
             DisposeView(_diskView);
             DisposeView(_networkView);
+            DisposeView(_sensorsView);
 
             GC.SuppressFinalize(this);
         }
@@ -197,6 +199,23 @@ namespace TaskCore.Views
             catch (Exception ex)
             {
                 Log($"ERROR switching to Network: {ex.Message}");
+            }
+        }
+
+        private void Sensors_Checked(object sender, RoutedEventArgs e)
+        {
+            if (GraphContent == null) return;
+            UncheckOthers(sender);
+            try
+            {
+                DeactivateCurrentView();
+                _sensorsView ??= new Graphs.SystemSensorsView();
+                GraphContent.Content = _sensorsView;
+                if (_sensorsView is IActivatableView av) av.OnActivated();
+            }
+            catch (Exception ex)
+            {
+                Log($"ERROR switching to System Sensors: {ex.Message}");
             }
         }
 
