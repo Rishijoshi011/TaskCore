@@ -22,7 +22,7 @@ namespace TaskCore.Services
             }
         }
 
-        public static void SetEnabled(bool enabled)
+        public static void SetEnabled(bool enabled, bool startMinimized = false)
         {
             try
             {
@@ -38,6 +38,10 @@ namespace TaskCore.Services
                 var exe = Environment.ProcessPath;
                 if (string.IsNullOrWhiteSpace(exe)) return;
                 var cmd = "\"" + exe + "\"";
+                if (startMinimized)
+                {
+                    cmd += " --minimized";
+                }
                 key.SetValue(AppName, cmd);
             }
             catch

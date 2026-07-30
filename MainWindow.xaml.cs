@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows;
@@ -111,6 +111,19 @@ namespace TaskCore
             var hwnd = new WindowInteropHelper(this).Handle;
             var source = HwndSource.FromHwnd(hwnd);
             source?.AddHook(WndProcHook);
+
+            var settings = AppSettingsService.Load();
+            bool startMinimized = settings.StartMinimized || Environment.GetCommandLineArgs().Any(arg =>
+                arg.Equals("--minimized", StringComparison.OrdinalIgnoreCase) ||
+                arg.Equals("-minimized", StringComparison.OrdinalIgnoreCase) ||
+                arg.Equals("/minimized", StringComparison.OrdinalIgnoreCase));
+
+            if (startMinimized)
+            {
+                TrayIconService.Instance.Initialize(this);
+                WindowState = WindowState.Minimized;
+                Hide();
+            }
         }
 
         private IntPtr WndProcHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

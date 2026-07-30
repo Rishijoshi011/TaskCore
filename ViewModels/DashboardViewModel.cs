@@ -121,235 +121,131 @@ namespace TaskCore.ViewModels
         }
 
         [RelayCommand]
-        private void RestartExplorer()
+        private async Task RestartExplorerAsync()
         {
-            ExecuteCommandWithLogging(
-                "RestartExplorer",
-                "cmd.exe",
-                "/c taskkill /f /im explorer.exe & start explorer.exe",
-                "Explorer restarted successfully",
-                "Failed to restart Explorer"
-            );
+            ActionStatusText = "Restarting Explorer...";
+            var result = await QuickActionsService.RestartExplorerAsync();
+            ActionStatusText = result.Message;
         }
 
         [RelayCommand]
-        private void FlushDns()
+        private async Task FlushDnsAsync()
         {
-            ExecuteCommandWithLogging(
-                "FlushDns",
-                "ipconfig",
-                "/flushdns",
-                "DNS cache flushed successfully",
-                "Failed to flush DNS"
-            );
+            ActionStatusText = "Flushing DNS cache...";
+            var result = await QuickActionsService.FlushDnsAsync();
+            ActionStatusText = result.Message;
         }
 
         [RelayCommand]
-        private void ClearTemp()
+        private async Task ClearTempAsync()
         {
-            try
-            {
-                ActionStatusText = "Clearing temp files...";
-                long freedBytes = 0;
-                int deletedFiles = 0;
-                int deletedDirs = 0;
-                var errors = new System.Collections.Generic.List<string>();
-                var tempPaths = new[]
-                {
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp"),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp"),
-                    Path.GetTempPath()
-                };
-
-                foreach (var tempPath in tempPaths)
-                {
-                    if (!Directory.Exists(tempPath)) continue;
-                    try
-                    {
-                        foreach (var file in Directory.GetFiles(tempPath, "*.*", SearchOption.TopDirectoryOnly))
-                        {
-                            try
-                            {
-                                var fi = new FileInfo(file);
-                                freedBytes += fi.Length;
-                                File.Delete(file);
-                                deletedFiles++;
-                            }
-                            catch (Exception ex) { errors.Add($"File {file}: {ex.Message}"); }
-                        }
-                        foreach (var dir in Directory.GetDirectories(tempPath))
-                        {
-                            try
-                            {
-                                Directory.Delete(dir, true);
-                                deletedDirs++;
-                            }
-                            catch (Exception ex) { errors.Add($"Dir {dir}: {ex.Message}"); }
-                        }
-                    }
-                    catch (Exception ex) { errors.Add($"Path {tempPath}: {ex.Message}"); }
-                }
-
-                var logMsg = $"[ClearTemp] Deleted {deletedFiles} files, {deletedDirs} directories, freed {freedBytes / 1024 / 1024} MB. Errors: {errors.Count}";
-                LogQuickAction(logMsg);
-
-                ActionStatusText = $"Cleared {freedBytes / 1024 / 1024} MB ({errors.Count} errors)";
-            }
-            catch (Exception ex)
-            {
-                LogQuickAction($"[ClearTemp] Failed: {ex.Message}");
-                ActionStatusText = $"Failed: {ex.Message}";
-            }
+            ActionStatusText = "Clearing temporary files...";
+            var result = await QuickActionsService.ClearTempAsync();
+            ActionStatusText = result.Message;
         }
 
         [RelayCommand]
-        private void RestartAudioService()
+        private async Task RestartAudioServiceAsync()
         {
-            ExecuteCommandWithLogging(
-                "RestartAudioService",
-                "cmd.exe",
-                "/c net stop audiosrv & net start audiosrv",
-                "Audio service restarted successfully",
-                "Failed to restart audio service"
-            );
+            ActionStatusText = "Restarting Audio service...";
+            var result = await QuickActionsService.RestartAudioServiceAsync();
+            ActionStatusText = result.Message;
         }
 
         [RelayCommand]
-        private void RestartGpuDriver()
+        private async Task RestartGpuDriverAsync()
         {
-            ExecuteCommandWithLogging(
-                "RestartGpuDriver",
-                "powershell.exe",
-                "-Command \"Get-PnpDevice -Class DisplayAdapter -Status OK | Disable-PnpDevice -Confirm:$false; Start-Sleep 2; Get-PnpDevice -Class DisplayAdapter | Enable-PnpDevice -Confirm:$false\"",
-                "GPU driver restart initiated (check log for details)",
-                "Failed to restart GPU driver"
-            );
+            ActionStatusText = "Initiating GPU driver restart...";
+            var result = await QuickActionsService.ClearIconCacheAsync();
+            ActionStatusText = result.Message;
         }
 
         [RelayCommand]
-        private void ResetNetworkStack()
+        private async Task ResetNetworkStackAsync()
         {
-            Task.Run(() =>
-            {
-                var results = new System.Collections.Generic.List<string>();
-                var commands = new[]
-                {
-                    ("netsh", "winsock reset"),
-                    ("netsh", "int ip reset"),
-                    ("ipconfig", "/flushdns"),
-                    ("ipconfig", "/release"),
-                    ("ipconfig", "/renew")
-                };
-
-                foreach (var (exe, args) in commands)
-                {
-                    var (success, output, exitCode) = ExecuteCommandAndCaptureOutput(exe, args, 10000);
-                    results.Add($"[{exe} {args}] Exit: {exitCode}, Success: {success}");
-                    if (!string.IsNullOrEmpty(output))
-                        results.Add($"  Output: {output.Substring(0, Math.Min(200, output.Length))}");
-                }
-
-                LogQuickAction($"[ResetNetworkStack]{Environment.NewLine}" + string.Join(Environment.NewLine, results));
-                ActionStatusText = "Network stack reset completed (see log)";
-            });
+            ActionStatusText = "Resetting network stack...";
+            var result = await QuickActionsService.ResetNetworkStackAsync();
+            ActionStatusText = result.Message;
         }
 
         [RelayCommand]
-        private void RenewIp()
+        private async Task RenewIpAsync()
         {
-            Task.Run(() =>
-            {
-                var (releaseSuccess, releaseOutput, releaseCode) = ExecuteCommandAndCaptureOutput("ipconfig", "/release", 5000);
-                Thread.Sleep(1000);
-                var (renewSuccess, renewOutput, renewCode) = ExecuteCommandAndCaptureOutput("ipconfig", "/renew", 10000);
-
-                var logMsg = $"[RenewIp] Release Exit: {releaseCode}, Renew Exit: {renewCode}";
-                LogQuickAction(logMsg);
-
-                ActionStatusText = renewSuccess ? "IP renewed successfully" : $"IP renew failed (exit: {renewCode})";
-            });
+            ActionStatusText = "Renewing IP address...";
+            var result = await QuickActionsService.RenewIpAsync();
+            ActionStatusText = result.Message;
         }
 
         [RelayCommand]
-        private void RestartPrintSpooler()
+        private async Task RestartPrintSpoolerAsync()
         {
-            ExecuteCommandWithLogging(
-                "RestartPrintSpooler",
-                "cmd.exe",
-                "/c net stop spooler & net start spooler",
-                "Print spooler restarted successfully",
-                "Failed to restart print spooler"
-            );
+            ActionStatusText = "Restarting Print Spooler...";
+            var result = await QuickActionsService.RestartPrintSpoolerAsync();
+            ActionStatusText = result.Message;
         }
 
         [RelayCommand]
-        private void RestartWindowsSearch()
+        private async Task RestartWindowsSearchAsync()
         {
-            ExecuteCommandWithLogging(
-                "RestartWindowsSearch",
-                "cmd.exe",
-                "/c net stop wsearch & net start wsearch",
-                "Windows Search restarted successfully",
-                "Failed to restart Windows Search"
-            );
+            ActionStatusText = "Restarting Windows Search...";
+            var result = await QuickActionsService.RestartWindowsSearchAsync();
+            ActionStatusText = result.Message;
         }
 
         [RelayCommand]
-        private void ClearIconCache()
+        private async Task ClearIconCacheAsync()
         {
-            ExecuteCommandWithLogging(
-                "ClearIconCache",
-                "cmd.exe",
-                "/c taskkill /f /im explorer.exe & del /f /q %localappdata%\\IconCache.db & start explorer.exe",
-                "Icon cache cleared successfully",
-                "Failed to clear icon cache"
-            );
+            ActionStatusText = "Clearing icon cache...";
+            var result = await QuickActionsService.ClearIconCacheAsync();
+            ActionStatusText = result.Message;
         }
 
         [RelayCommand]
-        private void SfcScan()
+        private async Task SfcScanAsync()
         {
-            try
-            {
-                ActionStatusText = "Starting SFC scan...";
-                var psi = new ProcessStartInfo("sfc", "/scannow")
-                {
-                    CreateNoWindow = false,
-                    UseShellExecute = true,
-                    Verb = "runas"
-                };
-                var proc = Process.Start(psi);
-                LogQuickAction($"[SfcScan] Process started (PID: {proc?.Id}). Requires admin elevation.");
-                ActionStatusText = "SFC scan started (requires admin - see log)";
-            }
-            catch (Exception ex)
-            {
-                LogQuickAction($"[SfcScan] Failed: {ex.Message}");
-                ActionStatusText = $"Failed: {ex.Message}";
-            }
+            ActionStatusText = "Launching SFC scan...";
+            var result = await QuickActionsService.SfcScanAsync();
+            ActionStatusText = result.Message;
         }
 
         [RelayCommand]
-        private void DismRepair()
+        private async Task DismRepairAsync()
         {
-            try
-            {
-                ActionStatusText = "Starting DISM repair...";
-                var psi = new ProcessStartInfo("DISM.exe", "/Online /Cleanup-Image /RestoreHealth")
-                {
-                    CreateNoWindow = false,
-                    UseShellExecute = true,
-                    Verb = "runas"
-                };
-                var proc = Process.Start(psi);
-                LogQuickAction($"[DismRepair] Process started (PID: {proc?.Id}). Requires admin elevation.");
-                ActionStatusText = "DISM repair started (requires admin - see log)";
-            }
-            catch (Exception ex)
-            {
-                LogQuickAction($"[DismRepair] Failed: {ex.Message}");
-                ActionStatusText = $"Failed: {ex.Message}";
-            }
+            ActionStatusText = "Launching DISM repair...";
+            var result = await QuickActionsService.DismRepairAsync();
+            ActionStatusText = result.Message;
+        }
+
+        [RelayCommand]
+        private async Task TrimRamAsync()
+        {
+            ActionStatusText = "Trimming system RAM & working sets...";
+            var result = await QuickActionsService.TrimRamAsync();
+            ActionStatusText = result.Message;
+        }
+
+        [RelayCommand]
+        private async Task ClearWindowsUpdateCacheAsync()
+        {
+            ActionStatusText = "Clearing Windows Update cache...";
+            var result = await QuickActionsService.ClearWindowsUpdateCacheAsync();
+            ActionStatusText = result.Message;
+        }
+
+        [RelayCommand]
+        private async Task OptimizeDisksAsync()
+        {
+            ActionStatusText = "Optimizing disks & sending SSD TRIM...";
+            var result = await QuickActionsService.OptimizeDisksAsync();
+            ActionStatusText = result.Message;
+        }
+
+        [RelayCommand]
+        private async Task ResetFirewallRulesAsync()
+        {
+            ActionStatusText = "Resetting Windows Firewall rules...";
+            var result = await QuickActionsService.ResetFirewallRulesAsync();
+            ActionStatusText = result.Message;
         }
 
         private void ExecuteCommandWithLogging(string actionName, string fileName, string arguments, string successText, string failureText)

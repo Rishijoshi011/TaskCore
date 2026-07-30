@@ -26,6 +26,9 @@ namespace TaskCore.ViewModels
         private bool autoStartWithWindows;
 
         [ObservableProperty]
+        private bool startMinimized;
+
+        [ObservableProperty]
         private bool preferAdminForProtectedActions;
 
         [ObservableProperty]
@@ -114,6 +117,7 @@ namespace TaskCore.ViewModels
             }
 
             AutoStartWithWindows = _settings.AutoStartWithWindows;
+            StartMinimized = _settings.StartMinimized;
             PreferAdminForProtectedActions = _settings.PreferAdminForProtectedActions;
             // Sync AlwaysRunAsAdministrator with actual registry state (in case user manually changed it)
             AlwaysRunAsAdministrator = AdminRegistryService.IsEnabled();
@@ -234,7 +238,17 @@ namespace TaskCore.ViewModels
         partial void OnAutoStartWithWindowsChanged(bool value)
         {
             _settings.AutoStartWithWindows = value;
-            StartupRegistryService.SetEnabled(value);
+            StartupRegistryService.SetEnabled(value, _settings.StartMinimized);
+            AppSettingsService.Save(_settings);
+        }
+
+        partial void OnStartMinimizedChanged(bool value)
+        {
+            _settings.StartMinimized = value;
+            if (_settings.AutoStartWithWindows)
+            {
+                StartupRegistryService.SetEnabled(true, value);
+            }
             AppSettingsService.Save(_settings);
         }
 

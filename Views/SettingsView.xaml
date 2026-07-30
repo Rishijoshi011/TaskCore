@@ -74,6 +74,24 @@
 
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Start Minimized to Tray" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="Launch TaskCore in the background (system tray) on startup without opening the main window.&#10;Double-click system tray icon to view."/>
+                            </StackPanel>
+                            <TextBlock Text="Opens in background silently" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding StartMinimized}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Close button should minimize the window" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
                                 <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
                                            ToolTip="When enabled, clicking X minimizes to system tray instead of closing.&#10;Right-click tray icon to fully exit."/>

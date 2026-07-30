@@ -247,6 +247,7 @@ namespace TaskCore.Services
     public sealed class AppSettings
     {
         public bool AutoStartWithWindows { get; set; } = false;
+        public bool StartMinimized { get; set; } = false;
         public bool PreferAdminForProtectedActions { get; set; } = false;
         public bool AlwaysRunAsAdministrator { get; set; } = false;
         public int RefreshIntervalMs { get; set; } = 1000;

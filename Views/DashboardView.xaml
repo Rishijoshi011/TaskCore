@@ -693,19 +693,7 @@
                             </Grid>
 
                             <!-- System Section -->
-                            <TextBlock Text="System" Foreground="{StaticResource TextSecondary}" FontSize="10" Margin="0 0 0 6" FontWeight="SemiBold"/>
-                            <Grid Margin="0 0 0 12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="10"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" Content="Restart Explorer" Command="{Binding RestartExplorerCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
-                                <Button Grid.Column="2" Content="Clear Temp" Command="{Binding ClearTempCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
-                            </Grid>
-
-                            <!-- Network Section -->
-                            <TextBlock Text="Network" Foreground="{StaticResource TextSecondary}" FontSize="10" Margin="0 0 0 6" FontWeight="SemiBold"/>
+                            <TextBlock Text="System &amp; Optimization" Foreground="{StaticResource TextSecondary}" FontSize="10" Margin="0 0 0 6" FontWeight="SemiBold"/>
                             <Grid Margin="0 0 0 12">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -716,10 +704,31 @@
                                     <ColumnDefinition Width="10"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
+                                <Button Grid.Row="0" Grid.Column="0" Content="Trim RAM" Command="{Binding TrimRamCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4" ToolTip="Trims process working sets instantly to free idle RAM"/>
+                                <Button Grid.Row="0" Grid.Column="2" Content="Clear Temp" Command="{Binding ClearTempCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
+                                <Button Grid.Row="1" Grid.Column="0" Content="Update Cache" Command="{Binding ClearWindowsUpdateCacheCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" ToolTip="Purges Windows Update download cache to reclaim disk space"/>
+                                <Button Grid.Row="1" Grid.Column="2" Content="Trim SSD / Disks" Command="{Binding OptimizeDisksCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" ToolTip="Sends TRIM commands to SSDs and optimizes disk storage"/>
+                            </Grid>
+
+                            <!-- Network Section -->
+                            <TextBlock Text="Network" Foreground="{StaticResource TextSecondary}" FontSize="10" Margin="0 0 0 6" FontWeight="SemiBold"/>
+                            <Grid Margin="0 0 0 12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
                                 <Button Grid.Row="0" Grid.Column="0" Content="Flush DNS" Command="{Binding FlushDnsCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
                                 <Button Grid.Row="0" Grid.Column="2" Content="Renew IP" Command="{Binding RenewIpCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
-                                <Button Grid.Row="1" Grid.Column="0" Content="Reset Network" Command="{Binding ResetNetworkStackCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"/>
-                                <Button Grid.Row="1" Grid.Column="2" Content="Restart Audio" Command="{Binding RestartAudioServiceCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"/>
+                                <Button Grid.Row="1" Grid.Column="0" Content="Reset Network" Command="{Binding ResetNetworkStackCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
+                                <Button Grid.Row="1" Grid.Column="2" Content="Restart Audio" Command="{Binding RestartAudioServiceCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" Margin="0 0 0 4"/>
+                                <Button Grid.Row="2" Grid.Column="0" Content="Reset Firewall" Command="{Binding ResetFirewallRulesCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11" ToolTip="Restores default Windows Defender Firewall rules"/>
+                                <Button Grid.Row="2" Grid.Column="2" Content="Restart Explorer" Command="{Binding RestartExplorerCommand}" Height="28" Style="{StaticResource ActionButton}" FontSize="11"/>
                             </Grid>
 
                             <!-- Services Section -->
