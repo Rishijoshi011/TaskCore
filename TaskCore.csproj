@@ -7,8 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <Version>5.0.6</Version>
-    <AssemblyVersion>5.0.6.1</AssemblyVersion>
-    <FileVersion>5.0.6.1</FileVersion>
+    <AssemblyVersion>5.0.6.2</AssemblyVersion>
+    <FileVersion>5.0.6.2</FileVersion>
     <ApplicationIcon>Resources\AppIcon\TaskCore_icon.ico</ApplicationIcon>
     <Company>TaskCore</Company>
     <Product>TaskCore System Monitor</Product>
