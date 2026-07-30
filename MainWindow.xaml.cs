@@ -204,42 +204,43 @@ namespace TaskCore
             return image;
         }
 
-        // View getters - create new each time to ensure proper disposal
+        // View getters - use lazy initialization with caching to avoid expensive recreation on tab switches
+        // This prevents navigation freezes by reusing view instances instead of recreating them
         private DashboardView GetDashboardView()
         {
-            DisposeView(_dashboardView);
-            _dashboardView = null;
-            return new DashboardView();
+            if (_dashboardView == null)
+                _dashboardView = new DashboardView();
+            return _dashboardView;
         }
         private ProcessesView GetProcessesView()
         {
-            DisposeView(_processesView);
-            _processesView = null;
-            return new ProcessesView();
+            if (_processesView == null)
+                _processesView = new ProcessesView();
+            return _processesView;
         }
         private GraphsView GetGraphsView()
         {
-            DisposeView(_graphsView);
-            _graphsView = null;
-            return new GraphsView();
+            if (_graphsView == null)
+                _graphsView = new GraphsView();
+            return _graphsView;
         }
         private DetailsView GetDetailsView()
         {
-            DisposeView(_detailsView);
-            _detailsView = null;
-            return new DetailsView();
+            if (_detailsView == null)
+                _detailsView = new DetailsView();
+            return _detailsView;
         }
         private RulesView GetRulesView()
         {
-            DisposeView(_rulesView);
-            _rulesView = null;
-            return new RulesView();
+            if (_rulesView == null)
+                _rulesView = new RulesView();
+            return _rulesView;
         }
         private SettingsView GetSettingsView()
         {
-            DisposeView(_settingsView);
-            _settingsView = null;
-            return new SettingsView();
+            if (_settingsView == null)
+                _settingsView = new SettingsView();
+            return _settingsView;
         }
 
         private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -263,22 +264,17 @@ namespace TaskCore
 
         private void DisposeCurrentViewModel()
         {
-            if (_currentView?.DataContext is IDisposable disposable)
-            {
-                try { disposable.Dispose(); } catch { }
-                _currentView.DataContext = null;
-            }
+            // Note: We no longer dispose ViewModels when switching views to enable efficient caching.
+            // ViewModels will pause their timers and data refresh through the IActivatableView interface.
+            // Full disposal will occur only when the application closes.
         }
 
         private void Sidebar_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            // Dispose current view's ViewModel when switching to free memory
-            DisposeCurrentViewModel();
-
-            // Deactivate current view before switching
+            // Deactivate current view before switching (this pauses timers, stops data refresh, etc.)
             if (_currentView is IActivatableView activatable)
             {
-                activatable.OnDeactivated();
+                try { activatable.OnDeactivated(); } catch { }
             }
 
             if (_watchdogMode)

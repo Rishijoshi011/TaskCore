@@ -28,12 +28,7 @@ namespace TaskCore.Views
 
         public void OnDeactivated()
         {
-            // Dispose ViewModel to free resources
-            if (DataContext is IDisposable vm)
-            {
-                DataContext = null;
-                vm.Dispose();
-            }
+            // Do NOT dispose - keep ViewModel cached for fast tab switching
         }
 
         private void DetailsView_Loaded(object sender, RoutedEventArgs e)

@@ -21,12 +21,7 @@ namespace TaskCore.Views
 
         public void OnDeactivated()
         {
-            // Dispose to free timers and event subscriptions
-            if (DataContext is IDisposable vm)
-            {
-                DataContext = null;
-                vm.Dispose();
-            }
+            // Do NOT dispose - keep ViewModel cached for fast tab switching
         }
     }
 }

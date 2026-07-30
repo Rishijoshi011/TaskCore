@@ -40,12 +40,7 @@ namespace TaskCore.Views.Graphs
 
         public void OnDeactivated()
         {
-            // Dispose ViewModel to free memory
-            if (DataContext is IDisposable disposable)
-            {
-                try { disposable.Dispose(); } catch { }
-            }
-            DataContext = null;
+            // Do NOT dispose - keep ViewModel cached to maintain PerformanceCounter state and historical data
         }
 
         public void Dispose()

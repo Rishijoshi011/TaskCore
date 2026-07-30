@@ -33,11 +33,41 @@
                 <StackPanel>
                     <!-- Top Row with Date, Search, and Buttons -->
                     <StackPanel Orientation="Horizontal" Margin="0 0 0 12">
-                        <!-- Date Picker -->
+                        <!-- Date Picker with Navigation -->
                         <StackPanel Orientation="Vertical" Margin="0 0 12 0">
                             <TextBlock Text="Date" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0 0 0 4"/>
-                            <DatePicker SelectedDate="{Binding SelectedDate}" Width="150" Height="32" VerticalAlignment="Center" 
-                                        Style="{StaticResource DarkDatePicker}" BorderThickness="0" BorderBrush="{StaticResource BackgroundSecondary}"/>
+                            <StackPanel Orientation="Horizontal">
+                                <!-- Previous Button -->
+                                <Button Command="{Binding GoToPreviousDateCommand}" 
+                                        IsEnabled="{Binding CanGoToPreviousDate}"
+                                        Width="32" Height="32" 
+                                        Style="{StaticResource ActionButton}"
+                                        ToolTip="Previous Day"
+                                        Margin="0 0 4 0"
+                                        Content="◀"/>
+
+                                <!-- Date Picker -->
+                                <DatePicker SelectedDate="{Binding SelectedDate}" Width="150" Height="32" VerticalAlignment="Center" 
+                                            Style="{StaticResource DarkDatePicker}" BorderThickness="0" BorderBrush="{StaticResource BackgroundSecondary}"
+                                            Margin="0 0 4 0"/>
+
+                                <!-- Today Button -->
+                                <Button Command="{Binding GoToTodayCommand}" 
+                                        Width="50" Height="32" 
+                                        Style="{StaticResource ActionButton}"
+                                        ToolTip="Go to Today"
+                                        Margin="0 0 4 0"
+                                        Content="Today"/>
+
+                                <!-- Next Button -->
+                                <Button Command="{Binding GoToNextDateCommand}" 
+                                        IsEnabled="{Binding CanGoToNextDate}"
+                                        Width="32" Height="32" 
+                                        Style="{StaticResource ActionButton}"
+                                        ToolTip="Next Day"
+                                        Margin="0 0 4 0"
+                                        Content="▶"/>
+                            </StackPanel>
                         </StackPanel>
 
                         <!-- Search Box -->
@@ -195,16 +225,17 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <DataGrid Grid.Row="0"
+                    <DataGrid
                               ItemsSource="{Binding PagedAppSummaries}"
                               Style="{StaticResource DarkDataGrid}"
                               AutoGenerateColumns="False"
                               HeadersVisibility="Column"
+                              ColumnWidth="*"
                               HorizontalAlignment="Stretch"
                               HorizontalContentAlignment="Stretch"
                               VerticalAlignment="Center"
                               VerticalContentAlignment="Center"
-                              x:Name="AppSummaryGrid">
+                              x:Name="AppSummaryGrid" Width="auto" >
                         <DataGrid.ContextMenu>
                             <ContextMenu Style="{StaticResource DarkContextMenu}">
                                 <MenuItem Header="Application" IsCheckable="True" IsChecked="{Binding PlacementTarget.DataContext.ShowSummaryApp, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Style="{StaticResource DarkMenuItem}"/>

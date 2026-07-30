@@ -482,9 +482,53 @@ namespace TaskCore.ViewModels
         partial void OnShowSessionPeakMemChanged(bool value) => SaveColumnPreferences();
         partial void OnShowSessionAvgMemChanged(bool value) => SaveColumnPreferences();
 
+        // Date navigation properties - match Dashboard behavior
+        [ObservableProperty]
+        private bool canGoToPreviousDate;
+
+        [ObservableProperty]
+        private bool canGoToNextDate;
+
         partial void OnSelectedDateChanged(DateTime value)
         {
+            UpdateDateNavigation();
             Refresh();
+        }
+
+        private void UpdateDateNavigation()
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var selectedDateOnly = DateOnly.FromDateTime(SelectedDate);
+
+            // Can go to previous date if we're not before the 7-day window
+            CanGoToPreviousDate = selectedDateOnly > DateOnly.FromDateTime(DateTime.Today.AddDays(-7));
+
+            // Can go to next date if we haven't reached today
+            CanGoToNextDate = selectedDateOnly < today;
+        }
+
+        [RelayCommand]
+        private void GoToPreviousDate()
+        {
+            if (CanGoToPreviousDate)
+            {
+                SelectedDate = SelectedDate.AddDays(-1);
+            }
+        }
+
+        [RelayCommand]
+        private void GoToNextDate()
+        {
+            if (CanGoToNextDate)
+            {
+                SelectedDate = SelectedDate.AddDays(1);
+            }
+        }
+
+        [RelayCommand]
+        private void GoToToday()
+        {
+            SelectedDate = DateTime.Today;
         }
 
         partial void OnSearchQueryChanged(string value)

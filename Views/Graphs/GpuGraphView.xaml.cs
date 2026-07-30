@@ -45,12 +45,9 @@ namespace TaskCore.Views.Graphs
 
         public void OnDeactivated()
         {
-            Log("OnDeactivated");
-            if (DataContext is IDisposable disposable)
-            {
-                try { disposable.Dispose(); } catch { }
-            }
-            DataContext = null;
+            Log("OnDeactivated - pausing timers");
+            // Do NOT dispose - keep ViewModel cached to maintain PerformanceCounter state and historical data
+            // Timers will be paused by AppViewStateService
         }
 
         public void Dispose()

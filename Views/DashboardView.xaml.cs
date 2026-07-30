@@ -43,13 +43,7 @@ namespace TaskCore.Views
         public void OnDeactivated()
         {
             _viewModel?.PauseRefresh();
-            // Dispose and clear to free memory
-            if (_viewModel is IDisposable disposable)
-            {
-                try { disposable.Dispose(); } catch { }
-            }
-            _viewModel = null;
-            DataContext = null;
+            // Do NOT dispose - keep ViewModel cached for fast tab switching
         }
 
         public void Dispose()
