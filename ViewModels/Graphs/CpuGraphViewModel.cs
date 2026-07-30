@@ -123,7 +123,7 @@ namespace TaskCore.ViewModels.Graphs
             {
                 new LineSeries<double>
                 {
-                    Values = new ObservableCollection<double>(),
+                    Values = new TaskCore.Helpers.BulkObservableCollection<double>(),
                     GeometrySize = 0,
                     Stroke = new SolidColorPaint(new SKColor(138, 43, 226), 2),
                     Fill = new LinearGradientPaint(
@@ -140,7 +140,7 @@ namespace TaskCore.ViewModels.Graphs
                 }
             };
 
-            xLabels = new ObservableCollection<string>();
+            xLabels = new TaskCore.Helpers.BulkObservableCollection<string>();
 
             // Initialize CPU information
             InitializeCpuInfo();
@@ -728,16 +728,40 @@ namespace TaskCore.ViewModels.Graphs
             // Update process and thread counts periodically
             if (DateTime.Now.Second % 5 == 0) // Update every 5 seconds
             {
-                try
+                System.Threading.Tasks.Task.Run(() =>
                 {
-                    Processes = Process.GetProcesses().Length;
-                    Threads = Process.GetProcesses().Sum(p => p.Threads.Count);
-                    Handles = Process.GetProcesses().Sum(p => p.HandleCount);
-                }
-                catch
-                {
-                    // Keep previous values if update fails
-                }
+                    try
+                    {
+                        var processes = System.Diagnostics.Process.GetProcesses();
+                        int procCount = processes.Length;
+                        int threadCount = 0;
+                        int handleCount = 0;
+
+                        foreach (var p in processes)
+                        {
+                            try
+                            {
+                                threadCount += p.Threads.Count;
+                                handleCount += p.HandleCount;
+                            }
+                            catch { }
+                            finally
+                            {
+                                p.Dispose();
+                            }
+                        }
+
+                        System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                        {
+                            Processes = procCount;
+                            Threads = threadCount;
+                            Handles = handleCount;
+                        }));
+                    }
+                    catch
+                    {
+                    }
+                });
             }
 
             // Update uptime every second
@@ -764,16 +788,27 @@ namespace TaskCore.ViewModels.Graphs
             // Update chart data safely
             try
             {
-                if (Series.Count > 0 && Series[0].Values is ObservableCollection<double> cpuValues)
+                if (Series.Count > 0 && Series[0].Values is TaskCore.Helpers.BulkObservableCollection<double> bulkCpuValues)
+                {
+                    bulkCpuValues.ReplaceAll(_cpuBuffer);
+                }
+                else if (Series.Count > 0 && Series[0].Values is ObservableCollection<double> cpuValues)
                 {
                     cpuValues.Clear();
                     foreach (var value in _cpuBuffer)
                         cpuValues.Add(value);
                 }
 
-                XLabels?.Clear();
-                foreach (var label in _timeBuffer)
-                    XLabels?.Add(label);
+                if (XLabels is TaskCore.Helpers.BulkObservableCollection<string> bulkXLabels)
+                {
+                    bulkXLabels.ReplaceAll(_timeBuffer);
+                }
+                else if (XLabels != null)
+                {
+                    XLabels.Clear();
+                    foreach (var label in _timeBuffer)
+                        XLabels.Add(label);
+                }
             }
             catch
             {

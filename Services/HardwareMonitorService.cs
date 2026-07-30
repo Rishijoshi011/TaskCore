@@ -84,37 +84,49 @@ namespace TaskCore.Services
             }
         }
 
+        private int _isRefreshing;
+
         private void Refresh()
         {
-            try
+            if (System.Threading.Interlocked.Exchange(ref _isRefreshing, 1) == 1)
+                return;
+
+            System.Threading.Tasks.Task.Run(() =>
             {
-                lock (_lock)
+                try
                 {
-                    try
+                    lock (_lock)
                     {
-                        _computer.Accept(_updateVisitor);
-                    }
-                    catch
-                    {
-                    }
+                        try
+                        {
+                            _computer.Accept(_updateVisitor);
+                        }
+                        catch
+                        {
+                        }
 
-                    _gpuTempsByName.Clear();
-                    _storageTempsByName.Clear();
-                    _cpuPackageTemp = null;
-                    _memoryTemp = null;
-                    _anyTemp = null;
+                        _gpuTempsByName.Clear();
+                        _storageTempsByName.Clear();
+                        _cpuPackageTemp = null;
+                        _memoryTemp = null;
+                        _anyTemp = null;
 
-                    foreach (var hw in _computer.Hardware)
-                    {
-                        ProcessHardwareRecursive(hw);
+                        foreach (var hw in _computer.Hardware)
+                        {
+                            ProcessHardwareRecursive(hw);
+                        }
+
+                        TryDebugLogTempSensors();
                     }
-
-                    TryDebugLogTempSensors();
                 }
-            }
-            catch
-            {
-            }
+                catch
+                {
+                }
+                finally
+                {
+                    System.Threading.Interlocked.Exchange(ref _isRefreshing, 0);
+                }
+            });
         }
 
         private void OnRefreshIntervalChanged(int ms)

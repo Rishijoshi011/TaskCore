@@ -97,7 +97,7 @@ namespace TaskCore.ViewModels.Graphs
             {
                 new LineSeries<double>
                 {
-                    Values = new ObservableCollection<double>(),
+                    Values = new TaskCore.Helpers.BulkObservableCollection<double>(),
                     GeometrySize = 0,
                     Stroke = new SolidColorPaint(new SKColor(0, 255, 255), 2),
                     Fill = new LinearGradientPaint(
@@ -114,7 +114,7 @@ namespace TaskCore.ViewModels.Graphs
                 }
             };
 
-            xLabels = new ObservableCollection<string>();
+            xLabels = new TaskCore.Helpers.BulkObservableCollection<string>();
 
             // Initialize memory information
             InitializeMemoryInfo();
@@ -325,14 +325,22 @@ namespace TaskCore.ViewModels.Graphs
                 _timeBuffer.Dequeue();
 
             // Batch update UI for better performance
-            if (series != null && series.Count > 0 && series[0].Values is ObservableCollection<double> memoryValues)
+            if (series != null && series.Count > 0 && series[0].Values is TaskCore.Helpers.BulkObservableCollection<double> bulkMemoryValues)
+            {
+                bulkMemoryValues.ReplaceAll(_memoryBuffer);
+            }
+            else if (series != null && series.Count > 0 && series[0].Values is ObservableCollection<double> memoryValues)
             {
                 memoryValues.Clear();
                 foreach (var value in _memoryBuffer)
                     memoryValues.Add(value);
             }
 
-            if (xLabels != null)
+            if (xLabels is TaskCore.Helpers.BulkObservableCollection<string> bulkXLabels)
+            {
+                bulkXLabels.ReplaceAll(_timeBuffer);
+            }
+            else if (xLabels != null)
             {
                 xLabels.Clear();
                 foreach (var label in _timeBuffer)

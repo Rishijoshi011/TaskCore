@@ -706,6 +706,8 @@ namespace TaskCore.ViewModels
             }
         }
 
+        private int _isRefreshingPerf;
+
         private void RefreshIfActive()
         {
             try
@@ -713,9 +715,26 @@ namespace TaskCore.ViewModels
                 if (!string.Equals(AppViewStateService.CurrentView, "Dashboard", StringComparison.OrdinalIgnoreCase))
                     return;
 
-                EnsurePerfCountersInitialized();
-                SamplePerfCounters();
-                Refresh();
+                if (System.Threading.Interlocked.Exchange(ref _isRefreshingPerf, 1) == 1)
+                    return;
+
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try
+                    {
+                        EnsurePerfCountersInitialized();
+                        SamplePerfCounters();
+
+                        System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                        {
+                            Refresh();
+                        }));
+                    }
+                    finally
+                    {
+                        System.Threading.Interlocked.Exchange(ref _isRefreshingPerf, 0);
+                    }
+                });
             }
             catch
             {

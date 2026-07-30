@@ -127,9 +127,6 @@ namespace TaskCore.ViewModels
 
         private bool _hasLoadedOnce = false;
 
-        // Prevent overlapping refreshes
-        private bool _isRefreshing = false;
-
         private CancellationTokenSource? _filterCts;
 
 #pragma warning disable CS8618 // Non-nullable field is initialized in constructor after design mode check
@@ -280,11 +277,12 @@ namespace TaskCore.ViewModels
                 .GetIsInDesignMode(new DependencyObject());
         }
 
+        private int _isRefreshingFlag;
+
         private async Task LoadProcessListAsync()
         {
-            if (_isRefreshing) return;
+            if (System.Threading.Interlocked.Exchange(ref _isRefreshingFlag, 1) == 1) return;
 
-            _isRefreshing = true;
             if (!_hasLoadedOnce || ProcessGroups.Count == 0)
                 IsLoading = true;
 
@@ -298,7 +296,7 @@ namespace TaskCore.ViewModels
             finally
             {
                 IsLoading = false;
-                _isRefreshing = false;
+                System.Threading.Interlocked.Exchange(ref _isRefreshingFlag, 0);
             }
         }
 
