@@ -184,6 +184,9 @@ namespace TaskCore.ViewModels.Graphs
 
         private void Tick()
         {
+            if (!string.Equals(AppViewStateService.CurrentView, "Graphs", StringComparison.OrdinalIgnoreCase))
+                return;
+
             try
             {
                 var nic = ResolveNic();

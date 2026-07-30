@@ -41,16 +41,18 @@ namespace TaskCore.ViewModels.Graphs
 
                 if (instances.Length == 0)
                 {
-                    Gpus.Add(new GpuAdapterViewModel(adapterMemoryInstance: null, gpuNameHint: null));
+                    Gpus.Add(new GpuAdapterViewModel(adapterMemoryInstance: null, gpuNameHint: null, wmiIndex: 0));
                     return;
                 }
 
+                int idx = 0;
                 foreach (var inst in instances)
                 {
                     if (string.IsNullOrWhiteSpace(inst)) continue;
 
-                    var vm = new GpuAdapterViewModel(adapterMemoryInstance: inst, gpuNameHint: null);
+                    var vm = new GpuAdapterViewModel(adapterMemoryInstance: inst, gpuNameHint: null, wmiIndex: idx);
                     Gpus.Add(vm);
+                    idx++;
                 }
             }
             catch

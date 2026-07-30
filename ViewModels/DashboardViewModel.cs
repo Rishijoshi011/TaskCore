@@ -156,7 +156,7 @@ namespace TaskCore.ViewModels
         private async Task RestartGpuDriverAsync()
         {
             ActionStatusText = "Initiating GPU driver restart...";
-            var result = await QuickActionsService.ClearIconCacheAsync();
+            var result = await QuickActionsService.RestartGpuDriverAsync();
             ActionStatusText = result.Message;
         }
 

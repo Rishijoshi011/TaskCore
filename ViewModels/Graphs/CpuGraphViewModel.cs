@@ -670,6 +670,9 @@ namespace TaskCore.ViewModels.Graphs
 
         private void Update(object? sender, EventArgs e)
         {
+            if (!string.Equals(AppViewStateService.CurrentView, "Graphs", StringComparison.OrdinalIgnoreCase))
+                return;
+
             double cpu = 0;
 
             // Get CPU utilization

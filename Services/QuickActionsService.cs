@@ -138,6 +138,22 @@ namespace TaskCore.Services
 
             return await ExecuteCommandAsync("ResetFirewallRules", "netsh.exe", "advfirewall reset", requireAdmin: true);
         }
+
+        public static async Task<QuickActionResult> RestartGpuDriverAsync()
+        {
+            if (!ElevationService.IsRunningAsAdmin())
+            {
+                return new QuickActionResult("RestartGpuDriver", false, -1, "Restarting GPU driver requires Administrator privileges.", TimeSpan.Zero);
+            }
+
+            return await ExecuteCommandAsync(
+                "RestartGpuDriver",
+                "powershell.exe",
+                "-NoProfile -Command \"Get-PnpDevice -Class DisplayAdapter -Status OK | Disable-PnpDevice -Confirm:$false; Start-Sleep 2; Get-PnpDevice -Class DisplayAdapter | Enable-PnpDevice -Confirm:$false\"",
+                requireAdmin: true,
+                timeoutMs: 30000);
+        }
+
         public static async Task<QuickActionResult> RestartExplorerAsync()
         {
             var startTime = DateTime.UtcNow;

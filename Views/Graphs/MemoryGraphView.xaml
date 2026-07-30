@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="TaskCore.Views.Graphs.MemoryGraphView"
+<UserControl x:Class="TaskCore.Views.Graphs.MemoryGraphView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
@@ -10,7 +10,7 @@
     </UserControl.DataContext>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid MinWidth="300">
+        <Grid MinWidth="300" Margin="0 0 15 0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>

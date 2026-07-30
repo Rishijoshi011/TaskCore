@@ -212,6 +212,9 @@ namespace TaskCore.ViewModels.Graphs
 
         private void Tick()
         {
+            if (!string.Equals(AppViewStateService.CurrentView, "Graphs", StringComparison.OrdinalIgnoreCase))
+                return;
+
             double readBps = 0;
             double writeBps = 0;
             double active = 0;
@@ -309,7 +312,7 @@ namespace TaskCore.ViewModels.Graphs
                 if (drive == null) return;
 
                 // MSFT_PhysicalDisk provides better MediaType (SSD/HDD) and health on modern Windows.
-                TryPopulateMsftPhysicalDisk(drive);
+                TryPopulateMsftPhysicalDisk(drive, index);
 
                 var m = drive["Model"]?.ToString();
                 if (!string.IsNullOrWhiteSpace(m))
@@ -363,7 +366,7 @@ namespace TaskCore.ViewModels.Graphs
             }
         }
 
-        private void TryPopulateMsftPhysicalDisk(ManagementObject win32DiskDrive)
+        private void TryPopulateMsftPhysicalDisk(ManagementObject win32DiskDrive, int? diskIndex)
         {
             try
             {
@@ -374,7 +377,7 @@ namespace TaskCore.ViewModels.Graphs
                 var scope = new ManagementScope("\\\\.\\root\\Microsoft\\Windows\\Storage");
                 scope.Connect();
 
-                var searcher = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT FriendlyName,UniqueId,SerialNumber,MediaType,BusType,HealthStatus,OperationalStatus,Size FROM MSFT_PhysicalDisk"));
+                var searcher = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT FriendlyName,UniqueId,SerialNumber,MediaType,BusType,HealthStatus,OperationalStatus,Size,DeviceId FROM MSFT_PhysicalDisk"));
                 var list = searcher.Get().Cast<ManagementObject>().ToList();
                 if (list.Count == 0) return;
 
@@ -383,6 +386,20 @@ namespace TaskCore.ViewModels.Graphs
                 if (!string.IsNullOrWhiteSpace(wmiSerial))
                 {
                     match = list.FirstOrDefault(d => string.Equals((d["SerialNumber"]?.ToString() ?? string.Empty).Trim(), wmiSerial, StringComparison.OrdinalIgnoreCase));
+                }
+
+                // Try matching by DeviceId (disk number) before model name fallback
+                if (match == null && diskIndex.HasValue)
+                {
+                    match = list.FirstOrDefault(d =>
+                    {
+                        try
+                        {
+                            var devId = d["DeviceId"]?.ToString();
+                            return devId != null && devId.Equals(diskIndex.Value.ToString(), StringComparison.OrdinalIgnoreCase);
+                        }
+                        catch { return false; }
+                    });
                 }
 
                 if (match == null && !string.IsNullOrWhiteSpace(wmiModel))

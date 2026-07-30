@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -97,12 +97,21 @@ namespace TaskCore.Views
             }
         }
 
+        private void DeactivateCurrentView()
+        {
+            if (GraphContent?.Content is IActivatableView current)
+            {
+                try { current.OnDeactivated(); } catch { }
+            }
+        }
+
         private void Cpu_Checked(object sender, RoutedEventArgs e)
         {
             if (GraphContent == null) return;
             UncheckOthers(sender);
             try
             {
+                DeactivateCurrentView();
                 _cpuView ??= new Graphs.CpuGraphView();
                 GraphContent.Content = _cpuView;
                 if (_cpuView is IActivatableView av) av.OnActivated();
@@ -119,6 +128,7 @@ namespace TaskCore.Views
             UncheckOthers(sender);
             try
             {
+                DeactivateCurrentView();
                 _memoryView ??= new Graphs.MemoryGraphView();
                 GraphContent.Content = _memoryView;
                 if (_memoryView is IActivatableView av) av.OnActivated();
@@ -136,6 +146,7 @@ namespace TaskCore.Views
             UncheckOthers(sender);
             try
             {
+                DeactivateCurrentView();
                 _gpuView ??= new Graphs.GpuGraphView();
                 Log("GpuGraphView created");
                 GraphContent.Content = _gpuView;
@@ -161,6 +172,7 @@ namespace TaskCore.Views
             UncheckOthers(sender);
             try
             {
+                DeactivateCurrentView();
                 _diskView ??= new Graphs.DiskGraphView();
                 GraphContent.Content = _diskView;
                 if (_diskView is IActivatableView av) av.OnActivated();
@@ -177,6 +189,7 @@ namespace TaskCore.Views
             UncheckOthers(sender);
             try
             {
+                DeactivateCurrentView();
                 _networkView ??= new Graphs.NetworkGraphView();
                 GraphContent.Content = _networkView;
                 if (_networkView is IActivatableView av) av.OnActivated();

@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace TaskCore.ViewModels.Graphs
 {
-    public partial class DiskGraphViewModel : ObservableObject
+    public partial class DiskGraphViewModel : ObservableObject, IDisposable
     {
         [ObservableProperty]
         private ObservableCollection<DiskAdapterViewModel> disks;
@@ -14,6 +14,15 @@ namespace TaskCore.ViewModels.Graphs
         {
             Disks = new ObservableCollection<DiskAdapterViewModel>();
             InitializeDisks();
+        }
+
+        public void Dispose()
+        {
+            foreach (var disk in Disks)
+            {
+                try { disk?.Dispose(); } catch { }
+            }
+            Disks.Clear();
         }
 
         private void InitializeDisks()

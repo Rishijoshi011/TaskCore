@@ -19,8 +19,7 @@ namespace TaskCore.ViewModels.Graphs
     public partial class GpuAdapterViewModel : ObservableObject, IDisposable
     {
         private bool _disposed;
-        private static readonly object _wmiLock = new();
-        private static int _nextWmiIndex;
+        private readonly int _wmiIndex;
 
         [ObservableProperty]
         private ObservableCollection<ISeries> series;
@@ -104,10 +103,11 @@ namespace TaskCore.ViewModels.Graphs
         private readonly string? _adapterMemoryInstance;
         private readonly string? _luidToken;
 
-        public GpuAdapterViewModel(string? adapterMemoryInstance, string? gpuNameHint)
+        public GpuAdapterViewModel(string? adapterMemoryInstance, string? gpuNameHint, int wmiIndex = 0)
         {
             try
             {
+                _wmiIndex = wmiIndex;
                 _adapterMemoryInstance = adapterMemoryInstance;
                 _luidToken = ExtractLuid(adapterMemoryInstance);
 
@@ -211,12 +211,7 @@ namespace TaskCore.ViewModels.Graphs
 
                 if (match == null && gpus.Count > 0)
                 {
-                    lock (_wmiLock)
-                    {
-                        if (_nextWmiIndex < 0) _nextWmiIndex = 0;
-                        match = gpus.ElementAtOrDefault(_nextWmiIndex);
-                        _nextWmiIndex++;
-                    }
+                    match = gpus.ElementAtOrDefault(_wmiIndex);
                 }
 
                 match ??= gpus.FirstOrDefault();
@@ -528,6 +523,9 @@ namespace TaskCore.ViewModels.Graphs
 
         private void Tick()
         {
+            if (!string.Equals(AppViewStateService.CurrentView, "Graphs", StringComparison.OrdinalIgnoreCase))
+                return;
+
             try
             {
                 System.Diagnostics.Debug.WriteLine($"[GpuGraph] Tick fired - CurrentUtil: {CurrentUtilization:F1}%");

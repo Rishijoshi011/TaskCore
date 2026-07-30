@@ -11,7 +11,7 @@
     </UserControl.DataContext>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <Grid MinWidth="300">
+        <Grid MinWidth="300" Margin="0 0 15 0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
