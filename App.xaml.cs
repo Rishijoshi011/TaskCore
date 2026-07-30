@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -24,25 +24,34 @@ namespace TaskCore
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            // Cleanup old logs on startup
+            // Bootstrap entire directory structure & default configuration if missing
+            RuntimeStorageInitializer.Bootstrap();
+            RuntimeStorageCleaner.RunAutoCleanup();
+
+            // Initialize Logging Engine & Cleanup/Archive Old Log Sessions
             TaskCoreLogger.CleanupOldLogs();
             TaskCoreLogger.SessionTracking.Startup();
 
-            // Setup global exception handlers FIRST - before anything else
+            // Start WPF Dispatcher UI Thread Freeze Monitor
+            TaskCore.Logging.DispatcherPerformanceMonitor.Instance.Start();
+
+            // Setup global exception handlers FIRST - with MiniDump capture
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
-                TaskCoreLogger.Lifecycle.UnhandledException(args.ExceptionObject?.ToString() ?? "Unknown");
+                var ex = args.ExceptionObject as Exception;
+                TaskCore.Logging.TaskCoreLog.Fatal("Crash", "AppDomain Fatal Unhandled Exception", ex);
+                TaskCore.Logging.CrashDumpWriter.CreateCrashDump();
                 MessageBox.Show($"Fatal Error: {args.ExceptionObject}", "TaskCore Error", MessageBoxButton.OK, MessageBoxImage.Error);
             };
             DispatcherUnhandledException += (s, args) =>
             {
-                TaskCoreLogger.Error("ui", $"DispatcherUnhandledException: {args.Exception}");
+                TaskCore.Logging.TaskCoreLog.Error("UI", "Dispatcher Unhandled Exception", args.Exception);
                 args.Handled = true;
                 MessageBox.Show($"UI Error: {args.Exception.Message}", "TaskCore Error", MessageBoxButton.OK, MessageBoxImage.Warning);
             };
             TaskScheduler.UnobservedTaskException += (s, args) =>
             {
-                TaskCoreLogger.Error("task", $"UnobservedTaskException: {args.Exception}");
+                TaskCore.Logging.TaskCoreLog.Error("Threading", "Unobserved Background Task Exception", args.Exception);
                 args.SetObserved();
             };
 
@@ -140,6 +149,8 @@ namespace TaskCore
         protected override void OnExit(ExitEventArgs e)
         {
             TaskCoreLogger.Lifecycle.OnExitCalled();
+            TaskCore.Logging.SessionManager.WriteSessionMetadata(isCleanShutdown: true);
+            TaskCore.Logging.AsyncLogBuffer.Instance.FlushSync();
             
             // Save running sessions before exit
             try

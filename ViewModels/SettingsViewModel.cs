@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using System;
@@ -201,6 +201,22 @@ namespace TaskCore.ViewModels
         {
             _settings.ProcessFilterMode = value;
             AppSettingsService.Save(_settings);
+        }
+
+        [RelayCommand]
+        private void ResetApplicationData()
+        {
+            var result = MessageBox.Show(
+                "Are you sure you want to reset all application data?\n\nThis will clear all logs, cached metrics, session history, and restore default settings.",
+                "Reset Application Data",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                RuntimeStorageCleaner.ResetApplicationData();
+                MessageBox.Show("TaskCore runtime data has been reset to default state.", "Reset Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
 
         partial void OnSelectedProcessesChanged(ObservableCollection<string> value)

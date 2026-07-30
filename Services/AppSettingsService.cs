@@ -21,6 +21,25 @@ namespace TaskCore.Services
         private static readonly string _bakPath = Path.Combine(_dir, "settings.json.bak");
         private static readonly string _tmpPath = Path.Combine(_dir, "settings.json.tmp");
 
+        public static void EnsureDefaultSettingsExist()
+        {
+            try
+            {
+                var configDir = Path.Combine(_dir, "Config");
+                Directory.CreateDirectory(configDir);
+                var configPath = Path.Combine(configDir, "settings.json");
+
+                if (!File.Exists(_path) && !File.Exists(configPath))
+                {
+                    var defaults = new AppSettings();
+                    Save(defaults);
+                }
+            }
+            catch
+            {
+            }
+        }
+
         public static AppSettings Load()
         {
             lock (_lock)
@@ -58,7 +77,9 @@ namespace TaskCore.Services
                         }
 
                         TaskCoreLogger.Info("settings", "Creating new default settings");
-                        return new AppSettings();
+                        var newSettings = new AppSettings();
+                        Save(newSettings);
+                        return newSettings;
                     }
 
                     var json = File.ReadAllText(_path);

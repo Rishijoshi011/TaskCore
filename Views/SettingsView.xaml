@@ -531,6 +531,21 @@
                         <TextBlock Grid.Row="3" Text="Tip: Only apps in 'Selected to Show' will appear in the Currently Running table" Foreground="{StaticResource TextSecondary}" FontSize="10" FontStyle="Italic" Margin="0 8 0 0"/>
                     </Grid>
 
+                    <Separator Margin="0 15 0 15"/>
+
+                    <!-- Developer & System Maintenance -->
+                    <TextBlock Text="Developer &amp; System Maintenance"
+                               FontSize="18" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimary}" Margin="0 0 0 8"/>
+                    <TextBlock Text="Reset all runtime data stored in AppData (logs, cache, sessions) to restore TaskCore to a clean first-run state."
+                               FontSize="11" Foreground="{StaticResource TextSecondary}"
+                               TextWrapping="Wrap" Margin="0 0 0 12"/>
+                    <Button Content="Reset Application Data"
+                            Command="{Binding ResetApplicationDataCommand}"
+                            HorizontalAlignment="Left"
+                            Padding="14 8" Background="#FFD32F2F" Foreground="White"
+                            BorderThickness="0" FontWeight="SemiBold"/>
+
                 </StackPanel>
             </ScrollViewer>
 
