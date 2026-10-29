@@ -284,6 +284,10 @@ namespace TaskCore.Services
         // Minimal Watchdog Mode - only Rules and Settings tabs for low memory usage
         public bool WatchdogMode { get; set; } = false;
 
+        // Process Insights / ML.NET Analysis — when disabled, no ML inference or analysis runs.
+        // Session tracking, watchdog, graphs and process monitoring are unaffected.
+        public bool ProcessInsightsEnabled { get; set; } = true;
+
         public bool AutomationWatchdogEnabled { get; set; } = false;
 
         public bool AutomationRestartExplorerEnabled { get; set; } = false;
@@ -304,6 +308,12 @@ namespace TaskCore.Services
         public int AutomationEdgeWebViewIdleSeconds { get; set; } = 60;
         public int AutomationEdgeWebViewCleanupCooldownSeconds { get; set; } = 30;
         public int AutomationEdgeWebViewMaxKillsPerRun { get; set; } = 3;
+
+        // Automatic Memory Trim — periodically checks system RAM usage and
+        // runs the same TrimRam action as the Dashboard Quick Action.
+        public bool AutomaticMemoryTrimEnabled { get; set; } = false;
+        public int AutomaticMemoryTrimIntervalMinutes { get; set; } = 30;
+        public int AutomaticMemoryTrimThresholdPercent { get; set; } = 85;
     }
 
     public enum ProcessFilterMode

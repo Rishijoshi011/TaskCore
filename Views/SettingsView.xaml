@@ -183,6 +183,24 @@
                         <ToggleButton Grid.Column="1" IsChecked="{Binding WatchdogMode}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
                     </Grid>
 
+                    <Grid Margin="0 0 0 15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Process Insights" Foreground="{StaticResource TextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                                <Control Style="{StaticResource InfoIcon}" Margin="6 0 0 0" VerticalAlignment="Center"
+                                           ToolTip="When enabled, TaskCore runs ML.NET-powered process behavioral analysis to generate insights and anomaly detection on the Dashboard.&#10;&#10;Disable this to reduce background CPU, memory, and disk usage.&#10;&#10;Session tracking, graphs, watchdog rules, and process monitoring are NOT affected by this setting."/>
+                            </StackPanel>
+                            <TextBlock Text="ML.NET-powered behavioral analysis and anomaly detection on the Dashboard" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                        </StackPanel>
+
+                        <ToggleButton Grid.Column="1" IsChecked="{Binding ProcessInsightsEnabled}" Style="{StaticResource GreenSwitchToggle}" Margin="10 0 0 0"/>
+                    </Grid>
+
                     <Separator Margin="0 0 0 15"/>
 
                     <TextBlock Text="Theme" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0 0 0 15"/>

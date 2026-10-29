@@ -1599,6 +1599,28 @@ namespace TaskCore.ViewModels
 
         private void BuildInsights(System.Collections.Generic.List<UsageTrackingService.SessionRecord> sessions)
         {
+            // ── Process Insights gate ────────────────────────────────────────────
+            // Check the setting first so we never pay the ML.NET analysis cost when
+            // the user has explicitly disabled insights. Session tracking, graphs,
+            // watchdog and all other features continue to operate normally.
+            var insightsEnabled = AppSettingsService.Load().ProcessInsightsEnabled;
+            if (!insightsEnabled)
+            {
+                if (Insights.Count != 1 || Insights[0].Title != "Process Insights disabled")
+                {
+                    Insights.Clear();
+                    Insights.Add(new InsightItem
+                    {
+                        Title = "Process Insights disabled",
+                        Detail = "Enable Process Insights in Settings to activate ML-powered behavioral analysis.",
+                        Icon = "💤",
+                        ColorBrush = "#6B7280" // muted grey — neutral, not alarming
+                    });
+                    OnPropertyChanged(nameof(HasNoInsights));
+                }
+                return;
+            }
+
             // Throttle expensive ML analytics to reduce CPU usage
             var now = DateTime.Now;
             if (now - _lastInsightsBuildTime < _insightsThrottleInterval && Insights.Count > 0)

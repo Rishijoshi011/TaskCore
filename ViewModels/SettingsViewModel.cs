@@ -46,6 +46,9 @@ namespace TaskCore.ViewModels
         private bool _watchdogModeChanging = false;
 
         [ObservableProperty]
+        private bool processInsightsEnabled;
+
+        [ObservableProperty]
         private bool automationWatchdogEnabled;
 
         [ObservableProperty]
@@ -56,6 +59,15 @@ namespace TaskCore.ViewModels
 
         [ObservableProperty]
         private bool automationEdgeWebViewCleanupEnabled;
+
+        [ObservableProperty]
+        private bool automaticMemoryTrimEnabled;
+
+        [ObservableProperty]
+        private int automaticMemoryTrimIntervalMinutes;
+
+        [ObservableProperty]
+        private int automaticMemoryTrimThresholdPercent;
 
         [ObservableProperty]
         private string customAlertSoundPath = string.Empty;
@@ -125,10 +137,14 @@ namespace TaskCore.ViewModels
             RefreshIntervalMs = _settings.RefreshIntervalMs;
             MinimizeToTray = _settings.MinimizeToTray;
             WatchdogMode = _settings.WatchdogMode;
+            ProcessInsightsEnabled = _settings.ProcessInsightsEnabled;
             AutomationWatchdogEnabled = _settings.AutomationWatchdogEnabled;
             AutomationRestartExplorerEnabled = _settings.AutomationRestartExplorerEnabled;
             AutomationCpuMitigationEnabled = _settings.AutomationCpuMitigationEnabled;
             AutomationEdgeWebViewCleanupEnabled = _settings.AutomationEdgeWebViewCleanupEnabled;
+            AutomaticMemoryTrimEnabled = _settings.AutomaticMemoryTrimEnabled;
+            AutomaticMemoryTrimIntervalMinutes = _settings.AutomaticMemoryTrimIntervalMinutes;
+            AutomaticMemoryTrimThresholdPercent = _settings.AutomaticMemoryTrimThresholdPercent;
             CustomAlertSoundPath = _settings.CustomAlertSoundPath ?? string.Empty;
             AccentColor = _settings.AccentColor ?? "#FF9A4DFF";
 
@@ -392,6 +408,12 @@ namespace TaskCore.ViewModels
         partial void OnCustomAlertSoundPathChanged(string value)
         {
             _settings.CustomAlertSoundPath = value;
+            AppSettingsService.Save(_settings);
+        }
+
+        partial void OnProcessInsightsEnabledChanged(bool value)
+        {
+            _settings.ProcessInsightsEnabled = value;
             AppSettingsService.Save(_settings);
         }
 

@@ -85,10 +85,45 @@ namespace TaskCore.ViewModels.Graphs
         private string memoryDeviceType = "Unknown";
 
         private readonly DispatcherTimer _timer;
-        private readonly PerformanceCounter? _memoryCounter;
         private readonly Queue<double> _memoryBuffer = new();
         private readonly Queue<string> _timeBuffer = new();
         private const int MaxDataPoints = 60;
+
+        // ────────────────────────────────────────────────────────────────────
+        // Native API: GlobalMemoryStatusEx — the same source Task Manager uses.
+        // Always returns the correct installed physical RAM without WMI or
+        // elevated permissions. ullTotalPhys matches the BIOS-reported value.
+        // ────────────────────────────────────────────────────────────────────
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct MemoryStatusEx
+        {
+            public uint dwLength;
+            public uint dwMemoryLoad;
+            public ulong ullTotalPhys;
+            public ulong ullAvailPhys;
+            public ulong ullTotalPageFile;
+            public ulong ullAvailPageFile;
+            public ulong ullTotalVirtual;
+            public ulong ullAvailVirtual;
+            public ulong ullAvailExtendedVirtual;
+        }
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
+
+        /// <summary>
+        /// Returns current system memory status via GlobalMemoryStatusEx.
+        /// Returns null if the call fails (extremely rare — API is always available on Windows 7+).
+        /// </summary>
+        private static MemoryStatusEx? GetMemoryStatus()
+        {
+            try
+            {
+                var status = new MemoryStatusEx { dwLength = (uint)System.Runtime.InteropServices.Marshal.SizeOf<MemoryStatusEx>() };
+                return GlobalMemoryStatusEx(ref status) ? status : null;
+            }
+            catch { return null; }
+        }
 
         public MemoryViewModel()
         {
@@ -116,18 +151,8 @@ namespace TaskCore.ViewModels.Graphs
 
             xLabels = new TaskCore.Helpers.BulkObservableCollection<string>();
 
-            // Initialize memory information
+            // Initialize memory information (total RAM + slot metadata)
             InitializeMemoryInfo();
-
-            // Initialize performance counter
-            try
-            {
-                _memoryCounter = new PerformanceCounter("Memory", "Available MBytes");
-            }
-            catch
-            {
-                _memoryCounter = null;
-            }
 
             // Start update timer
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(RefreshIntervalService.CurrentMs) };
@@ -180,48 +205,49 @@ namespace TaskCore.ViewModels.Graphs
 
         private void InitializeMemoryInfo()
         {
+            // ── Step 1: Total physical RAM via GlobalMemoryStatusEx ──────────
+            // This is always authoritative on Windows — no WMI, no permissions needed.
+            var memStatus = GetMemoryStatus();
+            if (memStatus.HasValue)
+            {
+                TotalMemoryGB = memStatus.Value.ullTotalPhys / (1024.0 * 1024.0 * 1024.0);
+                AvailableMemoryGB = memStatus.Value.ullAvailPhys / (1024.0 * 1024.0 * 1024.0);
+                UsedMemoryGB = Math.Max(0, TotalMemoryGB - AvailableMemoryGB);
+                CurrentUtilization = TotalMemoryGB > 0
+                    ? Math.Min(100, Math.Max(0, (UsedMemoryGB / TotalMemoryGB) * 100.0))
+                    : 0;
+                Capacity = $"{TotalMemoryGB:F2} GB";
+            }
+            else
+            {
+                // GlobalMemoryStatusEx failed (essentially impossible on modern Windows,
+                // but handle defensively without hardcoding a value).
+                TotalMemoryGB = 0;
+                AvailableMemoryGB = 0;
+                UsedMemoryGB = 0;
+                CurrentUtilization = 0;
+                Capacity = "Unknown";
+            }
+
+            // ── Step 2: Slot metadata via WMI Win32_PhysicalMemory ───────────
+            // Used only for informational fields (speed, type, manufacturer, etc.).
+            // NOT used for total capacity calculation.
             try
             {
-                // Get memory information from WMI
-                var memoryDevices = new ManagementObjectSearcher("select * from Win32_PhysicalMemory").Get().Cast<ManagementObject>().ToList();
-                
+                var memoryDevices = new ManagementObjectSearcher("select * from Win32_PhysicalMemory")
+                    .Get().Cast<ManagementObject>().ToList();
+
                 if (memoryDevices.Any())
                 {
-                    // Calculate total memory - sum all physical memory device capacities
-                    long totalMemoryBytes = 0;
-                    foreach (var device in memoryDevices)
-                    {
-                        try
-                        {
-                            var capacityValue = device["Capacity"];
-                            long capacity = capacityValue switch
-                            {
-                                long l => l,
-                                ulong ul => (long)ul,
-                                uint ui => (long)ui,
-                                int i => i,
-                                string s when long.TryParse(s, out var parsed) => parsed,
-                                _ => Convert.ToInt64(capacityValue)
-                            };
-                            totalMemoryBytes += capacity;
-                        }
-                        catch
-                        {
-                            // Skip devices that can't be read
-                        }
-                    }
-                    TotalMemoryGB = totalMemoryBytes / (1024.0 * 1024.0 * 1024.0);
+                    MemorySlots = memoryDevices.Count;
 
-                    // Get memory details from first device
                     var firstDevice = memoryDevices.First();
-                    
                     MemorySpeed = $"{firstDevice["Speed"] ?? "Unknown"} MHz";
-                    MemoryType = GetMemoryType(firstDevice["MemoryType"] as int? ?? 0);
-                    FormFactor = GetFormFactor(firstDevice["FormFactor"] as int? ?? 0);
+                    MemoryType = GetMemoryType(firstDevice["MemoryType"] as int? ?? Convert.ToInt32(firstDevice["MemoryType"] ?? 0));
+                    FormFactor = GetFormFactor(firstDevice["FormFactor"] as int? ?? Convert.ToInt32(firstDevice["FormFactor"] ?? 0));
                     Manufacturer = firstDevice["Manufacturer"]?.ToString() ?? "Unknown";
                     PartNumber = firstDevice["PartNumber"]?.ToString() ?? "Unknown";
                     SerialNumber = firstDevice["SerialNumber"]?.ToString() ?? "Unknown";
-                    Capacity = $"{TotalMemoryGB:F2} GB";
                     DataWidth = firstDevice["DataWidth"]?.ToString() ?? "Unknown";
                     TotalWidth = firstDevice["TotalWidth"]?.ToString() ?? "Unknown";
                     TypeDetail = firstDevice["TypeDetail"]?.ToString() ?? "Unknown";
@@ -229,56 +255,16 @@ namespace TaskCore.ViewModels.Graphs
                     DeviceLocator = firstDevice["DeviceLocator"]?.ToString() ?? "Unknown";
                     MemoryTag = firstDevice["Tag"]?.ToString() ?? "Unknown";
                     ConfiguredClockSpeed = $"{firstDevice["ConfiguredClockSpeed"] ?? "Unknown"} MHz";
-                    MemoryDeviceType = GetDeviceType(firstDevice["DeviceType"] as int? ?? 0);
-                    
-                    // Count memory slots
-                    MemorySlots = memoryDevices.Count;
+                    MemoryDeviceType = GetDeviceType(firstDevice["DeviceType"] as int? ?? Convert.ToInt32(firstDevice["DeviceType"] ?? 0));
                 }
                 else
                 {
-                    // Fallback to system memory if WMI fails
-                    try
-                    {
-                        var gcMemory = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
-                        TotalMemoryGB = Math.Max(gcMemory, 8.0); // Minimum 8GB fallback
-                        Capacity = $"{TotalMemoryGB:F2} GB";
-                        MemorySlots = 1;
-                    }
-                    catch
-                    {
-                        TotalMemoryGB = 8.0; // Default fallback
-                        Capacity = "8.00 GB";
-                        MemorySlots = 1;
-                    }
-                }
-
-                // Get initial available memory
-                try
-                {
-                    if (_memoryCounter != null)
-                    {
-                        var availableMB = _memoryCounter.NextValue();
-                        AvailableMemoryGB = availableMB / 1024.0;
-                        UsedMemoryGB = Math.Max(0, TotalMemoryGB - AvailableMemoryGB);
-                        CurrentUtilization = TotalMemoryGB > 0 ? Math.Min(100, Math.Max(0, (UsedMemoryGB / TotalMemoryGB) * 100.0)) : 0;
-                    }
-                }
-                catch
-                {
-                    // Use estimated values if performance counter fails
-                    AvailableMemoryGB = TotalMemoryGB * 0.3; // Assume 30% available
-                    UsedMemoryGB = TotalMemoryGB - AvailableMemoryGB;
-                    CurrentUtilization = 70.0; // Assume 70% utilization
+                    MemorySlots = 1;
                 }
             }
             catch
             {
-                // Ultimate fallback
-                TotalMemoryGB = 8.0;
-                AvailableMemoryGB = 2.4;
-                UsedMemoryGB = 5.6;
-                CurrentUtilization = 70.0;
-                Capacity = "8.00 GB";
+                // WMI metadata is optional — total RAM is already set from GlobalMemoryStatusEx above.
                 MemorySlots = 1;
             }
         }
@@ -292,20 +278,20 @@ namespace TaskCore.ViewModels.Graphs
 
             try
             {
-                if (_memoryCounter != null)
+                // Use GlobalMemoryStatusEx for live available/used values — same source as Task Manager.
+                var memStatus = GetMemoryStatus();
+                if (memStatus.HasValue)
                 {
-                    var availableMB = _memoryCounter.NextValue();
-                    AvailableMemoryGB = availableMB / 1024.0;
+                    AvailableMemoryGB = memStatus.Value.ullAvailPhys / (1024.0 * 1024.0 * 1024.0);
                     UsedMemoryGB = Math.Max(0, TotalMemoryGB - AvailableMemoryGB);
-                    utilization = TotalMemoryGB > 0 ? Math.Min(100, Math.Max(0, (UsedMemoryGB / TotalMemoryGB) * 100.0)) : 0;
+                    utilization = TotalMemoryGB > 0
+                        ? Math.Min(100, Math.Max(0, (UsedMemoryGB / TotalMemoryGB) * 100.0))
+                        : 0;
                 }
                 else
                 {
-                    // Fallback calculation if performance counter fails
-                    utilization = CurrentUtilization + (new Random().NextDouble() - 0.5) * 5; // Small variation
-                    utilization = Math.Min(100, Math.Max(0, utilization));
-                    UsedMemoryGB = (utilization / 100.0) * TotalMemoryGB;
-                    AvailableMemoryGB = TotalMemoryGB - UsedMemoryGB;
+                    // Keep previous values if API call fails (extremely rare)
+                    utilization = CurrentUtilization;
                 }
             }
             catch
@@ -486,7 +472,8 @@ namespace TaskCore.ViewModels.Graphs
             }
             catch { }
 
-            try { _memoryCounter?.Dispose(); } catch { }
+
+
 
             GC.SuppressFinalize(this);
         }

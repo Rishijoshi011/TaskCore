@@ -32,12 +32,62 @@ namespace TaskCore.Services
                 // 5. Clean empty directories under Sessions
                 CleanEmptyDirectories(Path.Combine(baseDir, "Sessions"));
                 CleanEmptyDirectories(Path.Combine(baseDir, "Logs", "Sessions"));
+
+                // 6. Remove diagnostic debug log files left over from Debug builds.
+                //    In Release builds these files should never be created (UsageDebugLogger
+                //    uses [Conditional("DEBUG")]). If they exist from a prior Debug run,
+                //    remove them so they don't accumulate in production installations.
+                CleanDebugLogs(Path.Combine(baseDir, "SessionLogs"));
             }
             catch (Exception ex)
             {
                 TaskCoreLog.Error("Application", $"Auto cleanup encountered error: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// Removes debug-*.txt diagnostic files from the SessionLogs directory.
+        /// In Release builds these files are never written (UsageDebugLogger methods are
+        /// decorated with [Conditional("DEBUG")]). This cleanup handles any files left
+        /// behind by a prior Debug-configuration run.
+        /// In Debug builds, files older than 7 days are removed to keep disk usage bounded.
+        /// </summary>
+        private static void CleanDebugLogs(string sessionLogsDir)
+        {
+            try
+            {
+                if (!Directory.Exists(sessionLogsDir)) return;
+
+                var debugFiles = Directory.GetFiles(sessionLogsDir, "debug-*.txt");
+                if (debugFiles.Length == 0) return;
+
+#if DEBUG
+                // In Debug builds: keep recent files (useful for active diagnostics),
+                // but remove files older than 7 days to prevent unbounded growth.
+                var cutoff = DateTime.UtcNow.AddDays(-7);
+                foreach (var file in debugFiles)
+                {
+                    try
+                    {
+                        if (new FileInfo(file).LastWriteTimeUtc < cutoff)
+                            File.Delete(file);
+                    }
+                    catch { }
+                }
+#else
+                // In Release builds: these files should never exist.
+                // Remove any that were left behind by a prior Debug run.
+                foreach (var file in debugFiles)
+                {
+                    try { File.Delete(file); } catch { }
+                }
+                TaskCoreLog.Info("Application", $"Removed {debugFiles.Length} leftover debug log file(s) from SessionLogs.");
+#endif
+            }
+            catch { }
+        }
+
+
 
         public static void ResetApplicationData()
         {

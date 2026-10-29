@@ -131,6 +131,17 @@ namespace TaskCore
                 }
             }
 
+            if (settings.AutomaticMemoryTrimEnabled)
+            {
+                try
+                {
+                    _ = AutomaticMemoryTrimService.Instance;
+                }
+                catch
+                {
+                }
+            }
+
             // RulesService initializes itself via lazy singleton when needed
             // No need to force init - it only runs when rules exist
         }
